@@ -54,7 +54,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
           <div className='size-full flex flex-col'>
             <Tooltip disabled={!collapsed} content={t('conversation.welcome.newConversation')} position='right'>
               <div
-                className='flex items-center justify-start gap-10px px-12px py-8px hover:bg-hover rd-0.5rem mb-8px cursor-pointer group shrink-0'
+                className='flex items-center justify-start gap-10px px-12px py-8px rd-0.5rem mb-8px cursor-pointer group shrink-0 transition-colors duration-200 hover:bg-3'
                 onClick={() => {
                   closePreview();
                   Promise.resolve(navigate('/guid')).catch((error) => {
