@@ -1445,7 +1445,8 @@ const Guid: React.FC = () => {
                   backgroundColor: 'var(--color-guid-agent-bar, var(--aou-2))',
                   transition: 'all 0.6s cubic-bezier(0.2, 0.8, 0.3, 1)',
                   width: 'fit-content',
-                  gap: 0,
+                  maxWidth: '100%',
+                  gap: 4,
                   color: 'var(--text-primary)',
                 }}
               >
