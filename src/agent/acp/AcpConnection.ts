@@ -43,6 +43,26 @@ export function createGenericSpawnConfig(cliPath: string, workingDir: string, ac
   // Use enhanced env that includes shell environment variables (PATH, SSL certs, etc.)
   const env = getEnhancedEnv(customEnv);
 
+  // Clean Electron/Node debugging vars that leak from the parent process and
+  // can crash child CLIs (e.g. Electron Forge injects --require hooks via
+  // NODE_OPTIONS that cause iflow-cli startup failure) (#963).
+  // This mirrors the cleanup already done by prepareNpxEnv() and all MCP agents.
+  delete env.NODE_OPTIONS;
+  delete env.NODE_INSPECT;
+  delete env.NODE_DEBUG;
+  // Strip npm lifecycle vars inherited from `npm start` to avoid child process
+  // confusion (same rationale as prepareNpxEnv).
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('npm_')) {
+      delete env[key];
+    }
+  }
+  // Disable ANSI colors: ACP processes communicate via JSON-RPC over piped
+  // stdio, so color escape codes are unnecessary and can crash CLIs whose
+  // color libraries fail in non-TTY environments.
+  env.NO_COLOR = '1';
+  env.FORCE_COLOR = '0';
+
   // Default to --experimental-acp only if acpArgs is strictly undefined.
   // This allows passing an empty array [] to bypass default flags.
   const effectiveAcpArgs = acpArgs === undefined ? ['--experimental-acp'] : acpArgs;
@@ -223,6 +243,7 @@ export class AcpConnection {
   private async connectGenericBackend(backend: Exclude<AcpBackend, 'claude' | 'codebuddy' | 'codex'>, cliPath: string, workingDir: string, acpArgs?: string[], customEnv?: Record<string, string>): Promise<void> {
     const spawnStart = Date.now();
     const config = createGenericSpawnConfig(cliPath, workingDir, acpArgs, customEnv);
+
     this.child = spawn(config.command, config.args, config.options);
     if (ACP_PERF_LOG) console.log(`[ACP-PERF] connect: ${backend} process spawned ${Date.now() - spawnStart}ms`);
     await this.setupChildProcessHandlers(backend);
@@ -288,9 +309,23 @@ export class AcpConnection {
         await this.connectCodex(workingDir);
         break;
 
+      case 'iflow': {
+        if (!cliPath) {
+          throw new Error(`CLI path is required for ${backend} backend`);
+        }
+        // iflow-cli is Node.js-based (#!/usr/bin/env node) and requires ≥ 18.17
+        // for node:stream APIs like getDefaultHighWaterMark.
+        const spawnStart = Date.now();
+        const config = createGenericSpawnConfig(cliPath, workingDir, acpArgs, customEnv);
+        this.ensureMinNodeVersion(config.options.env as Record<string, string | undefined>, 18, 17, 'iflow CLI');
+        this.child = spawn(config.command, config.args, config.options);
+        if (ACP_PERF_LOG) console.log(`[ACP-PERF] connect: iflow process spawned ${Date.now() - spawnStart}ms`);
+        await this.setupChildProcessHandlers(backend);
+        break;
+      }
+
       case 'gemini':
       case 'qwen':
-      case 'iflow':
       case 'droid':
       case 'goose':
       case 'auggie':
