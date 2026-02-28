@@ -71,6 +71,17 @@ const detectMobileViewportOrTouch = (): boolean => {
   return byWidth || (smallScreen && (byMedia || byTouchPoints));
 };
 
+const detectMobileViewportOrTouch = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  if (isElectronDesktop()) {
+    return window.innerWidth < 768;
+  }
+  const byWidth = window.innerWidth < 768;
+  const byMedia = window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;
+  const byTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+  return byWidth || byMedia || byTouchPoints;
+};
+
 const Layout: React.FC<{
   sider: React.ReactNode;
   onSessionClick?: () => void;
@@ -195,7 +206,6 @@ const Layout: React.FC<{
   }, [isMobile, collapsed, location.pathname, location.search, location.hash]);
 
   const siderWidth = isMobile ? Math.max(MOBILE_SIDER_MIN_WIDTH, Math.min(MOBILE_SIDER_MAX_WIDTH, Math.round(viewportWidth * MOBILE_SIDER_WIDTH_RATIO))) : DEFAULT_SIDER_WIDTH;
-
   useEffect(() => {
     collapsedRef.current = collapsed;
   }, [collapsed]);
@@ -279,7 +289,7 @@ const Layout: React.FC<{
             style={
               isMobile
                 ? {
-                    width: '100vw',
+                    width: '100%',
                   }
                 : undefined
             }
