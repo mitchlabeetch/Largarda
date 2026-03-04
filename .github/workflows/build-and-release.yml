@@ -234,6 +234,109 @@ jobs:
         with:
           path: build-artifacts
 
+      # Merge duplicate update manifest yml files from separate arch builds.
+      # electron-updater expects a single latest-mac.yml / latest.yml containing
+      # ALL architecture variants in its `files` array, then filters by arch
+      # at runtime. When arm64 and x64 are built separately, each produces its
+      # own yml with only one arch's files. This step merges them.
+      - name: Merge update manifests for multi-arch
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+
+          const dir = 'build-artifacts';
+
+          function findAll(name, base) {
+            const results = [];
+            for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
+              const full = path.join(base, entry.name);
+              if (entry.isDirectory()) results.push(...findAll(name, full));
+              else if (entry.name === name) results.push(full);
+            }
+            return results.sort();
+          }
+
+          function mergeYml(filename) {
+            const files = findAll(filename, dir);
+            if (files.length <= 1) return;
+
+            console.log('Merging ' + files.length + ' instances of ' + filename);
+
+            // Parse: split into header (version + files array) and footer (path/sha512/releaseDate)
+            function parse(content) {
+              const lines = content.split('\n');
+              const entries = [];
+              let current = null;
+              let footer = [];
+              let inFiles = false;
+
+              for (const line of lines) {
+                if (line.startsWith('files:')) { inFiles = true; continue; }
+                if (inFiles && line.startsWith('  - ')) {
+                  if (current) entries.push(current);
+                  current = [line];
+                  continue;
+                }
+                if (inFiles && current && line.startsWith('    ')) {
+                  current.push(line);
+                  continue;
+                }
+                if (inFiles && current) {
+                  entries.push(current);
+                  current = null;
+                  inFiles = false;
+                }
+                if (!inFiles && (line.startsWith('path:') || line.startsWith('sha512:') || line.startsWith('releaseDate:'))) {
+                  footer.push(line);
+                }
+              }
+              if (current) entries.push(current);
+              return { entries, footer };
+            }
+
+            // Merge all files entries
+            let allEntries = [];
+            let footer = [];
+            let version = '';
+            for (const f of files) {
+              console.log('  <- ' + f);
+              const content = fs.readFileSync(f, 'utf-8');
+              if (!version) {
+                const m = content.match(/^version:.*/m);
+                if (m) version = m[0];
+              }
+              const parsed = parse(content);
+              allEntries.push(...parsed.entries);
+              if (!footer.length) footer = parsed.footer;
+            }
+
+            // Build merged yml
+            let output = version + '\nfiles:\n';
+            for (const entry of allEntries) {
+              output += entry.join('\n') + '\n';
+            }
+            output += footer.join('\n') + '\n';
+
+            // Write to first file, remove others
+            fs.writeFileSync(files[0], output);
+            for (let i = 1; i < files.length; i++) {
+              fs.unlinkSync(files[i]);
+            }
+            console.log('  -> ' + files[0]);
+          }
+
+          mergeYml('latest-mac.yml');
+          mergeYml('latest.yml');
+
+          // Show final yml files
+          console.log('');
+          console.log('Final yml files:');
+          findAll('.yml', dir).forEach(f => {
+            if (f.endsWith('.yml')) console.log('  ' + f);
+          });
+          "
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
