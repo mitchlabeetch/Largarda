@@ -22,8 +22,8 @@ interface ThoughtDisplayProps {
 }
 
 // 背景渐变常量 Background gradient constants
-const GRADIENT_DARK = 'linear-gradient(135deg, #464767 0%, #323232 100%)';
-const GRADIENT_LIGHT = 'linear-gradient(90deg, #F0F3FF 0%, #F2F2F2 100%)';
+const GRADIENT_DARK = 'linear-gradient(135deg, var(--bg-3, #464767) 0%, var(--bg-2, #323232) 100%)';
+const GRADIENT_LIGHT = 'linear-gradient(135deg, var(--aou-1, #F0F3FF) 0%, var(--bg-1, #F2F2F2) 100%)';
 
 // 格式化时间 Format elapsed time
 const formatElapsedTime = (seconds: number): string => {

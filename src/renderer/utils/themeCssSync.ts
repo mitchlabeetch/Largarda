@@ -37,6 +37,13 @@ type ComputeCssSyncDecisionResult = {
 export const resolveCssByActiveTheme = (activeThemeId: string, userThemes: ICssTheme[]): string => {
   const ensureBackgroundCss = (theme: ICssTheme): ICssTheme => {
     if (theme.id === DEFAULT_THEME_ID) return theme;
+    // Respect theme opt-out and proactively strip legacy injected background blocks.
+    if (theme.noAutoBackground) {
+      return {
+        ...theme,
+        css: injectBackgroundCssBlock(theme.css || '', ''),
+      };
+    }
     if (theme.cover && theme.css && !theme.css.includes(BACKGROUND_BLOCK_START)) {
       return {
         ...theme,

@@ -8,7 +8,7 @@ import { ConfigStorage, type ICssTheme } from '@/common/storage';
 import { ipcBridge } from '@/common';
 import { uuid } from '@/common/utils';
 import { useThemeContext } from '@/renderer/context/ThemeContext';
-import { resolveCssByActiveTheme } from '@/renderer/utils/themeCssSync';
+import { resolveCssByActiveTheme, setExtensionThemesCache } from '@/renderer/utils/themeCssSync';
 import { Button, Message, Modal } from '@arco-design/web-react';
 import { EditTwo, Plus, CheckOne } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next';
 import CssThemeModal from './CssThemeModal';
 import { PRESET_THEMES, DEFAULT_THEME_ID } from './presets';
 import { BACKGROUND_BLOCK_START, injectBackgroundCssBlock } from './backgroundUtils';
-import { setExtensionThemesCache } from '@/renderer/utils/themeCssSync';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 
 interface ThemePreviewPalette {
@@ -175,9 +174,9 @@ const ThemeLayoutPreview: React.FC<{ palette: ThemePreviewPalette }> = ({ palett
   );
 };
 
-const ensureBackgroundCss = <T extends { id?: string; cover?: string; css: string }>(theme: T): T => {
+const ensureBackgroundCss = <T extends { id?: string; cover?: string; css: string; noAutoBackground?: boolean }>(theme: T): T => {
   // 跳过 Default 主题，不注入背景图 CSS / Skip Default theme, do not inject background CSS
-  if (theme.id === DEFAULT_THEME_ID) {
+  if (theme.id === DEFAULT_THEME_ID || theme.noAutoBackground) {
     return theme;
   }
   if (theme.cover && theme.css && !theme.css.includes(BACKGROUND_BLOCK_START)) {

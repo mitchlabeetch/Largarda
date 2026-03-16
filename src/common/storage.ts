@@ -449,6 +449,7 @@ export interface ICssTheme {
   id: string; // 唯一标识 / Unique identifier
   name: string; // 主题名称 / Theme name
   cover?: string; // 封面图片 base64 或 URL / Cover image base64 or URL
+  noAutoBackground?: boolean; // 是否禁用“封面自动注入背景图” / Disable auto background injection from cover
   css: string; // CSS 样式代码 / CSS style code
   isPreset?: boolean; // 是否为预设主题 / Whether it's a preset theme
   createdAt: number; // 创建时间 / Creation time

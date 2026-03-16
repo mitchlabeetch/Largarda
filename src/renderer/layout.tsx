@@ -21,6 +21,7 @@ import { processCustomCss } from './utils/customCssProcessor';
 import { cleanupSiderTooltips } from './utils/siderTooltip';
 import { isElectronDesktop } from './utils/platform';
 import { computeCssSyncDecision, resolveCssByActiveTheme } from './utils/themeCssSync';
+import ParticleBackground from './components/ParticleBackground';
 
 const useDebug = () => {
   const [count, setCount] = useState(0);
@@ -82,6 +83,7 @@ const Layout: React.FC<{
   const [isMobile, setIsMobile] = useState(false);
   const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 390 : window.innerWidth));
   const [customCss, setCustomCss] = useState<string>('');
+  const [activeThemeId, setActiveThemeId] = useState<string>('');
   const [shouldMountUpdateModal, setShouldMountUpdateModal] = useState(false);
   const { onClick } = useDebug();
   const { contextHolder: multiAgentContextHolder } = useMultiAgentDetection();
@@ -95,11 +97,11 @@ const Layout: React.FC<{
 
   const loadAndHealCustomCss = useCallback(async () => {
     try {
-      const [savedCssRaw, activeThemeId, savedThemes] = await Promise.all([ConfigStorage.get('customCss'), ConfigStorage.get('css.activeThemeId'), ConfigStorage.get('css.themes')]);
+      const [savedCssRaw, activeThemeIdStored, savedThemes] = await Promise.all([ConfigStorage.get('customCss'), ConfigStorage.get('css.activeThemeId'), ConfigStorage.get('css.themes')]);
 
       const decision = computeCssSyncDecision({
         savedCss: savedCssRaw || '',
-        activeThemeId: activeThemeId || '',
+        activeThemeId: activeThemeIdStored || '',
         savedThemes: (savedThemes || []) as ICssTheme[],
         currentUiCss: customCss,
         lastUiCssUpdateAt: lastUiCssUpdateAtRef.current,
@@ -110,12 +112,14 @@ const Layout: React.FC<{
       }
 
       let effectiveCss = decision.effectiveCss;
+      let nextActiveThemeId = activeThemeIdStored || '';
 
       // If the active theme resolved to empty CSS and there IS a saved activeThemeId
       // (but it no longer matches any known theme), fall back to default and persist.
-      if (!effectiveCss && activeThemeId && activeThemeId !== 'default-theme') {
+      if (!effectiveCss && activeThemeIdStored && activeThemeIdStored !== 'default-theme') {
         const defaultCss = resolveCssByActiveTheme('default-theme', (savedThemes || []) as ICssTheme[]);
         effectiveCss = defaultCss;
+        nextActiveThemeId = 'default-theme';
         // Persist the fallback so Layout doesn't keep retrying
         await Promise.all([ConfigStorage.set('css.activeThemeId', 'default-theme'), ConfigStorage.set('customCss', effectiveCss)]).catch((error) => {
           console.warn('Failed to persist theme fallback:', error);
@@ -127,6 +131,7 @@ const Layout: React.FC<{
       }
 
       setCustomCss(effectiveCss);
+      setActiveThemeId(nextActiveThemeId || '');
       if (lastCssRef.current !== effectiveCss) {
         lastCssRef.current = effectiveCss;
         window.dispatchEvent(new CustomEvent('custom-css-updated', { detail: { customCss: effectiveCss } }));
@@ -261,12 +266,14 @@ const Layout: React.FC<{
   }, []);
 
   const siderWidth = isMobile ? Math.max(MOBILE_SIDER_MIN_WIDTH, Math.min(MOBILE_SIDER_MAX_WIDTH, Math.round(viewportWidth * MOBILE_SIDER_WIDTH_RATIO))) : DEFAULT_SIDER_WIDTH;
+  const shouldShowParticleBackground = activeThemeId === 'retroma-y2k-jp-v42-pure';
   useEffect(() => {
     collapsedRef.current = collapsed;
   }, [collapsed]);
   return (
     <LayoutContext.Provider value={{ isMobile, siderCollapsed: collapsed, setSiderCollapsed: setCollapsed }}>
       <div className='app-shell flex flex-col size-full min-h-0'>
+        {shouldShowParticleBackground && <ParticleBackground />}
         <Titlebar workspaceAvailable={workspaceAvailable} />
         {/* 移动端左侧边栏蒙板 / Mobile left sider backdrop */}
         {isMobile && !collapsed && <div className='fixed inset-0 bg-black/30 z-90' onClick={() => setCollapsed(true)} aria-hidden='true' />}
