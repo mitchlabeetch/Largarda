@@ -3082,7 +3082,7 @@ input[type="radio"]:checked::after {
   },
   {
     id: 'retroma-y2k-jp-v42-pure',
-    name: 'Retroma Y2K JP v4.2 Pure',
+    name: 'Y2K电子账本 by 椰树女王',
     isPreset: true,
     cover: y2kJpCover,
     noAutoBackground: true,
@@ -3269,16 +3269,20 @@ body {
 }
 
 .settings-modal .bg-2.rd-16px,
+.settings-modal .bg-2.rd-12px,
 .settings-modal .arco-collapse-item.bg-2,
 .settings-page-wrapper .bg-2.rd-16px,
+.settings-page-wrapper .bg-2.rd-12px,
 .settings-page-wrapper .arco-collapse-item.bg-2 {
   background: linear-gradient(180deg, #e6ede7 0%, #dde6df 100%) !important;
   border: 1px solid rgba(144, 170, 153, 0.42) !important;
 }
 
 [data-theme='dark'] .settings-modal .bg-2.rd-16px,
+[data-theme='dark'] .settings-modal .bg-2.rd-12px,
 [data-theme='dark'] .settings-modal .arco-collapse-item.bg-2,
 [data-theme='dark'] .settings-page-wrapper .bg-2.rd-16px,
+[data-theme='dark'] .settings-page-wrapper .bg-2.rd-12px,
 [data-theme='dark'] .settings-page-wrapper .arco-collapse-item.bg-2 {
   background: linear-gradient(180deg, rgba(88, 80, 74, 0.96) 0%, rgba(72, 65, 60, 0.95) 56%, rgba(58, 52, 48, 0.95) 100%) !important;
   border: 1px solid rgba(166, 147, 128, 0.34) !important;
@@ -3429,12 +3433,21 @@ body {
 }
 
 .chat-history--collapsed .chat-history__item,
-.settings-sider--collapsed .settings-sider__item {
-  margin: 3px auto !important;
-  width: calc(100% - 10px) !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+.settings-sider--collapsed .settings-sider__item,
+.layout-sider.collapsed .chat-history__item,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item,
+.layout-sider.collapsed .settings-sider__item,
+.layout-sider.arco-layout-sider-collapsed .settings-sider__item {
+  margin: 6px auto !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  padding-inline: 0 !important;
+  padding-block: 0 !important;
   justify-content: center !important;
+  align-items: center !important;
+  gap: 0 !important;
 }
 
 .chat-history--collapsed,
@@ -3462,15 +3475,76 @@ body {
 }
 
 .chat-history--collapsed .chat-history__item > :first-child,
-.settings-sider--collapsed .settings-sider__item > :first-child {
-  margin-left: auto !important;
-  margin-right: auto !important;
+.settings-sider--collapsed .settings-sider__item > :first-child,
+.layout-sider.collapsed .chat-history__item > :first-child,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > :first-child,
+.layout-sider.collapsed .settings-sider__item > :first-child,
+.layout-sider.arco-layout-sider-collapsed .settings-sider__item > :first-child {
+  margin: 0 auto !important;
 }
 
-.settings-sider--collapsed .settings-sider__item > .mt-2px,
-.settings-sider--collapsed .settings-sider__item > [class*='w-20px'] {
-  margin-left: auto !important;
-  margin-right: auto !important;
+.layout-sider.collapsed .settings-sider .settings-sider__item,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+/* Collapsed sidebar: normalize utility padding/justify classes and center icon wrappers */
+.layout-sider.collapsed .conversation-item,
+.layout-sider.arco-layout-sider-collapsed .conversation-item,
+.chat-history--collapsed .conversation-item,
+.settings-sider--collapsed .conversation-item {
+  padding: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+.layout-sider.collapsed .settings-sider .settings-sider__item > svg,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > svg,
+.layout-sider.collapsed .settings-sider .settings-sider__item > img,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > img,
+.layout-sider.collapsed .settings-sider .settings-sider__item > .mt-2px,
+.layout-sider.collapsed .settings-sider .settings-sider__item > [class*='w-20px'],
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > .mt-2px,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > [class*='w-20px'],
+.layout-sider.collapsed .chat-history__item > svg,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > svg,
+.layout-sider.collapsed .chat-history__item > img,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > img,
+.layout-sider.collapsed .chat-history__item > .mt-2px,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > .mt-2px,
+.layout-sider.collapsed .chat-history__item > [class*='w-24px'],
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > [class*='w-24px'] {
+  margin: 0 auto !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+.layout-sider.collapsed .settings-sider .settings-sider__item > svg,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > svg,
+.layout-sider.collapsed .settings-sider .settings-sider__item > .mt-2px svg,
+.layout-sider.collapsed .settings-sider .settings-sider__item > [class*='w-20px'] svg,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > .mt-2px svg,
+.layout-sider.arco-layout-sider-collapsed .settings-sider .settings-sider__item > [class*='w-20px'] svg,
+.layout-sider.collapsed .chat-history__item > svg,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > svg,
+.layout-sider.collapsed .chat-history__item > .mt-2px svg,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > .mt-2px svg,
+.layout-sider.collapsed .chat-history__item > [class*='w-24px'] svg,
+.layout-sider.arco-layout-sider-collapsed .chat-history__item > [class*='w-24px'] svg {
+  display: block !important;
+  margin: 0 auto !important;
+  width: 20px !important;
+  height: 20px !important;
+  transform: none !important;
 }
 
 .chat-history--collapsed .chat-history__item--active::before,
@@ -3480,6 +3554,50 @@ body {
   top: 6px;
   bottom: 6px;
   width: 2px;
+}
+
+/* Collapsed selected state: use symmetric highlight to keep icon visually centered */
+.chat-history--collapsed .chat-history__item--active,
+.chat-history--collapsed .chat-history__item[aria-selected='true'],
+.chat-history--collapsed .chat-history__item[class~='!bg-active'],
+.settings-sider--collapsed .settings-sider__item[class~='!bg-aou-2'] {
+  box-shadow: inset 0 0 0 1px rgba(176, 156, 202, 0.58) !important;
+}
+
+.chat-history--collapsed .chat-history__item--active::before,
+.chat-history--collapsed .chat-history__item[aria-selected='true']::before,
+.chat-history--collapsed .chat-history__item[class~='!bg-active']::before,
+.settings-sider--collapsed .settings-sider__item[class~='!bg-aou-2']::before {
+  display: none !important;
+}
+
+.layout-sider.collapsed .conversation-item::before,
+.layout-sider.arco-layout-sider-collapsed .conversation-item::before,
+.chat-history--collapsed .conversation-item::before,
+.settings-sider--collapsed .conversation-item::before {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  background: transparent !important;
+}
+
+.layout-sider.collapsed .settings-sider [data-settings-id][class*='!bg-aou-2'],
+.layout-sider.arco-layout-sider-collapsed .settings-sider [data-settings-id][class*='!bg-aou-2'] {
+  box-shadow: inset 0 0 0 1px rgba(176, 156, 202, 0.58) !important;
+  transform: none !important;
+}
+
+[data-theme='dark'] .layout-sider.collapsed .settings-sider [data-settings-id][class*='!bg-aou-2'],
+[data-theme='dark'] .layout-sider.arco-layout-sider-collapsed .settings-sider [data-settings-id][class*='!bg-aou-2'] {
+  box-shadow: inset 0 0 0 1px rgba(177, 136, 212, 0.44) !important;
+  transform: none !important;
+}
+
+[data-theme='dark'] .chat-history--collapsed .chat-history__item--active,
+[data-theme='dark'] .chat-history--collapsed .chat-history__item[aria-selected='true'],
+[data-theme='dark'] .chat-history--collapsed .chat-history__item[class~='!bg-active'],
+[data-theme='dark'] .settings-sider--collapsed .settings-sider__item[class~='!bg-aou-2'] {
+  box-shadow: inset 0 0 0 1px rgba(177, 136, 212, 0.44) !important;
 }
 
 .arco-tree-node-title-wrapper {
@@ -3988,6 +4106,25 @@ body {
   background: var(--brand-light) !important;
   color: var(--brand) !important;
   border-color: var(--aou-4) !important;
+}
+
+.aion-file-changes-panel {
+  border: 1.5px solid #ccb8e0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 0 1px rgba(168, 120, 192, 0.22), 0 8px 18px rgba(152, 120, 184, 0.16) !important;
+}
+
+.aion-file-changes-panel > div:first-child {
+  box-shadow: inset 0 -1px 0 rgba(184, 156, 210, 0.5);
+}
+
+[data-theme='dark'] .aion-file-changes-panel {
+  border-color: #7f61a0 !important;
+  box-shadow: 0 0 0 1px rgba(177, 136, 212, 0.26), 0 10px 22px rgba(58, 34, 88, 0.5) !important;
+}
+
+[data-theme='dark'] .aion-file-changes-panel > div:first-child {
+  box-shadow: inset 0 -1px 0 rgba(148, 112, 186, 0.44);
 }
 
 .arco-divider {
