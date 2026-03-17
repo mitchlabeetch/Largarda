@@ -427,15 +427,37 @@ export function resolveNpxPath(env: Record<string, string | undefined>): string 
       stdio: ['pipe', 'pipe', 'pipe'],
     })
       .trim()
-      .split('\n')[0]; // `where` on Windows may return multiple lines
+      .split(/\r?\n/)[0]; // `where` on Windows may return multiple lines
     const npxCandidate = path.join(path.dirname(nodePath), npxName);
-    // Verify the candidate exists AND is modern (npm >= 7 bundles npx >= 7)
-    const versionOutput = execFileSync(npxCandidate, ['--version'], {
-      env,
-      encoding: 'utf-8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
+
+    let versionOutput = '';
+    if (isWindows) {
+      // On Windows, execFileSync() cannot execute .cmd shims directly.
+      // Validate the Node-adjacent npm installation by invoking the bundled
+      // npx entrypoint JS with the same node.exe instead of probing npx.cmd.
+      const npmBinDir = path.join(path.dirname(nodePath), 'node_modules', 'npm', 'bin');
+      const npmPrefixJs = path.join(npmBinDir, 'npm-prefix.js');
+      const npxCliJs = path.join(npmBinDir, 'npx-cli.js');
+      if (!existsSync(npxCandidate) || !existsSync(npmPrefixJs) || !existsSync(npxCliJs)) {
+        throw new Error('Node-adjacent npx.cmd or bundled npm scripts are missing');
+      }
+      versionOutput = execFileSync(nodePath, [npxCliJs, '--version'], {
+        env,
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+      }).trim();
+    } else {
+      // Verify the candidate exists AND is modern (npm >= 7 bundles npx >= 7)
+      versionOutput = execFileSync(npxCandidate, ['--version'], {
+        env,
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+    }
+
     const majorVersion = parseInt(versionOutput.split('.')[0], 10);
     if (majorVersion >= 7) {
       return npxCandidate;

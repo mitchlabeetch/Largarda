@@ -34,9 +34,10 @@ vi.mock('@process/utils/mainLogger', () => ({
   mainWarn: vi.fn(),
 }));
 
-import { spawn } from 'child_process';
-import { createGenericSpawnConfig, spawnNpxBackend } from '../../src/agent/acp/acpConnectors';
+import { execFileSync, spawn } from 'child_process';
+import { connectCodex, createGenericSpawnConfig, spawnNpxBackend } from '../../src/agent/acp/acpConnectors';
 
+const mockExecFileSync = vi.mocked(execFileSync);
 const mockSpawn = vi.mocked(spawn);
 
 describe('spawnNpxBackend - Windows UTF-8 fix', () => {
@@ -164,5 +165,47 @@ describe('createGenericSpawnConfig - Windows path handling', () => {
     expect(config.command).toBe('npx');
     expect(config.args).toContain('@pkg/cli');
     expect(config.args).toContain('--acp');
+  });
+});
+
+describe('connectCodex - Windows package selection', () => {
+  let originalPlatform: PropertyDescriptor | undefined;
+  let originalArch: PropertyDescriptor | undefined;
+  const mockChild = { unref: vi.fn() };
+
+  beforeEach(() => {
+    originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    originalArch = Object.getOwnPropertyDescriptor(process, 'arch');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'arch', { value: 'x64', configurable: true });
+    mockExecFileSync.mockImplementation((file) => {
+      if (file === 'node.exe') {
+        return 'v20.10.0\n' as never;
+      }
+      return 'v20.0.0\n' as never;
+    });
+    mockSpawn.mockReturnValue(mockChild as unknown as ReturnType<typeof spawn>);
+  });
+
+  afterEach(() => {
+    if (originalPlatform) {
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
+    if (originalArch) {
+      Object.defineProperty(process, 'arch', originalArch);
+    }
+    vi.clearAllMocks();
+  });
+
+  it('uses the published Windows platform package instead of the broken meta package', async () => {
+    const hooks = {
+      setup: vi.fn(async () => {}),
+      cleanup: vi.fn(async () => {}),
+    };
+
+    await connectCodex('C:\\cwd', hooks);
+
+    const [, args] = mockSpawn.mock.calls[0];
+    expect(args).toContain('@zed-industries/codex-acp-win32-x64@0.9.5');
   });
 });

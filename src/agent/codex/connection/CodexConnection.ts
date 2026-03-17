@@ -134,11 +134,13 @@ export async function terminateCodexChildProcess(
         timeout: WINDOWS_TREE_KILL_TIMEOUT_MS,
       });
     } catch (error) {
-      console.warn(`[CodexConnection] taskkill /T /F failed for PID ${pid}:`, error);
-      try {
-        child.kill();
-      } catch {
-        // Ignore fallback kill errors.
+      if (isProcessAlive(pid)) {
+        console.warn(`[CodexConnection] taskkill /T /F failed for PID ${pid}:`, error);
+        try {
+          child.kill();
+        } catch {
+          // Ignore fallback kill errors.
+        }
       }
     }
   } else {
@@ -313,8 +315,9 @@ export class CodexConnection {
       finalArgs = [...finalArgs, '-c', 'approval_policy=never'];
     } else {
       // Read user's config.toml setting and pass it explicitly to mcp-server.
-      // IMPORTANT: Skip 'never' — AionUi manages approval decisions at the Manager
-      // layer (Plan / Auto Edit / Full Auto modes). Passing 'never' to CLI causes
+      // IMPORTANT: Skip 'never'.
+      // AionUi manages approval decisions at the Manager layer
+      // (Plan / Auto Edit / Full Auto modes). Passing 'never' to CLI causes
       // a dual-approval conflict where both CLI and Manager try to approve,
       // leading to the CLI hanging on exec_approval_request events.
       const userApprovalPolicy = readUserApprovalPolicyConfig();

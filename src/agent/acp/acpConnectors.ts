@@ -30,6 +30,61 @@ const execFile = promisify(execFileCb);
 /** Enable ACP performance diagnostics via ACP_PERF=1 */
 export const ACP_PERF_LOG = process.env.ACP_PERF === '1';
 
+const CODEX_ACP_WINDOWS_FALLBACK_VERSION = '0.9.5';
+
+function quoteWindowsCmdArg(arg: string): string {
+  if (arg.length === 0) {
+    return '""';
+  }
+
+  return /[\s"&|<>^()]/.test(arg) ? `"${arg.replace(/"/g, '""')}"` : arg;
+}
+
+async function execDiagnosticCommand(
+  command: string,
+  args: string[],
+  env: Record<string, string | undefined>
+): Promise<string> {
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(command)) {
+    const shellCommand = env.COMSPEC || env.ComSpec || process.env.COMSPEC || process.env.ComSpec || 'cmd.exe';
+    const commandLine = [command, ...args].map((arg) => quoteWindowsCmdArg(arg)).join(' ');
+    const { stdout } = await execFile(shellCommand, ['/d', '/s', '/c', commandLine], {
+      env,
+      timeout: 5000,
+      windowsHide: true,
+    });
+    return stdout.trim();
+  }
+
+  const { stdout } = await execFile(command, args, {
+    env,
+    timeout: 5000,
+    windowsHide: true,
+  });
+  return stdout.trim();
+}
+
+function resolveCodexAcpPackage(): string {
+  if (process.platform !== 'win32') {
+    return CODEX_ACP_NPX_PACKAGE;
+  }
+
+  if (process.arch === 'x64') {
+    return `@zed-industries/codex-acp-win32-x64@${CODEX_ACP_WINDOWS_FALLBACK_VERSION}`;
+  }
+
+  if (process.arch === 'arm64') {
+    return `@zed-industries/codex-acp-win32-arm64@${CODEX_ACP_WINDOWS_FALLBACK_VERSION}`;
+  }
+
+  return CODEX_ACP_NPX_PACKAGE;
+}
+
+function extractPackageVersion(npmPackage: string): string {
+  const versionSeparatorIndex = npmPackage.lastIndexOf('@');
+  return versionSeparatorIndex > 0 ? npmPackage.slice(versionSeparatorIndex + 1) : CODEX_ACP_BRIDGE_VERSION;
+}
+
 // ── Environment helpers ─────────────────────────────────────────────
 
 /**
@@ -131,7 +186,8 @@ export function ensureMinNodeVersion(
  *
  * @param cliPath - CLI command path (e.g., 'goose', 'npx @pkg/cli')
  * @param workingDir - Working directory for the spawned process
- * @param acpArgs - Arguments to enable ACP mode (e.g., ['acp'] for goose, ['--acp'] for auggie, ['exec','--output-format','acp'] for droid)
+ * @param acpArgs - Arguments to enable ACP mode
+ *   Examples: ['acp'] for goose, ['--acp'] for auggie, ['exec', '--output-format', 'acp'] for droid
  * @param customEnv - Custom environment variables
  * @param prebuiltEnv - Pre-built env to use directly (skips internal getEnhancedEnv)
  */
@@ -254,6 +310,7 @@ function prepareClaude(): NpxPrepareResult {
 async function prepareCodex(): Promise<NpxPrepareResult> {
   const cleanEnv = prepareCleanEnv();
   ensureMinNodeVersion(cleanEnv, 20, 10, 'Codex ACP bridge');
+  const codexAcpPackage = resolveCodexAcpPackage();
 
   const codexCommand = process.platform === 'win32' ? 'codex.cmd' : 'codex';
   const diagnostics: {
@@ -265,8 +322,8 @@ async function prepareCodex(): Promise<NpxPrepareResult> {
     hasOpenAiApiKey: boolean;
     hasChatGptSession: boolean;
   } = {
-    bridgeVersion: CODEX_ACP_BRIDGE_VERSION,
-    bridgePackage: CODEX_ACP_NPX_PACKAGE,
+    bridgeVersion: extractPackageVersion(codexAcpPackage),
+    bridgePackage: codexAcpPackage,
     codexCliVersion: 'unknown',
     loginStatus: 'unknown',
     hasCodexApiKey: Boolean(cleanEnv.CODEX_API_KEY),
@@ -275,30 +332,22 @@ async function prepareCodex(): Promise<NpxPrepareResult> {
   };
 
   try {
-    const { stdout } = await execFile(codexCommand, ['--version'], {
-      env: cleanEnv,
-      timeout: 5000,
-      windowsHide: true,
-    });
-    diagnostics.codexCliVersion = stdout.trim() || diagnostics.codexCliVersion;
+    diagnostics.codexCliVersion =
+      (await execDiagnosticCommand(codexCommand, ['--version'], cleanEnv)) || diagnostics.codexCliVersion;
   } catch (error) {
     mainWarn('[ACP codex]', 'Failed to read codex CLI version', error);
   }
 
   try {
-    const { stdout } = await execFile(codexCommand, ['login', 'status'], {
-      env: cleanEnv,
-      timeout: 5000,
-      windowsHide: true,
-    });
-    diagnostics.loginStatus = stdout.trim() || diagnostics.loginStatus;
+    diagnostics.loginStatus =
+      (await execDiagnosticCommand(codexCommand, ['login', 'status'], cleanEnv)) || diagnostics.loginStatus;
     diagnostics.hasChatGptSession = /chatgpt/i.test(diagnostics.loginStatus);
   } catch (error) {
     mainWarn('[ACP codex]', 'Failed to read codex login status', error);
   }
 
   mainLog('[ACP codex]', 'Runtime diagnostics', diagnostics);
-  return { cleanEnv, npxCommand: resolveNpxPath(cleanEnv) };
+  return { cleanEnv, npxCommand: resolveNpxPath(cleanEnv), extraArgs: [] };
 }
 
 /** Prepare clean env + resolve npx + load MCP config for CodeBuddy. */
@@ -424,7 +473,7 @@ export function connectClaude(workingDir: string, hooks: NpxConnectHooks): Promi
 export function connectCodex(workingDir: string, hooks: NpxConnectHooks): Promise<void> {
   return connectNpxBackend({
     backend: 'codex',
-    npxPackage: CODEX_ACP_NPX_PACKAGE,
+    npxPackage: resolveCodexAcpPackage(),
     prepareFn: prepareCodex,
     workingDir,
     ...hooks,

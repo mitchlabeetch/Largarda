@@ -393,6 +393,60 @@ describe('getEnhancedEnv Windows extra paths (cross-platform mock)', () => {
   });
 });
 
+describe('resolveNpxPath', () => {
+  const originalPlatform = process.platform;
+
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+  });
+
+  it('prefers the Node-adjacent npx.cmd on Windows instead of falling back to PATH lookup', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+
+    vi.doMock('child_process', () => ({
+      execFileSync: vi.fn((file: string, args: string[]) => {
+        if (file === 'where' && args[0] === 'node') {
+          return 'E:\\evn\\nodeOthe\\node.exe\r\nE:\\broken\\node.exe\r\n';
+        }
+        if (
+          file === 'E:\\evn\\nodeOthe\\node.exe' &&
+          Array.isArray(args) &&
+          args[0] === 'E:\\evn\\nodeOthe\\node_modules\\npm\\bin\\npx-cli.js' &&
+          args[1] === '--version'
+        ) {
+          return '10.9.0';
+        }
+        throw new Error(`unexpected exec: ${file} ${args.join(' ')}`);
+      }),
+      execFile: vi.fn(),
+    }));
+
+    vi.doMock('fs', async () => {
+      const actual = await vi.importActual<typeof import('fs')>('fs');
+      return {
+        ...actual,
+        existsSync: vi.fn((targetPath: string) =>
+          [
+            'E:\\evn\\nodeOthe\\npx.cmd',
+            'E:\\evn\\nodeOthe\\node_modules\\npm\\bin\\npm-prefix.js',
+            'E:\\evn\\nodeOthe\\node_modules\\npm\\bin\\npx-cli.js',
+          ].includes(targetPath)
+        ),
+      };
+    });
+
+    const { resolveNpxPath } = await import('@process/utils/shellEnv');
+
+    expect(resolveNpxPath({ PATH: 'E:\\broken-project\\node_modules\\.bin;E:\\evn\\nodeOthe' })).toBe(
+      'E:\\evn\\nodeOthe\\npx.cmd'
+    );
+  });
+});
+
 // -------------------------------------------------------------------
 // 5. Regression test: the fix that was applied to ForkTask.ts
 //    Documents the expected behavior: getEnhancedEnv must be called
