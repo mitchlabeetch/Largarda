@@ -368,11 +368,6 @@ const ChatConversation: React.FC<{
 
   const headerExtraNode = (
     <div className='flex items-center gap-8px'>
-      {conversation ? (
-        <div className='shrink-0'>
-          <WorkspaceEditorLauncher conversation={conversation} />
-        </div>
-      ) : null}
       {conversation?.type === 'openclaw-gateway' && (
         <div className='shrink-0'>
           <StarOfficeMonitorCard
@@ -386,6 +381,11 @@ const ChatConversation: React.FC<{
       {conversation ? (
         <div className='shrink-0'>
           <CronJobManager conversationId={conversation.id} />
+        </div>
+      ) : null}
+      {conversation ? (
+        <div className='shrink-0'>
+          <WorkspaceEditorLauncher conversation={conversation} />
         </div>
       ) : null}
     </div>
