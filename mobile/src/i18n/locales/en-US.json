@@ -137,6 +137,7 @@
     "themeDark": "Dark",
     "about": "About",
     "version": "Version",
-    "language": "Language"
+    "language": "Language",
+    "languageSystem": "System"
   }
 }

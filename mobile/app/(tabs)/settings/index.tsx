@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,11 +6,23 @@ import { ThemedText } from '../../../src/components/ui/ThemedText';
 import { useConnection } from '../../../src/context/ConnectionContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useThemeColor } from '../../../src/hooks/useThemeColor';
+import { changeLanguage, getLanguagePreference } from '../../../src/i18n';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { config, connectionState, disconnect, tryReconnect } = useConnection();
   const { preference, setPreference } = useTheme();
+  const [language, setLanguage] = useState<'system' | 'en-US' | 'zh-CN'>('system');
+
+  useEffect(() => {
+    getLanguagePreference().then(setLanguage);
+  }, []);
+
+  const handleLanguageChange = (lang: 'system' | 'en-US' | 'zh-CN') => {
+    setLanguage(lang);
+    changeLanguage(lang);
+  };
+
   const surface = useThemeColor({}, 'surface');
   const border = useThemeColor({}, 'border');
   const success = useThemeColor({}, 'success');
@@ -86,7 +98,7 @@ export default function SettingsScreen() {
           {t('settings.appearance').toUpperCase()}
         </ThemedText>
         <View style={[styles.card, { backgroundColor: surface }]}>
-          <View style={styles.themeRow}>
+          <View style={[styles.themeRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: border }]}>
             <ThemedText>{t('settings.theme')}</ThemedText>
             <View style={styles.pillGroup}>
               {(
@@ -102,6 +114,35 @@ export default function SettingsScreen() {
                     key={key}
                     style={[styles.pill, { backgroundColor: selected ? tint : surface }]}
                     onPress={() => setPreference(key)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={icon} size={14} color={selected ? '#fff' : tint} />
+                    <ThemedText
+                      style={[styles.pillText, { color: selected ? '#fff' : undefined }]}
+                    >
+                      {label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          <View style={styles.themeRow}>
+            <ThemedText>{t('settings.language')}</ThemedText>
+            <View style={styles.pillGroup}>
+              {(
+                [
+                  { key: 'system', label: t('settings.languageSystem'), icon: 'phone-portrait-outline' },
+                  { key: 'en-US', label: 'English', icon: 'language-outline' },
+                  { key: 'zh-CN', label: '中文', icon: 'language-outline' },
+                ] as const
+              ).map(({ key, label, icon }) => {
+                const selected = language === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.pill, { backgroundColor: selected ? tint : surface }]}
+                    onPress={() => handleLanguageChange(key)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name={icon} size={14} color={selected ? '#fff' : tint} />
