@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { Colors } from '../src/constants/theme';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { ConnectionProvider } from '../src/context/ConnectionContext';
 import { WebSocketProvider } from '../src/context/WebSocketContext';
@@ -20,6 +21,28 @@ import { initI18n } from '../src/i18n';
 // Prevent splash screen from auto-hiding until routing is ready
 SplashScreen.preventAutoHideAsync();
 
+const LightNavTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: Colors.light.background,
+    card: Colors.light.background,
+    text: Colors.light.text,
+    border: Colors.light.border,
+  },
+};
+
+const DarkNavTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: Colors.dark.background,
+    card: Colors.dark.background,
+    text: Colors.dark.text,
+    border: Colors.dark.border,
+  },
+};
+
 // Initialize i18n early
 initI18n();
 
@@ -28,7 +51,7 @@ function AppContent() {
 
   return (
     <>
-      <NavigationThemeProvider value={effectiveTheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <NavigationThemeProvider value={effectiveTheme === 'dark' ? DarkNavTheme : LightNavTheme}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name='index' />
           <Stack.Screen name='connect' />
