@@ -28,6 +28,7 @@ export default function SettingsScreen() {
   const success = useThemeColor({}, 'success');
   const error = useThemeColor({}, 'error');
   const tint = useThemeColor({}, 'tint');
+  const textSecondary = useThemeColor({}, 'textSecondary');
 
   const handleDisconnect = () => {
     Alert.alert(t('common.disconnect'), t('connect.disconnected'), [
@@ -116,9 +117,9 @@ export default function SettingsScreen() {
                     onPress={() => setPreference(key)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name={icon} size={14} color={selected ? '#fff' : tint} />
+                    <Ionicons name={icon} size={14} color={selected ? '#fff' : textSecondary} />
                     <ThemedText
-                      style={[styles.pillText, { color: selected ? '#fff' : undefined }]}
+                      style={[styles.pillText, { color: selected ? '#fff' : textSecondary }]}
                     >
                       {label}
                     </ThemedText>
@@ -145,9 +146,9 @@ export default function SettingsScreen() {
                     onPress={() => handleLanguageChange(key)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name={icon} size={14} color={selected ? '#fff' : tint} />
+                    <Ionicons name={icon} size={14} color={selected ? '#fff' : textSecondary} />
                     <ThemedText
-                      style={[styles.pillText, { color: selected ? '#fff' : undefined }]}
+                      style={[styles.pillText, { color: selected ? '#fff' : textSecondary }]}
                     >
                       {label}
                     </ThemedText>
