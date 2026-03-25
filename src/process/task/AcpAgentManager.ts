@@ -608,16 +608,17 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
 
         // 首条消息时注入预设规则和 skills 索引（来自智能助手配置）
         // Inject preset context on first message (from smart assistant config)
-        // For backends with native skill support, skills are handled via workspace symlinks.
-        // For backends WITHOUT native support, fallback to prompt injection with skills index.
+        // For temp workspaces with native skill support, skills are handled via workspace symlinks.
+        // For custom workspaces or backends WITHOUT native support, fallback to prompt injection.
         if (this.isFirstMessage) {
-          if (hasNativeSkillSupport(this.options.backend)) {
-            // Native skill discovery — only inject preset rules
+          const useNativeSkills = hasNativeSkillSupport(this.options.backend) && !this.options.customWorkspace;
+          if (useNativeSkills) {
+            // Native skill discovery via symlinks — only inject preset rules
             if (this.options.presetContext) {
               contentToSend = `[Assistant Rules - You MUST follow these instructions]\n${this.options.presetContext}\n\n[User Request]\n${contentToSend}`;
             }
           } else {
-            // No native skill support — inject preset rules + skills index via prompt
+            // No native skill support or custom workspace — inject rules + skills index via prompt
             contentToSend = await prepareFirstMessageWithSkillsIndex(contentToSend, {
               presetContext: this.options.presetContext,
               enabledSkills: this.options.enabledSkills,
