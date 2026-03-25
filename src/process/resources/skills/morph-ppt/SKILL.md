@@ -69,13 +69,92 @@ Ask only when topic is unclear, otherwise proceed directly.
 **Before generation starts, always remind the user:**
 
 - The PPT file may be rewritten multiple times during build.
-- Once the PPT file appears in the workspace, the user can preview the live generation progress directly in AionUi.
-- Do **not** click "Open with system app" during generation, to avoid file lock / write conflicts.
+- Please do **not** open the target PPT while generation is running, to avoid file lock / write conflicts.
 - Use clear, direct language and make this a concrete warning, not an optional suggestion.
 
 **FIRST: Ensure latest officecli version**
 
 Follow the installation check in `reference/officecli-pptx-min.md` section 0 (checks version and upgrades only if needed).
+
+**SECOND: Define topic-driven custom style first (primary path)**
+
+Before selecting any remote style template, define a custom style from the topic itself:
+
+- Palette (primary/accent/background + contrast strategy)
+- Typography (title/body scale and hierarchy)
+- Mood/tone (e.g. analytical, futuristic, warm, editorial)
+
+This custom style is the primary design source.
+
+**THEN (optional): Resolve style template references from OfficeCli remote repository (on demand)**
+
+Follow `reference/remote-style-source.md` to:
+
+- Discover style template candidates from OfficeCli `Styles/`
+- Download only the selected template's `style.md` (and `build.sh` only if needed)
+- Store files in a temporary session directory and delete it after generation
+
+Do not pre-download all styles and do not keep persistent local style caches.
+
+Default behavior: skip template fetch and proceed with topic-driven custom style + component composition.
+
+Only fetch template references when:
+
+- User explicitly asks for a specific template/style, or
+- Topic keywords strongly match a known template and you need inspiration.
+
+If remote templates are unavailable, continue immediately with topic-driven custom style. Keep all Morph and quality requirements in this skill strictly enforced (`!!`/`#sN-` naming, ghosting, `transition=morph`, per-slide checks, final validation).
+
+**THIRD: Compose pages with component layering workflow**
+
+Use OfficeCli remote component library (on demand), defined in `reference/remote-style-source.md`.
+Fetch only needed component docs for the current task (default: `Styles/component/COMPONENT_LIBRARY.md`).
+If remote component fetch fails, continue with the rules below.
+
+Execution model:
+
+- `style.md` (from remote OfficeCli) defines palette, tone, and mood
+- Component composition defines structure and visual assembly
+- Do not treat `style.md` as a fixed layout template
+- Default generation should not depend on template lookup.
+
+Per-slide selection order (mandatory):
+
+1. Select exactly 1 `L1` main structure
+2. Add 1-2 `L0` background textures
+3. Add 0-2 `L2` decorations
+4. For data-heavy slides, add `L3` content components
+5. Add at most 1 `L4` typography effect
+6. Use at most 1 Morph primary technique
+
+Hard limits (mandatory):
+
+- Max 1 `L4` per slide
+- Max 1 Morph primary technique per slide
+- `L0` in text areas should stay subtle (`opacity <= 0.15`)
+- `L2` should not dominate text (`opacity <= 0.35` unless tiny and outside text zones)
+- If readability is weak: disable `L4` first, then reduce `L2`
+- If 2 consecutive slides fail readability/layout checks: downgrade to `L1 + L3 + max 1 L2`
+- Use actor naming format: `!!<layer>-<role>-<slot>` for persistent scene actors
+
+Failed-slide definition (for consecutive-failure counting):
+
+- Mark a slide as failed if any of these remains unresolved after one quick adjustment pass:
+  - Body text is covered or interfered with by `L2`/`L4`
+  - Contrast is insufficient for normal reading
+  - Critical overlap/crowding breaks readability
+- Consecutive rule:
+  - Pass => reset failed counter to 0
+  - Failed => increment by 1
+  - Counter reaches 2 => switch next slide(s) to downgrade mode (`L1 + L3 + max 1 L2`, no `L4`)
+
+**Rule priority (mandatory):**
+
+1. Hard constraints
+2. Readability checks
+3. Component/template examples
+
+If examples conflict with rules, rules always win.
 
 **IMPORTANT: Use morph-helpers for reliable workflow**
 
@@ -201,7 +280,7 @@ echo "✅ Build complete! Open $OUTPUT in PowerPoint to see morph animations."
 
 - `reference/pptx-design.md` — Design principles (Canvas, Fonts, Colors, Scene Actors, Page Types, Style References)
 - `reference/officecli-pptx-min.md` — Command syntax
-- `reference/styles/<name>/` — Visual style examples (optional inspiration, browse by use case in `styles/INDEX.md`)
+- `reference/remote-style-source.md` — OfficeCli remote style + component source (discover + on-demand fetch)
 
 ---
 
@@ -285,7 +364,7 @@ Ask user for feedback, support quick adjustments.
 - `reference/decision-rules.md` — Planning logic, Pyramid Principle
 - `reference/pptx-design.md` — Design principles (Canvas, Fonts, Colors, Scene Actors, Page Types)
 - `reference/officecli-pptx-min.md` — Tool syntax
-- `reference/styles/INDEX.md` — Visual style examples organized by use case
+- `reference/remote-style-source.md` — Remote style discovery and one-shot fetch workflow
 
 ---
 
