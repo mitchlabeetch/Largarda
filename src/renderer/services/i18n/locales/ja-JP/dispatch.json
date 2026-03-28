@@ -1,0 +1,51 @@
+{
+  "sidebar": {
+    "groupChatSection": "グループチャット",
+    "newGroupChat": "新規グループチャット",
+    "childTaskCount": "{{count}} タスク"
+  },
+  "create": {
+    "title": "グループチャットを作成",
+    "titleLabel": "グループチャットタイトル（任意）",
+    "titlePlaceholder": "例：React調査 + PPTアウトライン",
+    "confirm": "作成",
+    "noDispatchers": "利用可能なディスパッチャーがありません。先にディスパッチャーアシスタントを設定してください。",
+    "error": "グループチャットの作成に失敗しました。もう一度お試しください。",
+    "workspaceLabel": "ワークスペースディレクトリ（任意）",
+    "workspacePlaceholder": "ディレクトリ未選択（システムデフォルトを使用）",
+    "workspaceBrowse": "参照"
+  },
+  "header": {
+    "taskCount": "{{count}} タスク"
+  },
+  "timeline": {
+    "taskStarted": "開始済み",
+    "taskRunning": "実行中",
+    "taskCompleted": "完了",
+    "taskFailed": "失敗",
+    "taskCancelled": "キャンセル済み",
+    "turnsCompleted": "{{count}} ターン完了",
+    "viewDetails": "詳細を表示",
+    "hideDetails": "詳細を非表示",
+    "assigningTask": "{{agentName}} にタスクを割り当て中...",
+    "emptyState": "メッセージを送信して {{name}} とコラボレーションを開始",
+    "sendPlaceholder": "{{name}} にメッセージを送信...",
+    "noTranscript": "トランスクリプトがありません",
+    "userDisplayName": "あなた",
+    "dispatcherDisplayName": "ディスパッチャー"
+  },
+  "notification": {
+    "pendingTasks": "{{count}} 件の子タスク通知が保留中です。メッセージを送信して処理してください。"
+  },
+  "childTask": {
+    "cancel": "キャンセル",
+    "cancelling": "キャンセル中...",
+    "cancelConfirmTitle": "タスクをキャンセル",
+    "cancelConfirmContent": "タスク「{{title}}」をキャンセルしますか？",
+    "cancelFailed": "タスクのキャンセルに失敗しました"
+  },
+  "error": {
+    "groupChatLoadFailed": "グループチャットの読み込みに失敗しました",
+    "retry": "再試行"
+  }
+}

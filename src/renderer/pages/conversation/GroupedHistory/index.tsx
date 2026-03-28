@@ -10,14 +10,15 @@ import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
 import { CronJobIndicator, useCronJobsMap } from '@/renderer/pages/cron';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button, Empty, Input, Modal } from '@arco-design/web-react';
-import { FolderOpen } from '@icon-park/react';
+import { Button, Empty, Input, Modal, Tooltip } from '@arco-design/web-react';
+import { FolderOpen, Plus } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
 import WorkspaceCollapse from '../components/WorkspaceCollapse';
+import CreateGroupChatModal from '../dispatch/CreateGroupChatModal';
 import ConversationRow from './ConversationRow';
 import DragOverlayContent from './DragOverlayContent';
 import SortableConversationRow from './SortableConversationRow';
@@ -53,9 +54,13 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     hasCompletionUnread,
     expandedWorkspaces,
     pinnedConversations,
+    dispatchConversations,
+    dispatchChildCounts,
     timelineSections,
     handleToggleWorkspace,
   } = useConversations();
+
+  const [createGroupChatVisible, setCreateGroupChatVisible] = useState(false);
 
   const {
     selectedConversationIds,
@@ -129,6 +134,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       checked: selectedConversationIds.has(conversation.id),
       selected: id === conversation.id,
       menuVisible: dropdownVisibleId === conversation.id,
+      childTaskCount: conversation.type === 'dispatch' ? dispatchChildCounts.get(conversation.id) : undefined,
       onToggleChecked: toggleSelectedConversation,
       onConversationClick: handleConversationClick,
       onOpenMenu: handleOpenMenu,
@@ -148,6 +154,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       selectedConversationIds,
       id,
       dropdownVisibleId,
+      dispatchChildCounts,
       toggleSelectedConversation,
       handleConversationClick,
       handleOpenMenu,
@@ -168,7 +175,15 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   // Collect all sortable IDs for the pinned section
   const pinnedIds = useMemo(() => pinnedConversations.map((c) => c.id), [pinnedConversations]);
 
-  if (timelineSections.length === 0 && pinnedConversations.length === 0) {
+  const handleGroupChatCreated = useCallback(
+    (_conversationId: string) => {
+      setCreateGroupChatVisible(false);
+      if (onSessionClick) onSessionClick();
+    },
+    [onSessionClick]
+  );
+
+  if (timelineSections.length === 0 && pinnedConversations.length === 0 && dispatchConversations.length === 0) {
     return (
       <FlexFullContainer>
         <div className='flex-center'>
@@ -302,6 +317,12 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
         onCancel={() => setShowExportDirectorySelector(false)}
       />
 
+      <CreateGroupChatModal
+        visible={createGroupChatVisible}
+        onClose={() => setCreateGroupChatVisible(false)}
+        onCreated={handleGroupChatCreated}
+      />
+
       {batchMode && !collapsed && (
         <div className='px-12px pb-8px'>
           <div className='rd-8px bg-fill-1 p-10px flex flex-col gap-8px border border-solid border-[rgba(var(--primary-6),0.08)]'>
@@ -372,6 +393,27 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
             {activeId && activeConversation ? <DragOverlayContent conversation={activeConversation} /> : null}
           </DragOverlay>
         </DndContext>
+
+        <div className='mb-8px min-w-0'>
+          {!collapsed && (
+            <div className='chat-history__section px-12px py-8px text-13px text-t-secondary font-bold flex items-center justify-between'>
+              <span>{t('dispatch.sidebar.groupChatSection')}</span>
+              <Tooltip content={t('dispatch.sidebar.newGroupChat')} position='top' mini>
+                <span
+                  className='flex-center cursor-pointer hover:bg-fill-2 rd-4px p-2px transition-colors'
+                  onClick={() => setCreateGroupChatVisible(true)}
+                >
+                  <Plus theme='outline' size='14' />
+                </span>
+              </Tooltip>
+            </div>
+          )}
+          {dispatchConversations.length > 0 && (
+            <div className='min-w-0'>
+              {dispatchConversations.map((conversation) => renderConversation(conversation))}
+            </div>
+          )}
+        </div>
 
         {timelineSections.map((section) => (
           <div key={section.timeline} className='mb-8px min-w-0'>

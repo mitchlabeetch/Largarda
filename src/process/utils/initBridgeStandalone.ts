@@ -40,6 +40,7 @@ import { initMcpBridge } from '@process/bridge/mcpBridge';
 import { initNotificationBridge } from '@process/bridge/notificationBridge';
 import { initSystemSettingsBridge } from '@process/bridge/systemSettingsBridge';
 import { initTaskBridge } from '@process/bridge/taskBridge';
+import { initDispatchBridge } from '@process/bridge/dispatchBridge';
 
 logger.config({ print: true });
 
@@ -73,6 +74,7 @@ export async function initBridgeStandalone(): Promise<void> {
   initMcpBridge();
   initNotificationBridge();
   initTaskBridge(workerTaskManager);
+  initDispatchBridge(workerTaskManager, conversationService, repo);
   initStarOfficeBridge();
 
   // Initialize ACP detector to scan for installed CLI agents (claude, codex, etc.)

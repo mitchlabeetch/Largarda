@@ -34,9 +34,19 @@ class BaseAgentManager<Data, ConfirmationOption extends any = any>
 
   protected readonly emitter: IAgentEventEmitter;
 
-  constructor(type: AgentType, data: Data, emitter: IAgentEventEmitter, enableFork = true) {
+  /**
+   * @param type       Public agent type (e.g. 'dispatch'), used by listTasks() and AgentFactory routing
+   * @param data       Agent initialization data
+   * @param emitter    Event emitter for IPC communication
+   * @param enableFork Whether to enable fork (default true)
+   * @param workerType Actual worker file type (e.g. 'gemini'). Defaults to `type`.
+   *                   When type !== workerType, the worker process reuses workerType's .js file
+   *                   while the public type remains as specified.
+   */
+  constructor(type: AgentType, data: Data, emitter: IAgentEventEmitter, enableFork = true, workerType?: AgentType) {
+    const resolvedWorkerType = workerType ?? type;
     super(
-      path.resolve(__dirname, type + '.js'),
+      path.resolve(__dirname, resolvedWorkerType + '.js'),
       {
         type: type,
         data: data,

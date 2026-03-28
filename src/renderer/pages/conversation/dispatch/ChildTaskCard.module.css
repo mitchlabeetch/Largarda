@@ -1,0 +1,22 @@
+.card {
+  border-left-width: 3px;
+  border-left-style: solid;
+  transition: border-color 0.2s ease;
+}
+
+.cardStarted,
+.cardRunning {
+  border-left-color: rgb(var(--primary-6));
+}
+
+.cardCompleted {
+  border-left-color: rgb(var(--success-6));
+}
+
+.cardFailed {
+  border-left-color: rgb(var(--danger-6));
+}
+
+.cardCancelled {
+  border-left-color: var(--color-text-3);
+}

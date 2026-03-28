@@ -129,7 +129,22 @@ export const buildGroupedHistory = (
   conversations: TChatConversation[],
   t: (key: string) => string
 ): GroupedHistoryResult => {
-  const pinnedConversations = conversations
+  // Filter out dispatch_child conversations from sidebar display.
+  // Raw conversation list is preserved upstream for child count computation.
+  const visibleConversations = conversations.filter((conv) => {
+    // Check extra.dispatchSessionType, not conv.type — child conversations use type='gemini' (CR-004/BUG-001)
+    const extra = conv.extra as { dispatchSessionType?: string } | undefined;
+    return extra?.dispatchSessionType !== 'dispatch_child';
+  });
+
+  // Separate dispatch (dispatcher) conversations from normal conversations
+  const dispatchConversations = visibleConversations
+    .filter((conv) => conv.type === 'dispatch')
+    .toSorted((a, b) => getActivityTime(b) - getActivityTime(a));
+
+  const nonDispatchConversations = visibleConversations.filter((conv) => conv.type !== 'dispatch');
+
+  const pinnedConversations = nonDispatchConversations
     .filter((conversation) => isConversationPinned(conversation))
     .toSorted((a, b) => {
       const orderA = getConversationSortOrder(a);
@@ -140,10 +155,11 @@ export const buildGroupedHistory = (
       return getConversationPinnedAt(b) - getConversationPinnedAt(a);
     });
 
-  const normalConversations = conversations.filter((conversation) => !isConversationPinned(conversation));
+  const normalConversations = nonDispatchConversations.filter((conversation) => !isConversationPinned(conversation));
 
   return {
     pinnedConversations,
+    dispatchConversations,
     timelineSections: groupConversationsByTimelineAndWorkspace(normalConversations, t),
   };
 };

@@ -45,6 +45,12 @@ type Draft =
       content: string;
       atPath: Array<string | FileOrFolderItem>;
       uploadFile: string[];
+    }
+  | {
+      _type: 'dispatch';
+      content: string;
+      atPath: Array<string | FileOrFolderItem>;
+      uploadFile: string[];
     };
 
 /**
@@ -61,6 +67,7 @@ const store: SendBoxDraftStore = {
   'openclaw-gateway': new Map(),
   nanobot: new Map(),
   remote: new Map(),
+  dispatch: new Map(),
 };
 
 const setDraft = <K extends TChatConversation['type']>(

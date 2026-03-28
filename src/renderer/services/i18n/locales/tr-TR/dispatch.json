@@ -1,0 +1,51 @@
+{
+  "sidebar": {
+    "groupChatSection": "Grup Sohbetleri",
+    "newGroupChat": "Yeni Grup Sohbeti",
+    "childTaskCount": "{{count}} görev"
+  },
+  "create": {
+    "title": "Grup Sohbeti Oluştur",
+    "titleLabel": "Grup Sohbeti Başlığı (isteğe bağlı)",
+    "titlePlaceholder": "örn. React Araştırma + PPT Taslağı",
+    "confirm": "Oluştur",
+    "noDispatchers": "Kullanılabilir dağıtıcı yok. Lütfen önce bir dağıtıcı asistan yapılandırın.",
+    "error": "Grup sohbeti oluşturulamadı. Lütfen tekrar deneyin.",
+    "workspaceLabel": "Çalışma Alanı Dizini (isteğe bağlı)",
+    "workspacePlaceholder": "Dizin seçilmedi (sistem varsayılanı kullanılır)",
+    "workspaceBrowse": "Göz At"
+  },
+  "header": {
+    "taskCount": "{{count}} görev"
+  },
+  "timeline": {
+    "taskStarted": "Başlatıldı",
+    "taskRunning": "Çalışıyor",
+    "taskCompleted": "Tamamlandı",
+    "taskFailed": "Başarısız",
+    "taskCancelled": "İptal Edildi",
+    "turnsCompleted": "{{count}} tur tamamlandı",
+    "viewDetails": "Ayrıntıları Göster",
+    "hideDetails": "Ayrıntıları Gizle",
+    "assigningTask": "{{agentName}} adlı ajana görev atanıyor...",
+    "emptyState": "{{name}} ile işbirliğine başlamak için mesaj gönderin",
+    "sendPlaceholder": "{{name}} adlı kişiye mesaj gönderin...",
+    "noTranscript": "Transkript mevcut değil",
+    "userDisplayName": "Siz",
+    "dispatcherDisplayName": "Dağıtıcı"
+  },
+  "notification": {
+    "pendingTasks": "{{count}} alt görev bildirimi bekliyor. İşlemek için mesaj gönderin."
+  },
+  "childTask": {
+    "cancel": "İptal",
+    "cancelling": "İptal ediliyor...",
+    "cancelConfirmTitle": "Görevi İptal Et",
+    "cancelConfirmContent": "\"{{title}}\" görevi iptal edilsin mi?",
+    "cancelFailed": "Görev iptal edilemedi"
+  },
+  "error": {
+    "groupChatLoadFailed": "Grup sohbeti yüklenemedi",
+    "retry": "Tekrar Dene"
+  }
+}

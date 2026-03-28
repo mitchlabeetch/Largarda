@@ -1,0 +1,51 @@
+{
+  "sidebar": {
+    "groupChatSection": "Group Chats",
+    "newGroupChat": "New Group Chat",
+    "childTaskCount": "{{count}} task(s)"
+  },
+  "create": {
+    "title": "Create Group Chat",
+    "titleLabel": "Group Chat Title (optional)",
+    "titlePlaceholder": "e.g. React Research + PPT Outline",
+    "confirm": "Create",
+    "noDispatchers": "No dispatchers available. Please configure a dispatcher assistant first.",
+    "error": "Failed to create group chat. Please try again.",
+    "workspaceLabel": "Workspace Directory (optional)",
+    "workspacePlaceholder": "No directory selected (uses system default)",
+    "workspaceBrowse": "Browse"
+  },
+  "header": {
+    "taskCount": "{{count}} task(s)"
+  },
+  "timeline": {
+    "taskStarted": "Started",
+    "taskRunning": "Running",
+    "taskCompleted": "Completed",
+    "taskFailed": "Failed",
+    "taskCancelled": "Cancelled",
+    "turnsCompleted": "{{count}} turns completed",
+    "viewDetails": "View Details",
+    "hideDetails": "Hide Details",
+    "assigningTask": "Assigning task to {{agentName}}...",
+    "emptyState": "Send a message to start collaborating with {{name}}",
+    "sendPlaceholder": "Send a message to {{name}}...",
+    "noTranscript": "No transcript available",
+    "userDisplayName": "You",
+    "dispatcherDisplayName": "Dispatcher"
+  },
+  "notification": {
+    "pendingTasks": "{{count}} child task notification(s) pending. Send a message to process them."
+  },
+  "childTask": {
+    "cancel": "Cancel",
+    "cancelling": "Cancelling...",
+    "cancelConfirmTitle": "Cancel Task",
+    "cancelConfirmContent": "Cancel task \"{{title}}\"?",
+    "cancelFailed": "Failed to cancel task"
+  },
+  "error": {
+    "groupChatLoadFailed": "Failed to load group chat",
+    "retry": "Retry"
+  }
+}

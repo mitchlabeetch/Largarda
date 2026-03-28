@@ -165,6 +165,25 @@ export class ConversationServiceImpl implements IConversationService {
         conversation = await createRemoteAgent(params as any);
         break;
       }
+      case 'dispatch': {
+        // Dispatch conversations are lightweight — no workspace setup or skill symlinks needed.
+        // The caller (dispatchBridge) provides all fields directly via params.extra.
+        const now = Date.now();
+        conversation = {
+          type: 'dispatch',
+          model: params.model,
+          extra: {
+            workspace: params.extra.workspace || '',
+            dispatchSessionType: (params.extra as Record<string, unknown>).dispatchSessionType || 'normal',
+            ...(params.extra as Record<string, unknown>),
+          },
+          name: params.name || 'Group Chat',
+          id: params.id || uuid(),
+          createTime: now,
+          modifyTime: now,
+        } as TChatConversation;
+        break;
+      }
       default: {
         throw new Error(`Invalid conversation type: ${(params as any).type}`);
       }

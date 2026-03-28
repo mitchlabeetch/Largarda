@@ -18,6 +18,7 @@ import { CodexAgentManager } from '@process/agent/codex';
 import OpenClawAgentManager from './OpenClawAgentManager';
 import NanoBotAgentManager from './NanoBotAgentManager';
 import RemoteAgentManager from './RemoteAgentManager';
+import { DispatchAgentManager } from './dispatch';
 
 const agentFactory = new AgentFactory();
 
@@ -77,5 +78,29 @@ agentFactory.register('remote', (conv, opts) => {
   }) as unknown as ReturnType<typeof agentFactory.create>;
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+agentFactory.register('dispatch', (conv, opts) => {
+  const c = conv as any;
+  const manager = new DispatchAgentManager({
+    workspace: c.extra?.workspace || '',
+    conversation_id: c.id,
+    model: c.model,
+    presetRules: c.extra?.presetRules,
+    // Use yoloMode from build options first, fall back to persisted extra value
+    yoloMode: opts?.yoloMode ?? c.extra?.yoloMode,
+    dispatchSessionType: c.extra?.dispatchSessionType || 'dispatcher',
+    dispatcherName: c.name || 'Dispatcher',
+  });
+  // Dependencies are injected after WorkerTaskManager is created (see below)
+  return manager as unknown as ReturnType<typeof agentFactory.create>;
+});
+
 const conversationRepo = new SqliteConversationRepository();
 export const workerTaskManager = new WorkerTaskManager(agentFactory, conversationRepo);
+
+// Register post-build hook: inject dependencies into dispatch agents
+workerTaskManager.onPostBuild((task) => {
+  if (task.type === 'dispatch' && task instanceof DispatchAgentManager) {
+    task.setDependencies(workerTaskManager, conversationRepo);
+  }
+});

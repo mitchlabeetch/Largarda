@@ -169,7 +169,7 @@ interface IChatConversation<T, Extra> {
   type: T;
   extra: Extra;
   model: TProviderWithModel;
-  status?: 'pending' | 'running' | 'finished' | undefined;
+  status?: 'pending' | 'running' | 'idle' | 'finished' | 'failed' | undefined;
   /** 会话来源，默认为 aionui / Conversation source, defaults to aionui */
   source?: ConversationSource;
   /** Channel chat isolation ID (e.g. user:xxx, group:xxx) */
@@ -357,6 +357,42 @@ export type TChatConversation =
         }
       >,
       'model'
+    >
+  | IChatConversation<
+      'dispatch',
+      {
+        workspace: string;
+        customWorkspace?: boolean;
+        /** Dispatch session role: 'dispatcher' (parent) or 'dispatch_child' (sub-task) */
+        dispatchSessionType: 'dispatcher' | 'dispatch_child' | 'normal';
+        /** Parent session ID (only for dispatch_child) */
+        parentSessionId?: string;
+        /** Group chat display name */
+        groupChatName?: string;
+        /** Child task short title (only for dispatch_child) */
+        dispatchTitle?: string;
+        /** Temporary teammate config snapshot (only for dispatch_child) */
+        teammateConfig?: {
+          name: string;
+          avatar?: string;
+        };
+        /** System rules for the dispatch agent */
+        presetRules?: string;
+        /** Force yoloMode on child agents to auto-approve tool calls (see tech design 6.8) */
+        yoloMode?: boolean;
+        /** Pending notifications from completed child tasks (persisted for cold parent) */
+        pendingNotifications?: string[];
+        /** Enabled skills list */
+        enabledSkills?: string[];
+        /** Preset assistant ID */
+        presetAssistantId?: string;
+        /** Whether this conversation is pinned */
+        pinned?: boolean;
+        /** Pin timestamp in milliseconds */
+        pinnedAt?: number;
+        /** Explicit marker for temporary health-check conversations */
+        isHealthCheck?: boolean;
+      }
     >;
 
 export type IChatConversationRefer = {

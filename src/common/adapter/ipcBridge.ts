@@ -857,7 +857,7 @@ export interface IResponseMessage {
 
 export interface IConversationTurnCompletedEvent {
   sessionId: string;
-  status: 'pending' | 'running' | 'finished';
+  status: 'pending' | 'running' | 'idle' | 'finished' | 'failed';
   state:
     | 'ai_generating'
     | 'ai_waiting_input'
@@ -900,6 +900,50 @@ interface IBridgeResponse<D = {}> {
   data?: D;
   msg?: string;
 }
+
+// ==================== Dispatch API ====================
+
+export const dispatch = {
+  /** Create a new group chat session */
+  createGroupChat: bridge.buildProvider<
+    IBridgeResponse<{ conversationId: string }>,
+    { name?: string; workspace?: string }
+  >('dispatch.create-group-chat'),
+
+  /** Get group chat info (dispatcher + children + pending count) */
+  getGroupChatInfo: bridge.buildProvider<
+    IBridgeResponse<{
+      dispatcherId: string;
+      dispatcherName: string;
+      children: Array<{
+        sessionId: string;
+        title: string;
+        status: string;
+        teammateName?: string;
+        teammateAvatar?: string;
+        createdAt: number;
+        lastActivityAt: number;
+      }>;
+      pendingNotificationCount: number;
+    }>,
+    { conversationId: string }
+  >('dispatch.get-group-chat-info'),
+
+  /** Get child task transcript messages (on-demand, for card expansion) */
+  getChildTranscript: bridge.buildProvider<
+    IBridgeResponse<{
+      messages: Array<{ role: string; content: string; timestamp: number }>;
+      status: string;
+    }>,
+    { childSessionId: string; limit?: number }
+  >('dispatch.get-child-transcript'),
+
+  /** F-2.5: Cancel a running child task */
+  cancelChildTask: bridge.buildProvider<
+    IBridgeResponse<{ cancelled: boolean }>,
+    { conversationId: string; childSessionId: string }
+  >('dispatch.cancel-child-task'),
+};
 
 // ==================== Extensions API ====================
 

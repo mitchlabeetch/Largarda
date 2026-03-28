@@ -74,6 +74,29 @@ describe('i18n Modular Structure Tests', () => {
           const indexFile = path.join(LOCALES_DIR, lang, 'index.ts');
           expect(fs.existsSync(indexFile)).toBe(true);
         });
+
+        it('index.ts should import and export every required module', () => {
+          const indexFile = path.join(LOCALES_DIR, lang, 'index.ts');
+          const content = fs.readFileSync(indexFile, 'utf-8');
+          for (const mod of REQUIRED_MODULES) {
+            expect(content).toContain(`from './${mod}.json'`);
+            const exportBlock = content.match(/export default \{([\s\S]*?)\}/);
+            expect(exportBlock).not.toBeNull();
+            expect(exportBlock![1]).toContain(mod);
+          }
+        });
+
+        for (const mod of REQUIRED_MODULES) {
+          it(`${mod}.json should not have a redundant top-level wrapper key`, () => {
+            const moduleFile = path.join(LOCALES_DIR, lang, `${mod}.json`);
+            if (fs.existsSync(moduleFile)) {
+              const content = JSON.parse(fs.readFileSync(moduleFile, 'utf-8'));
+              const keys = Object.keys(content);
+              // If the only top-level key matches the module name, it's a double-nesting bug
+              expect(keys.length === 1 && keys[0] === mod).toBe(false);
+            }
+          });
+        }
       });
     }
   });

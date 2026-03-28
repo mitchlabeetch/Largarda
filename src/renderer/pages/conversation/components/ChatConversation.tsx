@@ -25,6 +25,7 @@ import CodexChat from '../platforms/codex/CodexChat';
 import NanobotChat from '../platforms/nanobot/NanobotChat';
 import OpenClawChat from '../platforms/openclaw/OpenClawChat';
 import RemoteChat from '../platforms/remote/RemoteChat';
+import GroupChatView from '../dispatch/GroupChatView';
 import GeminiChat from '../platforms/gemini/GeminiChat';
 import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
 import GeminiModelSelector from '../platforms/gemini/GeminiModelSelector';
@@ -273,6 +274,11 @@ const ChatConversation: React.FC<{
     // Gemini 会话独立渲染，带右上角模型选择
     // Render Gemini layout with dedicated top-right model selector
     return <GeminiConversationPanel key={conversation.id} conversation={conversation} sliderTitle={sliderTitle} />;
+  }
+
+  // Dispatch conversations use GroupChatView with workspaceEnabled={false}
+  if (conversation && conversation.type === 'dispatch') {
+    return <GroupChatView key={conversation.id} conversation={conversation} />;
   }
 
   // 如果有预设助手信息，使用预设助手的 logo 和名称；加载中时不进入 fallback；否则使用 backend 的 logo

@@ -70,10 +70,10 @@ export interface IConversationRow {
   id: string;
   user_id: string;
   name: string;
-  type: 'gemini' | 'acp' | 'codex' | 'openclaw-gateway' | 'nanobot' | 'remote';
+  type: 'gemini' | 'acp' | 'codex' | 'openclaw-gateway' | 'nanobot' | 'remote' | 'dispatch';
   extra: string; // JSON string of extra data
   model?: string; // JSON string of TProviderWithModel (gemini type has this)
-  status?: 'pending' | 'running' | 'finished';
+  status?: 'pending' | 'running' | 'idle' | 'finished' | 'failed';
   source?: ConversationSource; // 会话来源 / Conversation source
   channel_chat_id?: string; // Channel chat isolation ID (e.g. user:xxx or group:xxx)
   created_at: number;
@@ -195,6 +195,16 @@ export function rowToConversation(row: IConversationRow): TChatConversation {
       ...base,
       type: 'remote' as const,
       extra: JSON.parse(row.extra),
+    } as TChatConversation;
+  }
+
+  // Dispatch type (multi-agent coordination)
+  if (row.type === 'dispatch') {
+    return {
+      ...base,
+      type: 'dispatch' as const,
+      extra: JSON.parse(row.extra),
+      model: row.model ? JSON.parse(row.model) : undefined,
     } as TChatConversation;
   }
 

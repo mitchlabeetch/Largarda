@@ -1,0 +1,51 @@
+{
+  "sidebar": {
+    "groupChatSection": "群聊",
+    "newGroupChat": "新增群聊",
+    "childTaskCount": "{{count}} 個任務"
+  },
+  "create": {
+    "title": "建立群聊",
+    "titleLabel": "群聊標題（選填）",
+    "titlePlaceholder": "例如：React 調研 + PPT 大綱",
+    "confirm": "建立",
+    "noDispatchers": "目前沒有可用的調度助手，請先設定調度助手。",
+    "error": "建立群聊失敗，請重試。",
+    "workspaceLabel": "工作區目錄（選填）",
+    "workspacePlaceholder": "未選擇目錄（使用系統預設）",
+    "workspaceBrowse": "瀏覽"
+  },
+  "header": {
+    "taskCount": "{{count}} 個任務"
+  },
+  "timeline": {
+    "taskStarted": "已啟動",
+    "taskRunning": "執行中",
+    "taskCompleted": "已完成",
+    "taskFailed": "失敗",
+    "taskCancelled": "已取消",
+    "turnsCompleted": "已完成 {{count}} 輪",
+    "viewDetails": "檢視詳情",
+    "hideDetails": "收起詳情",
+    "assigningTask": "正在將任務分配給 {{agentName}}...",
+    "emptyState": "傳送訊息開始與 {{name}} 協作",
+    "sendPlaceholder": "傳送訊息給 {{name}}...",
+    "noTranscript": "暫無對話記錄",
+    "userDisplayName": "你",
+    "dispatcherDisplayName": "調度器"
+  },
+  "notification": {
+    "pendingTasks": "有 {{count}} 條子任務通知待處理，傳送訊息以查看。"
+  },
+  "childTask": {
+    "cancel": "取消",
+    "cancelling": "取消中...",
+    "cancelConfirmTitle": "取消任務",
+    "cancelConfirmContent": "確定取消任務「{{title}}」？",
+    "cancelFailed": "取消任務失敗"
+  },
+  "error": {
+    "groupChatLoadFailed": "載入群聊失敗",
+    "retry": "重試"
+  }
+}

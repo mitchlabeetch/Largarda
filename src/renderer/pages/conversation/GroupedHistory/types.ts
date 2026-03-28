@@ -26,6 +26,7 @@ export type TimelineSection = {
 
 export type GroupedHistoryResult = {
   pinnedConversations: TChatConversation[];
+  dispatchConversations: TChatConversation[];
   timelineSections: TimelineSection[];
 };
 
@@ -50,6 +51,8 @@ export type ConversationRowProps = {
   checked: boolean;
   selected: boolean;
   menuVisible: boolean;
+  /** Active child task count for dispatch conversations */
+  childTaskCount?: number;
   onToggleChecked: (conversation: TChatConversation) => void;
   onConversationClick: (conversation: TChatConversation) => void;
   onOpenMenu: (conversation: TChatConversation) => void;

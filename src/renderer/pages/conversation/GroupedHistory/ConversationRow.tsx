@@ -12,7 +12,7 @@ import { CronJobIndicator } from '@/renderer/pages/cron';
 import { cleanupSiderTooltips, getSiderTooltipProps } from '@/renderer/utils/ui/siderTooltip';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { Checkbox, Dropdown, Menu, Spin, Tooltip } from '@arco-design/web-react';
-import { DeleteOne, EditOne, Export, MessageOne, Pushpin } from '@icon-park/react';
+import { DeleteOne, EditOne, Export, MessageOne, People, Pushpin } from '@icon-park/react';
 import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,7 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
     checked,
     selected,
     menuVisible,
+    childTaskCount,
   } = props;
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
@@ -53,7 +54,18 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
   const siderTooltipProps = getSiderTooltipProps(tooltipEnabled);
   const inlineNameTooltipEnabled = !collapsed && !isMobile && !!conversation.name;
 
+  const isDispatchConversation = conversation.type === 'dispatch';
+
   const renderLeadingIcon = () => {
+    if (isDispatchConversation) {
+      const extra = conversation.extra as { teammateConfig?: { avatar?: string } };
+      const avatar = extra.teammateConfig?.avatar;
+      if (avatar) {
+        return <span className='text-18px leading-none flex-shrink-0'>{avatar}</span>;
+      }
+      return <People theme='outline' size='20' className='line-height-0 flex-shrink-0' />;
+    }
+
     if (cronStatus !== 'none') {
       return <CronJobIndicator status={cronStatus} size={20} className='flex-shrink-0' />;
     }
@@ -151,7 +163,13 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
           </Tooltip>
         </FlexFullContainer>
 
-        {renderCompletionUnreadDot()}
+        {isDispatchConversation && typeof childTaskCount === 'number' && childTaskCount > 0 && (
+          <span className='ml-4px text-11px text-t-secondary bg-fill-2 px-4px py-1px rd-full flex-shrink-0'>
+            {childTaskCount}
+          </span>
+        )}
+
+        {!isDispatchConversation && renderCompletionUnreadDot()}
         {!batchMode && (
           <div
             className={classNames(

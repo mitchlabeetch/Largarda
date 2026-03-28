@@ -1,0 +1,51 @@
+{
+  "sidebar": {
+    "groupChatSection": "그룹 채팅",
+    "newGroupChat": "새 그룹 채팅",
+    "childTaskCount": "{{count}}개 작업"
+  },
+  "create": {
+    "title": "그룹 채팅 만들기",
+    "titleLabel": "그룹 채팅 제목 (선택사항)",
+    "titlePlaceholder": "예: React 조사 + PPT 개요",
+    "confirm": "만들기",
+    "noDispatchers": "사용 가능한 디스패처가 없습니다. 먼저 디스패처 어시스턴트를 설정해주세요.",
+    "error": "그룹 채팅 생성에 실패했습니다. 다시 시도해주세요.",
+    "workspaceLabel": "작업 공간 디렉터리 (선택사항)",
+    "workspacePlaceholder": "디렉터리 미선택 (시스템 기본값 사용)",
+    "workspaceBrowse": "찾아보기"
+  },
+  "header": {
+    "taskCount": "{{count}}개 작업"
+  },
+  "timeline": {
+    "taskStarted": "시작됨",
+    "taskRunning": "실행 중",
+    "taskCompleted": "완료",
+    "taskFailed": "실패",
+    "taskCancelled": "취소됨",
+    "turnsCompleted": "{{count}}회 완료",
+    "viewDetails": "상세 보기",
+    "hideDetails": "상세 숨기기",
+    "assigningTask": "{{agentName}}에게 작업 할당 중...",
+    "emptyState": "메시지를 보내 {{name}}와 협업을 시작하세요",
+    "sendPlaceholder": "{{name}}에게 메시지 보내기...",
+    "noTranscript": "대화 기록이 없습니다",
+    "userDisplayName": "나",
+    "dispatcherDisplayName": "디스패처"
+  },
+  "notification": {
+    "pendingTasks": "{{count}}건의 하위 작업 알림이 보류 중입니다. 메시지를 보내 처리하세요."
+  },
+  "childTask": {
+    "cancel": "취소",
+    "cancelling": "취소 중...",
+    "cancelConfirmTitle": "작업 취소",
+    "cancelConfirmContent": "작업 \"{{title}}\"을(를) 취소하시겠습니까?",
+    "cancelFailed": "작업 취소에 실패했습니다"
+  },
+  "error": {
+    "groupChatLoadFailed": "그룹 채팅을 불러오지 못했습니다",
+    "retry": "다시 시도"
+  }
+}

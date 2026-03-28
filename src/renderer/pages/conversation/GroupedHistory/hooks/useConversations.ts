@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useConversationHistoryContext } from '@/renderer/hooks/context/ConversationHistoryContext';
 import {
@@ -24,6 +24,20 @@ export const useConversations = () => {
     setActiveConversation,
     groupedHistory,
   } = useConversationHistoryContext();
+
+  // Compute dispatch child counts from the full (unfiltered) conversation list.
+  // This must happen before buildGroupedHistory filters out dispatch_child from display.
+  const dispatchChildCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    conversations.forEach((conv) => {
+      // Check extra.dispatchSessionType, not conv.type — child conversations use type='gemini' (CR-004/BUG-001)
+      const extra = conv.extra as { dispatchSessionType?: string; parentSessionId?: string } | undefined;
+      if (extra?.dispatchSessionType === 'dispatch_child' && extra.parentSessionId) {
+        counts.set(extra.parentSessionId, (counts.get(extra.parentSessionId) ?? 0) + 1);
+      }
+    });
+    return counts;
+  }, [conversations]);
 
   // Track whether auto-expand has already been performed to avoid
   // re-expanding workspaces after a user manually collapses them (#1156)
@@ -58,7 +72,7 @@ export const useConversations = () => {
     dispatchWorkspaceExpansionChange(expandedWorkspaces);
   }, [expandedWorkspaces]);
 
-  const { pinnedConversations, timelineSections } = groupedHistory;
+  const { pinnedConversations, dispatchConversations, timelineSections } = groupedHistory;
 
   // Auto-expand all workspaces on first load only (#1156)
   useEffect(() => {
@@ -113,6 +127,8 @@ export const useConversations = () => {
     hasCompletionUnread,
     expandedWorkspaces,
     pinnedConversations,
+    dispatchConversations,
+    dispatchChildCounts,
     timelineSections,
     handleToggleWorkspace,
   };
