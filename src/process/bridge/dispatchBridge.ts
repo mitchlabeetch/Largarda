@@ -40,15 +40,6 @@ export function initDispatchBridge(
       // Read config directly via ProcessConfig (file I/O) — never via ConfigStorage
       // (bridge invoke) which deadlocks inside a main-process provider handler.
       //
-      // gemini.defaultModel only stores { id, useModel } — a reference to the provider.
-      // We must look up the full provider (with apiKey, baseUrl, platform) from model.config
-      // to avoid "OpenAI API key is required" errors in the Gemini CLI worker.
-      const geminiDefaultModel = await ProcessConfig.get('gemini.defaultModel');
-      const modelRef =
-        typeof geminiDefaultModel === 'object' && geminiDefaultModel !== null
-          ? (geminiDefaultModel as { id: string; useModel: string })
-          : { id: 'gemini', useModel: String(geminiDefaultModel || 'gemini-2.0-flash') };
-
       // Look up full provider config (apiKey, baseUrl, platform, etc.)
       const providers = ((await ProcessConfig.get('model.config')) || []) as Array<{
         id: string;
@@ -58,25 +49,75 @@ export function initDispatchBridge(
         apiKey: string;
         model: string[];
       }>;
-      const provider = providers.find((p) => p.id === modelRef.id);
 
-      const defaultModel: TProviderWithModel = provider
-        ? { ...provider, useModel: modelRef.useModel }
-        : ({ id: modelRef.id, useModel: modelRef.useModel } as TProviderWithModel);
+      // Phase 2b: Model override support
+      let defaultModel: TProviderWithModel;
+      if (params.modelOverride) {
+        const overrideProvider = providers.find((p) => p.id === params.modelOverride!.providerId);
+        defaultModel = overrideProvider
+          ? { ...overrideProvider, useModel: params.modelOverride.useModel }
+          : ({ id: params.modelOverride.providerId, useModel: params.modelOverride.useModel } as TProviderWithModel);
+      } else {
+        // gemini.defaultModel only stores { id, useModel } — a reference to the provider.
+        // We must look up the full provider (with apiKey, baseUrl, platform) from model.config
+        // to avoid "OpenAI API key is required" errors in the Gemini CLI worker.
+        const geminiDefaultModel = await ProcessConfig.get('gemini.defaultModel');
+        const modelRef =
+          typeof geminiDefaultModel === 'object' && geminiDefaultModel !== null
+            ? (geminiDefaultModel as { id: string; useModel: string })
+            : { id: 'gemini', useModel: String(geminiDefaultModel || 'gemini-2.0-flash') };
+        const provider = providers.find((p) => p.id === modelRef.id);
+        defaultModel = provider
+          ? { ...provider, useModel: modelRef.useModel }
+          : ({ id: modelRef.id, useModel: modelRef.useModel } as TProviderWithModel);
+      }
 
       // Determine workspace from params or use system default via ProcessEnv
       const envDirs = await ProcessEnv.get('aionui.dir');
       const workspace = params.workspace || envDirs?.workDir || '';
 
+      // Phase 2b: Leader agent snapshot
+      let leaderAgentId: string | undefined;
+      let leaderPresetRules: string | undefined;
+      let leaderName: string | undefined;
+      let leaderAvatar: string | undefined;
+      if (params.leaderAgentId) {
+        // AcpBackendConfig uses 'context' field; stored as 'leaderPresetRules' in dispatch extra
+        const customAgents =
+          ((await ProcessConfig.get('acp.customAgents')) as Array<
+            Record<string, unknown> & { id: string; name: string; avatar?: string; context?: string; enabled?: boolean }
+          >) || [];
+        const leaderAgent = customAgents.find((a) => a.id === params.leaderAgentId);
+        if (leaderAgent) {
+          leaderAgentId = leaderAgent.id;
+          leaderPresetRules = leaderAgent.context; // AcpBackendConfig.context → leaderPresetRules
+          leaderName = leaderAgent.name;
+          leaderAvatar = leaderAgent.avatar;
+        } else {
+          mainWarn('[DispatchBridge:createGroupChat]', 'Leader agent not found: ' + params.leaderAgentId);
+        }
+      }
+
+      // Phase 2b: Seed messages
+      const seedMessages = params.seedMessages?.trim() || undefined;
+
+      // Use leader name as dispatcher name if available
+      const displayName = leaderName || params.name || 'Group Chat';
+
       await conversationService.createConversation({
         id,
         type: 'dispatch',
-        name: params.name || 'Group Chat',
+        name: displayName,
         model: defaultModel,
         extra: {
           workspace,
           dispatchSessionType: 'dispatcher',
           groupChatName: params.name || undefined,
+          leaderAgentId,
+          leaderPresetRules,
+          leaderName,
+          leaderAvatar,
+          seedMessages,
         },
       });
 
@@ -194,8 +235,9 @@ export function initDispatchBridge(
     try {
       // Query messages directly via repository to avoid IPC round-trip in the process layer
       const pageSize = params.limit || 50;
+      const offset = params.offset || 0;
       const result = conversationRepo
-        ? await conversationRepo.getMessages(params.childSessionId, 0, pageSize)
+        ? await conversationRepo.getMessages(params.childSessionId, offset, pageSize)
         : { data: [] as Array<{ position?: string; content: unknown; createdAt?: number }> };
       const dbMessages = result.data;
       const conversation = await conversationService.getConversation(params.childSessionId);

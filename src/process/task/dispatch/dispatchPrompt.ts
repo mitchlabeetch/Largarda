@@ -13,8 +13,14 @@
  *
  * English prompt: this is consumed by the AI, not displayed to users.
  */
-export function buildDispatchSystemPrompt(dispatcherName: string): string {
-  return `You are "${dispatcherName}", a dispatch orchestrator in a group chat.
+export function buildDispatchSystemPrompt(
+  dispatcherName: string,
+  options?: {
+    leaderProfile?: string;
+    customInstructions?: string;
+  }
+): string {
+  let prompt = `You are "${dispatcherName}", a dispatch orchestrator in a group chat.
 
 ## Your Role
 You coordinate complex tasks by breaking them into subtasks and delegating to specialized agents.
@@ -63,4 +69,21 @@ When you identify that a task needs a specialized role, create a teammate config
 \`\`\`
 Pass it as the "teammate" parameter in start_task. The child agent will adopt this persona.
 `;
+
+  if (options?.leaderProfile) {
+    prompt += `
+## Leader Agent Profile
+The following is your additional persona information. It does NOT change your core dispatch responsibilities above.
+${options.leaderProfile}
+`;
+  }
+
+  if (options?.customInstructions) {
+    prompt += `
+## User Custom Instructions
+${options.customInstructions}
+`;
+  }
+
+  return prompt;
 }

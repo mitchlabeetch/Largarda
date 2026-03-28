@@ -13,7 +13,16 @@
     "error": "Failed to create group chat. Please try again.",
     "workspaceLabel": "Workspace Directory (optional)",
     "workspacePlaceholder": "No directory selected (uses system default)",
-    "workspaceBrowse": "Browse"
+    "workspaceBrowse": "Browse",
+    "leaderAgentLabel": "Leader Agent / Persona (optional)",
+    "leaderAgentPlaceholder": "Select an agent persona...",
+    "modelLabel": "Model (optional)",
+    "modelPlaceholder": "Use default model",
+    "modelTooltip": "Dispatch requires a model with tool calling (function calling) support",
+    "advancedSettings": "Advanced Settings",
+    "seedMessageLabel": "Custom System Prompt",
+    "seedMessagePlaceholder": "Add additional instructions for the orchestrator...",
+    "seedMessageHint": "These instructions will be appended to the dispatch system prompt (max 2000 chars)."
   },
   "header": {
     "taskCount": "{{count}} task(s)"
@@ -43,6 +52,18 @@
     "cancelConfirmTitle": "Cancel Task",
     "cancelConfirmContent": "Cancel task \"{{title}}\"?",
     "cancelFailed": "Failed to cancel task"
+  },
+  "taskPanel": {
+    "noTranscript": "No transcript available yet",
+    "refresh": "Refresh",
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "idle": "Idle",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
   },
   "error": {
     "groupChatLoadFailed": "Failed to load group chat",

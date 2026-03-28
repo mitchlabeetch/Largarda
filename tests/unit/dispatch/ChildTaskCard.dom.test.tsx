@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const loadTranscriptMock = vi.fn();
 const getTranscriptMock = vi.fn();
 const isTranscriptLoadingMock = vi.fn();
+const onViewDetailMock = vi.fn();
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -31,6 +32,7 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
 vi.mock('@icon-park/react', () => ({
   CheckOne: (props: Record<string, unknown>) => <span data-testid='icon-check-one' {...props} />,
   CloseOne: (props: Record<string, unknown>) => <span data-testid='icon-close-one' {...props} />,
+  Forbid: (props: Record<string, unknown>) => <span data-testid='icon-forbid' {...props} />,
   Loading: (props: Record<string, unknown>) => <span data-testid='icon-loading' {...props} />,
   People: (props: Record<string, unknown>) => <span data-testid='icon-people' {...props} />,
 }));
@@ -108,50 +110,40 @@ describe('ChildTaskCard', () => {
     expect(screen.getByText('dispatch.timeline.viewDetails')).toBeInTheDocument();
   });
 
-  // CMP-CC-007: Clicking View Details loads transcript and toggles to Hide Details
+  // CMP-CC-007: Clicking View Details calls onViewDetail with childTaskId
   it('CMP-CC-007: clicking View Details loads transcript and shows Hide Details', async () => {
-    render(<ChildTaskCard message={makeMessage()} />);
+    render(<ChildTaskCard message={makeMessage()} onViewDetail={onViewDetailMock} />);
 
     const viewBtn = screen.getByText('dispatch.timeline.viewDetails');
     await act(async () => {
       fireEvent.click(viewBtn);
     });
 
-    expect(loadTranscriptMock).toHaveBeenCalledWith('child-1');
-    expect(isTranscriptLoadingMock).toHaveBeenCalledWith('child-1');
-    expect(screen.getByText('dispatch.timeline.hideDetails')).toBeInTheDocument();
+    expect(onViewDetailMock).toHaveBeenCalledWith('child-1');
   });
 
-  // CMP-CC-008: Shows no transcript message when expanded and transcript is empty
+  // CMP-CC-008: Clicking View Details delegates to onViewDetail (no inline transcript)
   it('CMP-CC-008: shows no transcript message when transcript is empty', async () => {
-    getTranscriptMock.mockReturnValue([]);
-
-    render(<ChildTaskCard message={makeMessage()} />);
+    render(<ChildTaskCard message={makeMessage()} onViewDetail={onViewDetailMock} />);
 
     const viewBtn = screen.getByText('dispatch.timeline.viewDetails');
     await act(async () => {
       fireEvent.click(viewBtn);
     });
 
-    expect(screen.getByText('dispatch.timeline.noTranscript')).toBeInTheDocument();
+    expect(onViewDetailMock).toHaveBeenCalledWith('child-1');
   });
 
-  // CMP-CC-009: Shows transcript messages when expanded and transcript has data
+  // CMP-CC-009: Clicking View Details with transcript data delegates to onViewDetail
   it('CMP-CC-009: shows transcript messages when data is available', async () => {
-    getTranscriptMock.mockReturnValue([
-      { role: 'user', content: 'Hello agent', timestamp: 1 },
-      { role: 'assistant', content: 'Working on it', timestamp: 2 },
-    ]);
-
-    render(<ChildTaskCard message={makeMessage()} />);
+    render(<ChildTaskCard message={makeMessage()} onViewDetail={onViewDetailMock} />);
 
     const viewBtn = screen.getByText('dispatch.timeline.viewDetails');
     await act(async () => {
       fireEvent.click(viewBtn);
     });
 
-    expect(screen.getByText('Hello agent')).toBeInTheDocument();
-    expect(screen.getByText('Working on it')).toBeInTheDocument();
+    expect(onViewDetailMock).toHaveBeenCalledWith('child-1');
   });
 
   // CMP-CC-010: Renders avatar emoji when provided
@@ -182,33 +174,28 @@ describe('ChildTaskCard', () => {
     expect(screen.getByText('dispatch.timeline.taskStarted')).toBeInTheDocument();
   });
 
-  // EDGE-007: No childTaskId means loadTranscript not called
+  // EDGE-007: No childTaskId means onViewDetail not called
   it('EDGE-007: does not call loadTranscript when childTaskId is undefined', async () => {
-    render(<ChildTaskCard message={makeMessage({ childTaskId: undefined })} />);
+    render(<ChildTaskCard message={makeMessage({ childTaskId: undefined })} onViewDetail={onViewDetailMock} />);
 
     const viewBtn = screen.getByText('dispatch.timeline.viewDetails');
     await act(async () => {
       fireEvent.click(viewBtn);
     });
 
-    expect(loadTranscriptMock).not.toHaveBeenCalled();
+    expect(onViewDetailMock).not.toHaveBeenCalled();
   });
 
-  // CMP-CC-013: Loading spinner shown while transcript is loading
+  // CMP-CC-013: View Details button calls onViewDetail (transcript loading handled by parent)
   it('CMP-CC-013: shows spinner when transcript is loading', async () => {
-    isTranscriptLoadingMock.mockReturnValue(true);
-
-    render(<ChildTaskCard message={makeMessage()} />);
+    render(<ChildTaskCard message={makeMessage()} onViewDetail={onViewDetailMock} />);
 
     const viewBtn = screen.getByText('dispatch.timeline.viewDetails');
     await act(async () => {
       fireEvent.click(viewBtn);
     });
 
-    // When loading, the Spin component is rendered inside the expanded area
-    const expandedArea = screen.getByText('dispatch.timeline.hideDetails').closest('[class]');
-    expect(expandedArea).not.toBeNull();
-    // The noTranscript message should NOT be shown while loading
-    expect(screen.queryByText('dispatch.timeline.noTranscript')).not.toBeInTheDocument();
+    // onViewDetail is called — transcript loading handled by TaskPanel
+    expect(onViewDetailMock).toHaveBeenCalledWith('child-1');
   });
 });

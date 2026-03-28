@@ -15,6 +15,7 @@ import { emitter } from '@/renderer/utils/emitter';
 
 import ChatLayout from '../components/ChatLayout';
 import GroupChatTimeline from './GroupChatTimeline';
+import TaskPanel from './TaskPanel';
 import { useGroupChatInfo } from './hooks/useGroupChatInfo';
 import { useGroupChatMessages } from './hooks/useGroupChatMessages';
 import type { GroupChatViewProps } from './types';
@@ -26,6 +27,7 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   const [sendBoxContent, setSendBoxContent] = useState('');
   const [sending, setSending] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [selectedChildTaskId, setSelectedChildTaskId] = useState<string | null>(null);
 
   const extra = conversation.extra as {
     groupChatName?: string;
@@ -63,6 +65,16 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
     },
     [conversation.id, refreshInfo, t]
   );
+
+  // Phase 2b: TaskPanel toggle logic
+  const handleViewDetail = useCallback((childTaskId: string) => {
+    setSelectedChildTaskId((prev) => (prev === childTaskId ? null : childTaskId));
+  }, []);
+
+  const selectedChildInfo = useMemo(() => {
+    if (!selectedChildTaskId || !info?.children) return undefined;
+    return info.children.find((c) => c.sessionId === selectedChildTaskId);
+  }, [selectedChildTaskId, info?.children]);
 
   const handleSend = useCallback(
     async (message: string) => {
@@ -122,49 +134,65 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
       conversationId={conversation.id}
       title={conversation.name}
     >
-      <div className='flex-1 flex flex-col min-h-0'>
-        {showBanner && (
-          <div
-            className='mx-16px mt-8px px-16px py-12px rd-8px flex items-center justify-between'
-            style={{
-              backgroundColor: 'rgba(var(--primary-6), 0.08)',
-              border: '1px solid rgba(var(--primary-6), 0.2)',
-            }}
-          >
-            <div className='flex items-center gap-8px text-14px text-t-primary'>
-              <Info theme='outline' size='16' fill='rgb(var(--primary-6))' />
-              <span>{t('dispatch.notification.pendingTasks', { count: pendingCount })}</span>
+      <div className='flex-1 flex flex-row min-h-0'>
+        {/* Left: Timeline + SendBox */}
+        <div className='flex-1 flex flex-col min-h-0 min-w-0'>
+          {showBanner && (
+            <div
+              className='mx-16px mt-8px px-16px py-12px rd-8px flex items-center justify-between'
+              style={{
+                backgroundColor: 'rgba(var(--primary-6), 0.08)',
+                border: '1px solid rgba(var(--primary-6), 0.2)',
+              }}
+            >
+              <div className='flex items-center gap-8px text-14px text-t-primary'>
+                <Info theme='outline' size='16' fill='rgb(var(--primary-6))' />
+                <span>{t('dispatch.notification.pendingTasks', { count: pendingCount })}</span>
+              </div>
+              <Button
+                type='text'
+                size='mini'
+                icon={<Close theme='outline' size='14' />}
+                onClick={() => setBannerDismissed(true)}
+              />
             </div>
-            <Button
-              type='text'
-              size='mini'
-              icon={<Close theme='outline' size='14' />}
-              onClick={() => setBannerDismissed(true)}
+          )}
+
+          <GroupChatTimeline
+            messages={messages}
+            isLoading={messagesLoading}
+            dispatcherName={dispatcherName}
+            dispatcherAvatar={dispatcherAvatar}
+            onCancelChild={handleCancelChild}
+            conversationId={conversation.id}
+            onViewDetail={handleViewDetail}
+            selectedChildTaskId={selectedChildTaskId}
+          />
+
+          <div className='max-w-800px w-full mx-auto mb-16px px-20px'>
+            <SendBox
+              value={sendBoxContent}
+              onChange={setSendBoxContent}
+              loading={sending}
+              placeholder={t('dispatch.timeline.sendPlaceholder', { name: dispatcherName })}
+              onSend={handleSend}
+              defaultMultiLine={true}
+              lockMultiLine={true}
+              className='z-10'
             />
           </div>
-        )}
-
-        <GroupChatTimeline
-          messages={messages}
-          isLoading={messagesLoading}
-          dispatcherName={dispatcherName}
-          dispatcherAvatar={dispatcherAvatar}
-          onCancelChild={handleCancelChild}
-          conversationId={conversation.id}
-        />
-
-        <div className='max-w-800px w-full mx-auto mb-16px px-20px'>
-          <SendBox
-            value={sendBoxContent}
-            onChange={setSendBoxContent}
-            loading={sending}
-            placeholder={t('dispatch.timeline.sendPlaceholder', { name: dispatcherName })}
-            onSend={handleSend}
-            defaultMultiLine={true}
-            lockMultiLine={true}
-            className='z-10'
-          />
         </div>
+
+        {/* Right: TaskPanel (conditional) */}
+        {selectedChildTaskId && selectedChildInfo && (
+          <TaskPanel
+            childTaskId={selectedChildTaskId}
+            childInfo={selectedChildInfo}
+            conversationId={conversation.id}
+            onClose={() => setSelectedChildTaskId(null)}
+            onCancel={handleCancelChild}
+          />
+        )}
       </div>
     </ChatLayout>
   );

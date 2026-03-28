@@ -416,6 +416,9 @@ describe('initDispatchBridge', () => {
   // ISSUE-07: createGroupChat model extraction from ProcessConfig
   describe('IPC-DB-014: createGroupChat model from ProcessConfig', () => {
     it('uses ProcessConfig model when available as object', async () => {
+      // First call is model.config (providers list) — return empty array
+      (ProcessConfig.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+      // Second call is gemini.defaultModel — return the custom provider reference
       (ProcessConfig.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         id: 'custom-provider',
         useModel: 'gemini-2.5-pro',

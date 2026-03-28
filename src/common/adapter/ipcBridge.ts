@@ -907,7 +907,16 @@ export const dispatch = {
   /** Create a new group chat session */
   createGroupChat: bridge.buildProvider<
     IBridgeResponse<{ conversationId: string }>,
-    { name?: string; workspace?: string }
+    {
+      name?: string;
+      workspace?: string;
+      /** Selected leader agent ID (from acp.customAgents) */
+      leaderAgentId?: string;
+      /** Model override, takes priority over gemini.defaultModel */
+      modelOverride?: { providerId: string; useModel: string };
+      /** User custom system prompt */
+      seedMessages?: string;
+    }
   >('dispatch.create-group-chat'),
 
   /** Get group chat info (dispatcher + children + pending count) */
@@ -935,7 +944,7 @@ export const dispatch = {
       messages: Array<{ role: string; content: string; timestamp: number }>;
       status: string;
     }>,
-    { childSessionId: string; limit?: number }
+    { childSessionId: string; limit?: number; offset?: number }
   >('dispatch.get-child-transcript'),
 
   /** F-2.5: Cancel a running child task */

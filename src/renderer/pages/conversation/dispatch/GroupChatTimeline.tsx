@@ -29,6 +29,8 @@ const GroupChatTimeline: React.FC<GroupChatTimelineProps> = ({
   dispatcherAvatar,
   onCancelChild,
   conversationId,
+  onViewDetail,
+  selectedChildTaskId,
 }) => {
   const { t } = useTranslation();
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -80,7 +82,13 @@ const GroupChatTimeline: React.FC<GroupChatTimelineProps> = ({
     if (isTaskMessage(message.messageType)) {
       return (
         <div key={message.id} className='py-4px px-16px'>
-          <ChildTaskCard message={message} onCancel={onCancelChild} conversationId={conversationId} />
+          <ChildTaskCard
+            message={message}
+            onCancel={onCancelChild}
+            conversationId={conversationId}
+            onViewDetail={onViewDetail}
+            isSelected={selectedChildTaskId === message.childTaskId}
+          />
         </div>
       );
     }

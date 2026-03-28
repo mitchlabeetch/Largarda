@@ -382,6 +382,16 @@ export type TChatConversation =
         yoloMode?: boolean;
         /** Pending notifications from completed child tasks (persisted for cold parent) */
         pendingNotifications?: string[];
+        /** Leader agent ID (snapshot source identifier) */
+        leaderAgentId?: string;
+        /** Leader agent system rules snapshot */
+        leaderPresetRules?: string;
+        /** Leader agent name snapshot */
+        leaderName?: string;
+        /** Leader agent avatar snapshot */
+        leaderAvatar?: string;
+        /** User custom system prompt for dispatch */
+        seedMessages?: string;
         /** Enabled skills list */
         enabledSkills?: string[];
         /** Preset assistant ID */

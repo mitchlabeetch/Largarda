@@ -129,7 +129,29 @@ export class DispatchAgentManager extends BaseAgentManager<
    * Initialize worker with dispatch config.
    */
   private async createBootstrap(): Promise<void> {
-    const systemPrompt = buildDispatchSystemPrompt(this.dispatcherName);
+    // Phase 2b: Read leader profile and seed messages from conversation extra
+    let leaderProfile: string | undefined;
+    let customInstructions: string | undefined;
+    if (this.conversationRepo) {
+      try {
+        const conv = await this.conversationRepo.getConversation(this.conversation_id);
+        if (conv) {
+          const extra = conv.extra as {
+            leaderPresetRules?: string;
+            seedMessages?: string;
+          };
+          leaderProfile = extra.leaderPresetRules;
+          customInstructions = extra.seedMessages;
+        }
+      } catch (err) {
+        mainWarn('[DispatchAgentManager]', 'Failed to read extra for leader/seed', err);
+      }
+    }
+
+    const systemPrompt = buildDispatchSystemPrompt(this.dispatcherName, {
+      leaderProfile,
+      customInstructions,
+    });
     const combinedRules = systemPrompt;
 
     // Build MCP server config for Gemini CLI

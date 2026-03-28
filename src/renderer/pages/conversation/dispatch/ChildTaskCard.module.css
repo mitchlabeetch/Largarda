@@ -20,3 +20,8 @@
 .cardCancelled {
   border-left-color: var(--color-text-3);
 }
+
+.cardSelected {
+  border-color: rgb(var(--primary-6));
+  box-shadow: 0 0 0 1px rgb(var(--primary-6));
+}

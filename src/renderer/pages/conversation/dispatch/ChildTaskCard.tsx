@@ -10,7 +10,6 @@ import classNames from 'classnames';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useChildTaskDetail } from './hooks/useChildTaskDetail';
 import type { ChildTaskCardProps } from './types';
 import styles from './ChildTaskCard.module.css';
 
@@ -65,11 +64,9 @@ const getTagColor = (status: string): string => {
   }
 };
 
-const ChildTaskCard: React.FC<ChildTaskCardProps> = ({ message, onCancel }) => {
+const ChildTaskCard: React.FC<ChildTaskCardProps> = ({ message, onCancel, onViewDetail, isSelected }) => {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const { loadTranscript, getTranscript, isTranscriptLoading } = useChildTaskDetail();
 
   const status = getCardStatus(message.messageType);
   const statusText =
@@ -97,15 +94,11 @@ const ChildTaskCard: React.FC<ChildTaskCardProps> = ({ message, onCancel }) => {
     });
   }, [message.childTaskId, message.displayName, message.content, onCancel, t]);
 
-  const handleToggleExpand = useCallback(() => {
-    if (!expanded && message.childTaskId) {
-      loadTranscript(message.childTaskId);
+  const handleViewDetail = useCallback(() => {
+    if (message.childTaskId && onViewDetail) {
+      onViewDetail(message.childTaskId);
     }
-    setExpanded((prev) => !prev);
-  }, [expanded, message.childTaskId, loadTranscript]);
-
-  const transcript = message.childTaskId ? getTranscript(message.childTaskId) : undefined;
-  const transcriptLoading = message.childTaskId ? isTranscriptLoading(message.childTaskId) : false;
+  }, [message.childTaskId, onViewDetail]);
 
   // CF-2: Display progressSummary separately from content (title)
   const progressText = message.progressSummary || '';
@@ -116,6 +109,7 @@ const ChildTaskCard: React.FC<ChildTaskCardProps> = ({ message, onCancel }) => {
     [styles.cardCompleted]: status === 'completed',
     [styles.cardFailed]: status === 'failed',
     [styles.cardCancelled]: status === 'cancelled',
+    [styles.cardSelected]: isSelected,
   });
 
   return (
@@ -161,36 +155,10 @@ const ChildTaskCard: React.FC<ChildTaskCardProps> = ({ message, onCancel }) => {
       {status === 'running' && progressText && <div className='mt-8px text-13px text-t-secondary'>{progressText}</div>}
 
       <div className='mt-8px flex justify-end'>
-        <Button type='text' size='mini' onClick={handleToggleExpand}>
-          {expanded ? t('dispatch.timeline.hideDetails') : t('dispatch.timeline.viewDetails')}
+        <Button type='text' size='mini' onClick={handleViewDetail} disabled={!onViewDetail}>
+          {t('dispatch.timeline.viewDetails')}
         </Button>
       </div>
-
-      {expanded && (
-        <div
-          className='mt-8px rd-4px p-8px overflow-y-auto'
-          style={{ maxHeight: '400px', backgroundColor: 'var(--color-fill-1)' }}
-        >
-          {transcriptLoading && (
-            <div className='flex-center py-16px'>
-              <Spin />
-            </div>
-          )}
-          {!transcriptLoading && transcript && transcript.length > 0 && (
-            <div className='flex flex-col gap-4px'>
-              {transcript.map((msg, index) => (
-                <div key={index} className='text-13px'>
-                  <span className='font-medium text-t-secondary'>[{msg.role}]</span>{' '}
-                  <span className='text-t-primary whitespace-pre-wrap'>{msg.content}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {!transcriptLoading && (!transcript || transcript.length === 0) && (
-            <div className='text-13px text-t-secondary text-center py-8px'>{t('dispatch.timeline.noTranscript')}</div>
-          )}
-        </div>
-      )}
     </Card>
   );
 };

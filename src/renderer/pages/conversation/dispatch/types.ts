@@ -71,6 +71,10 @@ export type GroupChatTimelineProps = {
   onCancelChild?: (childTaskId: string) => void;
   /** Conversation ID for cancel IPC */
   conversationId?: string;
+  /** Callback when "View Details" is clicked on a ChildTaskCard */
+  onViewDetail?: (childTaskId: string) => void;
+  /** Currently selected child task ID (for highlight) */
+  selectedChildTaskId?: string | null;
 };
 
 /** Props for the ChildTaskCard component */
@@ -80,6 +84,10 @@ export type ChildTaskCardProps = {
   onCancel?: (childTaskId: string) => void;
   /** Conversation ID (needed for cancel IPC) */
   conversationId?: string;
+  /** Callback when "View Details" is clicked, opens TaskPanel */
+  onViewDetail?: (childTaskId: string) => void;
+  /** Whether this card is currently selected (highlighted) */
+  isSelected?: boolean;
 };
 
 /** Props for the GroupChatCreationModal component */
@@ -87,6 +95,36 @@ export type GroupChatCreationModalProps = {
   visible: boolean;
   onClose: () => void;
   onCreated: (conversationId: string) => void;
+};
+
+/** Props for the TaskPanel component */
+export type TaskPanelProps = {
+  /** Currently selected child task ID */
+  childTaskId: string;
+  /** Child task basic info (from GroupChatInfoVO.children) */
+  childInfo: ChildTaskInfoVO;
+  /** Parent conversation ID (for cancel operation) */
+  conversationId: string;
+  /** Close panel callback */
+  onClose: () => void;
+  /** Cancel child task callback */
+  onCancel: (childTaskId: string) => void;
+};
+
+/** TaskPanel transcript message */
+export type TranscriptMessage = {
+  role: string;
+  content: string;
+  timestamp: number;
+};
+
+/** useTaskPanelTranscript hook return value */
+export type UseTaskPanelTranscriptResult = {
+  transcript: TranscriptMessage[];
+  status: ChildTaskInfoVO['status'];
+  isLoading: boolean;
+  error: string | null;
+  refresh: () => void;
 };
 
 /** Backend GroupChatMessage shape (matches dispatchTypes.ts without importing from process layer) */

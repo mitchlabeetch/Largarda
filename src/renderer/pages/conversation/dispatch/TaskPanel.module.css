@@ -1,0 +1,29 @@
+.panel {
+  width: 360px;
+  min-width: 360px;
+  border-left: 1px solid var(--color-border);
+  background-color: var(--color-bg-1);
+  animation: slideIn 0.25s ease forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.transcriptContainer {
+  scrollbar-width: thin;
+}
+
+.transcriptContainer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.transcriptContainer::-webkit-scrollbar-thumb {
+  background-color: var(--color-text-4);
+  border-radius: 2px;
+}

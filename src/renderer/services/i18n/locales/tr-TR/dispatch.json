@@ -13,7 +13,16 @@
     "error": "Grup sohbeti oluşturulamadı. Lütfen tekrar deneyin.",
     "workspaceLabel": "Çalışma Alanı Dizini (isteğe bağlı)",
     "workspacePlaceholder": "Dizin seçilmedi (sistem varsayılanı kullanılır)",
-    "workspaceBrowse": "Göz At"
+    "workspaceBrowse": "Göz At",
+    "leaderAgentLabel": "Lider Ajan / Persona (isteğe bağlı)",
+    "leaderAgentPlaceholder": "Bir ajan personası seçin...",
+    "modelLabel": "Model (isteğe bağlı)",
+    "modelPlaceholder": "Varsayılan modeli kullan",
+    "modelTooltip": "Dağıtım, araç çağırma (function calling) destekli bir model gerektirir",
+    "advancedSettings": "Gelişmiş Ayarlar",
+    "seedMessageLabel": "Özel Sistem Komutu",
+    "seedMessagePlaceholder": "Orkestratör için ek talimatlar ekleyin...",
+    "seedMessageHint": "Bu talimatlar dağıtım sistem komutuna eklenecektir (maks. 2000 karakter)."
   },
   "header": {
     "taskCount": "{{count}} görev"
@@ -43,6 +52,18 @@
     "cancelConfirmTitle": "Görevi İptal Et",
     "cancelConfirmContent": "\"{{title}}\" görevi iptal edilsin mi?",
     "cancelFailed": "Görev iptal edilemedi"
+  },
+  "taskPanel": {
+    "noTranscript": "Henüz transkript mevcut değil",
+    "refresh": "Yenile",
+    "status": {
+      "pending": "Bekliyor",
+      "running": "Çalışıyor",
+      "idle": "Boşta",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız",
+      "cancelled": "İptal Edildi"
+    }
   },
   "error": {
     "groupChatLoadFailed": "Grup sohbeti yüklenemedi",

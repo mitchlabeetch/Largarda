@@ -13,7 +13,16 @@
     "error": "그룹 채팅 생성에 실패했습니다. 다시 시도해주세요.",
     "workspaceLabel": "작업 공간 디렉터리 (선택사항)",
     "workspacePlaceholder": "디렉터리 미선택 (시스템 기본값 사용)",
-    "workspaceBrowse": "찾아보기"
+    "workspaceBrowse": "찾아보기",
+    "leaderAgentLabel": "리더 에이전트 / 페르소나 (선택사항)",
+    "leaderAgentPlaceholder": "에이전트 페르소나를 선택하세요...",
+    "modelLabel": "모델 (선택사항)",
+    "modelPlaceholder": "기본 모델 사용",
+    "modelTooltip": "디스패치에는 도구 호출(function calling)을 지원하는 모델이 필요합니다",
+    "advancedSettings": "고급 설정",
+    "seedMessageLabel": "커스텀 시스템 프롬프트",
+    "seedMessagePlaceholder": "오케스트레이터에 추가 지침을 입력하세요...",
+    "seedMessageHint": "이 지침은 디스패치 시스템 프롬프트에 추가됩니다 (최대 2000자)."
   },
   "header": {
     "taskCount": "{{count}}개 작업"
@@ -43,6 +52,18 @@
     "cancelConfirmTitle": "작업 취소",
     "cancelConfirmContent": "작업 \"{{title}}\"을(를) 취소하시겠습니까?",
     "cancelFailed": "작업 취소에 실패했습니다"
+  },
+  "taskPanel": {
+    "noTranscript": "아직 대화 기록이 없습니다",
+    "refresh": "새로고침",
+    "status": {
+      "pending": "대기 중",
+      "running": "실행 중",
+      "idle": "유휴",
+      "completed": "완료",
+      "failed": "실패",
+      "cancelled": "취소됨"
+    }
   },
   "error": {
     "groupChatLoadFailed": "그룹 채팅을 불러오지 못했습니다",

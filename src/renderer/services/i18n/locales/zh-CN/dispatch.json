@@ -13,7 +13,16 @@
     "error": "创建群聊失败，请重试。",
     "workspaceLabel": "工作区目录（可选）",
     "workspacePlaceholder": "未选择目录（使用系统默认）",
-    "workspaceBrowse": "浏览"
+    "workspaceBrowse": "浏览",
+    "leaderAgentLabel": "领导 Agent / 人设（可选）",
+    "leaderAgentPlaceholder": "选择一个 Agent 人设...",
+    "modelLabel": "模型（可选）",
+    "modelPlaceholder": "使用默认模型",
+    "modelTooltip": "调度需要支持工具调用（function calling）的模型",
+    "advancedSettings": "高级设置",
+    "seedMessageLabel": "自定义系统提示词",
+    "seedMessagePlaceholder": "为调度器添加额外指令...",
+    "seedMessageHint": "这些指令将追加到调度系统提示词中（最多 2000 字符）。"
   },
   "header": {
     "taskCount": "{{count}} 个任务"
@@ -43,6 +52,18 @@
     "cancelConfirmTitle": "取消任务",
     "cancelConfirmContent": "确定取消任务 {{title}}？",
     "cancelFailed": "取消任务失败"
+  },
+  "taskPanel": {
+    "noTranscript": "暂无对话记录",
+    "refresh": "刷新",
+    "status": {
+      "pending": "等待中",
+      "running": "运行中",
+      "idle": "空闲",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    }
   },
   "error": {
     "groupChatLoadFailed": "加载群聊失败",
