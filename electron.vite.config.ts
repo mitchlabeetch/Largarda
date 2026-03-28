@@ -33,6 +33,19 @@ function iconParkPlugin() {
   };
 }
 
+/** Add #!/usr/bin/env node shebang to the CLI output bundle only */
+function cliShebangPlugin() {
+  return {
+    name: 'cli-shebang',
+    renderChunk(code: string, chunk: { facadeModuleId?: string | null }) {
+      if (chunk.facadeModuleId?.includes('src/cli/index')) {
+        return { code: '#!/usr/bin/env node\n' + code, map: null as null };
+      }
+      return null;
+    },
+  };
+}
+
 // Common path aliases for main process and workers
 const mainAliases = {
   '@': resolve('src'),
@@ -67,6 +80,7 @@ export default defineConfig(({ mode }) => {
         // externalizeDepsPlugin replaces our custom getExternalDeps() + pluginExternalizeDynamicImports.
         // 'fix-path' excluded so it gets bundled inline (only 3KB).
         externalizeDepsPlugin({ exclude: ['fix-path'] }),
+        cliShebangPlugin(),
         ...(!isDevelopment
           ? [
               viteStaticCopy({
@@ -103,6 +117,8 @@ export default defineConfig(({ mode }) => {
             nanobot: resolve('src/process/worker/nanobot.ts'),
             // Built-in MCP server entry points
             'builtin-mcp-image-gen': resolve('src/process/resources/builtinMcp/imageGenServer.ts'),
+            // Standalone Aion CLI entry — outputs out/main/cli.js with shebang
+            cli: resolve('src/cli/index.ts'),
           },
           onwarn(warning, warn) {
             if (warning.code === 'EVAL') return;

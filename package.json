@@ -9,7 +9,13 @@
     "email": "service@aionui.com"
   },
   "main": "./out/main/index.js",
+  "bin": {
+    "aion": "./out/main/cli.js"
+  },
   "scripts": {
+    "aion:cli": "node scripts/build-cli.mjs && npm link",
+    "aion:dev": "node out/main/cli.js",
+    "aion:build": "electron-vite build && chmod +x out/main/cli.js",
     "start": "electron-vite dev",
     "cli": "electron-vite dev",
     "webui": "rm -rf out/renderer && electron-vite dev -- --webui",
