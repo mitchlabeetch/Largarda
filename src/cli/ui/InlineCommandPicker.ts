@@ -300,18 +300,12 @@ export class InlineCommandPicker {
     const line: string = (this.rl as unknown as { line: string }).line ?? '';
 
     if (!this.active) {
-      // Activate on '/' as the first character
-      if (key.name === '/' || (key.sequence === '/' && !line)) {
-        // Will be '/' after readline processes this key — check next tick
+      // Activate on '/' — key.name is undefined for printable chars, check sequence
+      // Note: rl.line is already "/" at keypress time, so do NOT guard with !line
+      if (key.sequence === '/') {
         setImmediate(() => {
           const current: string = (this.rl as unknown as { line: string })?.line ?? '';
-          // Guarantee activation if line starts with '/' regardless of timing
-          if (current.startsWith('/')) {
-            this.activate(current);
-          } else {
-            // Fallback: treat '/' as start of filter directly
-            this.activate('/');
-          }
+          this.activate(current.startsWith('/') ? current : '/');
         });
       }
       return;

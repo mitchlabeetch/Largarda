@@ -79,6 +79,12 @@ export function startRepl(
       process.stdout.write('\n');
       resolve();
     });
+
+    // Suppress ERR_USE_AFTER_CLOSE from readline internal writes after close
+    process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code !== 'ERR_USE_AFTER_CLOSE' && err.code !== 'EPIPE') throw err;
+    });
+
     ask();
   });
 }
