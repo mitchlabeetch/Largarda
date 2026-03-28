@@ -5,7 +5,7 @@
  */
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { AionCliConfig, AgentConfig } from './types';
@@ -18,7 +18,7 @@ export const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 /** Find a CLI binary via `which`. Returns null if not found. */
 function findBin(name: string): string | null {
   try {
-    return execSync(`which ${name}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return execFileSync('which', [name], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch {
     return null;
   }

@@ -7,11 +7,12 @@
  *   bun run aion:cli
  */
 import { build } from 'esbuild';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const { version } = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'));
 
 mkdirSync(resolve(root, 'out/main'), { recursive: true });
 
@@ -34,6 +35,10 @@ await build({
     '@process': resolve(root, 'src/process'),
     '@common': resolve(root, 'src/common'),
     '@worker': resolve(root, 'src/process/worker'),
+  },
+
+  define: {
+    __AION_VERSION__: JSON.stringify(version),
   },
 
   logLevel: 'info',

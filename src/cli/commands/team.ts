@@ -216,10 +216,15 @@ export async function runTeam(options: TeamOptions = {}): Promise<void> {
 }
 
 async function promptGoal(): Promise<string> {
+  if (!process.stdin.isTTY) {
+    process.stderr.write(fmt.red('Goal required in non-interactive mode. Use: aion team --goal "your goal"\n'));
+    process.exit(1);
+  }
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise<string>((resolve) => {
     rl.question(fmt.bold('Goal: '), (answer) => {
       rl.close();
+      process.stdin.resume();
       const goal = answer.trim();
       if (!goal) {
         process.stderr.write(fmt.red('Goal cannot be empty.\n'));

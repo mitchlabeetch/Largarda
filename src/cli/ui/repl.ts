@@ -22,7 +22,8 @@ export function startRepl(prompt: string | (() => string), handler: ReplHandler)
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
-    terminal: true,
+    terminal: process.stdout.isTTY ?? false,
+    historySize: 200,
   });
 
   const getPrompt = typeof prompt === 'function' ? prompt : () => prompt;

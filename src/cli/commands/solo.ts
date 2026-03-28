@@ -7,20 +7,27 @@
 /**
  * Solo command — interactive multi-turn chat.
  *
- * Design:
- *   - NO interactive selector before REPL (eliminates double-readline / Warp stdin bug)
- *   - Agent list shown passively on startup; use /model or -a to switch
- *   - Single readline lifecycle: startRepl owns stdin from the start
+ * Design (per UX Lead spec):
+ *   - ≤2 lines of chrome before prompt on repeat runs
+ *   - Passive agent list — no readline before REPL, no Warp stdin freeze
+ *   - Warn loudly on silent agent fallbacks
+ *   - Kill old manager before switching agents
+ *   - ↑/↓ history via readline historySize (in repl.ts)
  */
 import { loadConfig } from '../config/loader';
 import { createCliAgentFactory } from '../agents/factory';
 import { startRepl } from '../ui/repl';
-import { fmt, hr } from '../ui/format';
+import { fmt } from '../ui/format';
 import type { AionCliConfig } from '../config/types';
 import type { IAgentManager } from '@process/task/IAgentManager';
 import type { IAgentEventEmitter, AgentMessageEvent } from '@process/task/IAgentEventEmitter';
 
-const VERSION = '1.9.2';
+// Single source of truth pulled from package.json at build time via esbuild define,
+// with a fallback so it still works in ts-node / tests.
+const VERSION: string =
+  typeof __AION_VERSION__ !== 'undefined' ? __AION_VERSION__ : '1.9.2';
+
+declare const __AION_VERSION__: string | undefined;
 
 const LOGO_LINES = [
   '    _   ___ ___  _  _ ',
@@ -50,16 +57,6 @@ function makeStdoutEmitter(): IAgentEventEmitter {
 
 // ── Display ───────────────────────────────────────────────────────────────────
 
-function printLogo(config: AionCliConfig): void {
-  const n = Object.keys(config.agents).length;
-  process.stdout.write('\n');
-  for (const line of LOGO_LINES) process.stdout.write(fmt.cyan(line) + '\n');
-  process.stdout.write(
-    `  ${fmt.dim('Multi-Model Agent Platform')}  ${fmt.dim('·')}  ${fmt.dim(`v${VERSION}`)}  ${fmt.dim('·')}  ${fmt.green(`${n} agent${n !== 1 ? 's' : ''} ready`)}\n`,
-  );
-  process.stdout.write(fmt.dim(hr()) + '\n');
-}
-
 function printOnboarding(): void {
   process.stdout.write('\n');
   for (const line of LOGO_LINES) process.stdout.write(fmt.cyan(line) + '\n');
@@ -74,35 +71,18 @@ function printOnboarding(): void {
   );
 }
 
-/** Show agent list passively — no readline, no prompt, no waiting */
-function printAgentList(config: AionCliConfig, activeKey: string): void {
+/**
+ * Compact header: 2 lines max.
+ * Shows all agent names inline — active one bold+cyan, others dim.
+ */
+function printHeader(config: AionCliConfig, activeKey: string): void {
   const keys = Object.keys(config.agents);
-  if (keys.length <= 1) return; // single agent: no noise
+  const agentList = keys
+    .map((k) => (k === activeKey ? fmt.bold(fmt.cyan(k)) : fmt.dim(k)))
+    .join(fmt.dim('  ·  '));
 
-  process.stdout.write('\n');
-  for (const key of keys) {
-    const agent = config.agents[key]!;
-    const isActive = key === activeKey;
-    const provider =
-      agent.provider === 'claude-cli' || agent.provider === 'codex-cli'
-        ? agent.provider
-        : `${agent.provider}/${agent.model ?? '?'}`;
-    process.stdout.write(
-      `  ${isActive ? fmt.green('●') : fmt.dim('○')} ${isActive ? fmt.bold(fmt.cyan(key)) : fmt.cyan(key)}  ${fmt.dim(provider)}\n`,
-    );
-  }
-  process.stdout.write(fmt.dim('\n  /model <name>  switch agent  ·  /help  all commands\n'));
-}
-
-function printActiveAgent(config: AionCliConfig, key: string): void {
-  const agent = config.agents[key];
-  if (!agent) return;
-  const provider =
-    agent.provider === 'claude-cli' || agent.provider === 'codex-cli'
-      ? agent.provider
-      : `${agent.provider}/${agent.model ?? '?'}`;
   process.stdout.write(
-    `\n${fmt.green('●')} ${fmt.bold(fmt.cyan(key))}  ${fmt.dim(provider)}\n${fmt.dim(hr())}\n\n`,
+    `\n${fmt.dim(`Aion v${VERSION}`)}  ${fmt.dim('·')}  ${agentList}  ${fmt.dim('·  /help for commands')}\n\n`,
   );
 }
 
@@ -110,11 +90,11 @@ function printActiveAgent(config: AionCliConfig, key: string): void {
 
 const SLASH_HELP = `
 ${fmt.bold('Commands:')}
-  ${fmt.cyan('/model <name>')}   Switch agent  ${fmt.dim('(e.g. /model codex  or  /model 2)')}
-  ${fmt.cyan('/agents')}         List all configured agents
-  ${fmt.cyan('/team [goal]')}    Launch a multi-agent team
-  ${fmt.cyan('/help')}           Show this
-  ${fmt.cyan('/exit')}           Exit Aion
+  ${fmt.cyan('/model <name|n>')}  Switch agent  ${fmt.dim('(e.g. /model codex  or  /model 2)')}
+  ${fmt.cyan('/agents')}          List configured agents
+  ${fmt.cyan('/team [goal]')}     Launch a multi-agent team
+  ${fmt.cyan('/help')}            Show this
+  ${fmt.cyan('/exit')}            Exit
 `.trim();
 
 async function handleSlashCommand(
@@ -145,7 +125,7 @@ async function handleSlashCommand(
           `  ${isActive ? fmt.green('●') : fmt.dim('○')} ${fmt.dim(`${i + 1}.`)} ${fmt.cyan(key)}  ${fmt.dim(provider)}${isActive ? fmt.dim('  ← active') : ''}\n`,
         );
       }
-      process.stdout.write('\n');
+      process.stdout.write(fmt.dim('\n  /model <name> or /model <number> to switch\n\n'));
       return { handled: true };
     }
 
@@ -157,20 +137,24 @@ async function handleSlashCommand(
       const keys = Object.keys(config.agents);
       const byNum = parseInt(arg, 10);
       const resolvedKey =
-        config.agents[arg] ? arg
-        : !isNaN(byNum) && keys[byNum - 1] ? keys[byNum - 1]!
-        : null;
+        config.agents[arg]
+          ? arg
+          : !isNaN(byNum) && keys[byNum - 1]
+            ? keys[byNum - 1]!
+            : null;
 
       if (!resolvedKey) {
-        process.stdout.write(fmt.red(`Agent "${arg}" not found. Type /agents to list.\n`));
+        const available = keys.join(', ');
+        process.stdout.write(fmt.red(`✗ "${arg}" not found — available: ${available}\n\n`));
         return { handled: true };
       }
+
+      // Kill old manager before switching to avoid orphaned processes
+      await managerRef.current.stop();
       agentKeyRef.current = resolvedKey;
       const factory = createCliAgentFactory(config, undefined, resolvedKey);
       managerRef.current = factory(`solo-${Date.now()}`, '', makeStdoutEmitter());
-      process.stdout.write(
-        `${fmt.green(`Switched to ${fmt.bold(resolvedKey)}`)}\n${fmt.dim('New conversation.\n\n')}`,
-      );
+      process.stdout.write(`→ ${fmt.bold(fmt.cyan(resolvedKey))}  ${fmt.dim('(new conversation)')}\n\n`);
       return { handled: true };
     }
 
@@ -202,20 +186,26 @@ export async function runSolo(options: SoloOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve active agent — no readline, no prompt
-  const activeKey =
-    options.agent && config.agents[options.agent]
-      ? options.agent
-      : config.defaultAgent;
+  // Resolve active agent — warn loudly if requested agent not found
+  let activeKey: string;
+  if (options.agent) {
+    if (config.agents[options.agent]) {
+      activeKey = options.agent;
+    } else {
+      process.stderr.write(
+        fmt.yellow(`⚠ Agent "${options.agent}" not configured — using ${config.defaultAgent}\n`),
+      );
+      activeKey = config.defaultAgent;
+    }
+  } else {
+    activeKey = config.defaultAgent;
+  }
 
-  printLogo(config);
-  printAgentList(config, activeKey);
-  printActiveAgent(config, activeKey);
+  printHeader(config, activeKey);
 
   const agentKeyRef = { current: activeKey };
-  const emitter = makeStdoutEmitter();
   const managerRef: { current: IAgentManager } = {
-    current: createCliAgentFactory(config, undefined, activeKey)(`solo-${Date.now()}`, '', emitter),
+    current: createCliAgentFactory(config, undefined, activeKey)(`solo-${Date.now()}`, '', makeStdoutEmitter()),
   };
 
   // Single readline lifecycle — owns stdin from here to EOF
