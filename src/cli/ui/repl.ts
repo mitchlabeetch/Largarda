@@ -63,10 +63,14 @@ export function startRepl(
     if ((rl as unknown as { closed?: boolean }).closed) return;
     rl.question(fmt.bold(fmt.cyan(`${getPrompt()} `)), async (line) => {
       const input = line.trim();
+      let escapedInput: string | null = null;
       if (input) {
         // Register ESC listener during handler execution
         const escListener = (_str: string, key: { name?: string }): void => {
-          if (key?.name === 'escape') onEsc?.();
+          if (key?.name === 'escape') {
+            escapedInput = input;
+            onEsc?.();
+          }
         };
         if (onEsc) process.stdin.on('keypress', escListener);
 
@@ -81,6 +85,16 @@ export function startRepl(
         }
       }
       ask();
+      // Restore the original input after the new prompt is shown, so the user
+      // can resume editing what they typed before pressing ESC (like Claude Code).
+      if (escapedInput !== null) {
+        const toRestore = escapedInput;
+        setImmediate(() => {
+          if (!(rl as unknown as { closed?: boolean }).closed) {
+            rl.write(toRestore);
+          }
+        });
+      }
     });
   };
 

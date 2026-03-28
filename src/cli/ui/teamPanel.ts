@@ -14,6 +14,44 @@
 import type { OrchestratorEvent } from '@process/task/orchestrator/types';
 import { fmt, clearLines, hr } from './format';
 
+/** Calculate terminal display width — CJK and full-width chars occupy 2 columns. */
+function displayWidth(s: string): number {
+  let w = 0;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0x303e) ||
+      (cp >= 0x3041 && cp <= 0x33ff) ||
+      (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe10 && cp <= 0xfe19) ||
+      (cp >= 0xfe30 && cp <= 0xfe6f) ||
+      (cp >= 0xff01 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x20000 && cp <= 0x2a6df)
+    ) {
+      w += 2;
+    } else {
+      w += 1;
+    }
+  }
+  return w;
+}
+
+/** Truncate string to at most `maxCols` terminal columns. */
+function truncateToWidth(s: string, maxCols: number): string {
+  let w = 0;
+  let result = '';
+  for (const ch of s) {
+    const cw = ch.codePointAt(0)! >= 0x1100 ? displayWidth(ch) : 1;
+    if (w + cw > maxCols) break;
+    result += ch;
+    w += cw;
+  }
+  return result;
+}
+
 type AgentState = {
   label: string;
   status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
@@ -127,10 +165,15 @@ export class TeamPanel {
       }
 
       let preview = '';
+      const cols = process.stdout.columns ?? 80;
+      // Fixed prefix: "  X Label 00s " ≈ 2+1+1+labelWidth+6
+      const labelWidth = displayWidth(state.label || id);
+      const prefixCols = 2 + 1 + 1 + labelWidth + 6;
+      const maxPreviewCols = Math.max(0, cols - prefixCols - 2);
       if (state.status === 'failed' && state.preview) {
-        preview = fmt.dim(' ' + Array.from(state.preview).slice(0, 50).join('').trim());
+        preview = fmt.dim(' ' + truncateToWidth(state.preview.trim(), maxPreviewCols));
       } else if (state.preview) {
-        preview = fmt.dim(' ' + state.preview.slice(0, 60).trim());
+        preview = fmt.dim(' ' + truncateToWidth(state.preview.trim(), maxPreviewCols));
       }
 
       lines.push(`  ${coloredIcon} ${label}${statusSuffix}${preview}`);
