@@ -856,11 +856,30 @@ const migration_v17: IMigration = {
 };
 
 /**
- * Migration v17 -> v18: Add 'dispatch' to conversations type CHECK constraint
- * Dispatch conversations are used by the multi-agent group chat system (Orchestrator + child agents).
+ * Migration v17 -> v18: Add allow_insecure column to remote_agents
  */
 const migration_v18: IMigration = {
   version: 18,
+  name: 'Add allow_insecure column to remote_agents',
+  up: (db) => {
+    const columns = new Set((db.pragma('table_info(remote_agents)') as Array<{ name: string }>).map((c) => c.name));
+    if (!columns.has('allow_insecure')) {
+      db.exec('ALTER TABLE remote_agents ADD COLUMN allow_insecure INTEGER DEFAULT 0');
+    }
+    console.log('[Migration v18] Added allow_insecure column to remote_agents');
+  },
+  down: (_db) => {
+    // SQLite does not support DROP COLUMN before 3.35.0; skip rollback to prevent data loss.
+    console.warn('[Migration v18] Rollback skipped: cannot drop columns safely.');
+  },
+};
+
+/**
+ * Migration v18 -> v19: Add 'dispatch' to conversations type CHECK constraint
+ * Dispatch conversations are used by the multi-agent group chat system (Orchestrator + child agents).
+ */
+const migration_v19: IMigration = {
+  version: 19,
   name: 'Add dispatch to conversations type constraint',
   up: (db) => {
     db.exec(`CREATE TABLE IF NOT EXISTS conversations_new (
@@ -891,7 +910,7 @@ const migration_v18: IMigration = {
       'CREATE INDEX IF NOT EXISTS idx_conversations_source_chat ON conversations(source, channel_chat_id, updated_at DESC)'
     );
 
-    console.log('[Migration v18] Added dispatch type + extended status constraint');
+    console.log('[Migration v19] Added dispatch type + extended status constraint');
   },
   down: (db) => {
     db.exec(`DELETE FROM conversations WHERE type = 'dispatch'`);
@@ -924,7 +943,7 @@ const migration_v18: IMigration = {
       'CREATE INDEX IF NOT EXISTS idx_conversations_source_chat ON conversations(source, channel_chat_id, updated_at DESC)'
     );
 
-    console.log('[Migration v18] Rolled back: Removed dispatch type, kept extended status constraint');
+    console.log('[Migration v19] Rolled back: Removed dispatch type, kept extended status constraint');
   },
 };
 
@@ -936,6 +955,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6,
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
+  migration_v19,
 ];
 
 /**

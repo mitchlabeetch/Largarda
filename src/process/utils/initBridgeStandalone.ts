@@ -31,6 +31,7 @@ import { initGeminiConversationBridge } from '@process/bridge/geminiConversation
 import { initModelBridge } from '@process/bridge/modelBridge';
 import { initPreviewHistoryBridge } from '@process/bridge/previewHistoryBridge';
 import { initPptPreviewBridge } from '@process/bridge/pptPreviewBridge';
+import { initOfficeWatchBridge } from '@process/bridge/officeWatchBridge';
 import { initStarOfficeBridge } from '@process/bridge/starOfficeBridge';
 import { initApplicationBridgeCore } from '@process/bridge/applicationBridgeCore';
 import { initShellBridgeStandalone } from '@process/bridge/shellBridgeStandalone';
@@ -41,6 +42,7 @@ import { initNotificationBridge } from '@process/bridge/notificationBridge';
 import { initSystemSettingsBridge } from '@process/bridge/systemSettingsBridge';
 import { initTaskBridge } from '@process/bridge/taskBridge';
 import { initDispatchBridge } from '@process/bridge/dispatchBridge';
+import { initSpeechToTextBridge } from '@process/bridge/speechToTextBridge';
 
 logger.config({ print: true });
 
@@ -66,6 +68,7 @@ export async function initBridgeStandalone(): Promise<void> {
   initPreviewHistoryBridge();
   initDocumentBridge();
   initPptPreviewBridge();
+  initOfficeWatchBridge();
   initChannelBridge(channelRepo);
   initDatabaseBridge(repo);
   initExtensionsBridge(repo, workerTaskManager);
@@ -76,6 +79,7 @@ export async function initBridgeStandalone(): Promise<void> {
   initTaskBridge(workerTaskManager);
   initDispatchBridge(workerTaskManager, conversationService, repo);
   initStarOfficeBridge();
+  initSpeechToTextBridge();
 
   // Initialize ACP detector to scan for installed CLI agents (claude, codex, etc.)
   // Must mirror Electron's initializeAcpDetector() call in src/index.ts
