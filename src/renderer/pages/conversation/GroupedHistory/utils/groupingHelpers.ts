@@ -202,9 +202,11 @@ export const groupConversationsByAgent = (
       .toSorted((a, b) => b.latestActivityTime - a.latestActivityTime);
 
     // Determine display mode
+    // General agents (non-permanent) always use flat mode — workspace info
+    // is only meaningful for assistants where the user explicitly picks a workspace.
     const customWsCount = workspaceMap.size;
     let displayMode: 'flat' | 'subtitle' | 'grouped';
-    if (customWsCount === 0) {
+    if (!isPermanent || customWsCount === 0) {
       displayMode = 'flat';
     } else if (customWsCount === 1 && ungrouped.length === 0) {
       displayMode = 'subtitle';
