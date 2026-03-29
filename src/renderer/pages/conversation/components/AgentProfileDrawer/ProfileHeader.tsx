@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { Button, Tag } from '@arco-design/web-react';
 import { AddOne, People } from '@icon-park/react';
 import React from 'react';
@@ -16,12 +17,23 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ identity, onStartConversa
   const { t } = useTranslation();
 
   const isPermanent = identity.employeeType === 'permanent';
+  const logo = getAgentLogo(identity.id);
+
+  const renderAvatar = () => {
+    if (identity.avatar) {
+      return <span>{identity.avatar}</span>;
+    }
+    if (logo) {
+      return <img src={logo} alt={identity.name} className='w-40px h-40px' />;
+    }
+    return <People theme='outline' size='32' />;
+  };
 
   return (
     <div className='flex flex-col items-center gap-16px py-24px px-16px'>
       {/* Avatar */}
       <div className='flex items-center justify-center w-64px h-64px rounded-full bg-fill-2 text-32px'>
-        {identity.avatar ? <span>{identity.avatar}</span> : <People theme='outline' size='32' />}
+        {renderAvatar()}
       </div>
 
       {/* Name */}

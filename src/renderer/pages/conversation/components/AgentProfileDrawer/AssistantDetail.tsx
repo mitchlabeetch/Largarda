@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { Button, Tag, Typography } from '@arco-design/web-react';
 import { Down, People, Up } from '@icon-park/react';
 import React, { useState } from 'react';
@@ -63,18 +64,23 @@ const AssistantDetail: React.FC<AssistantDetailProps> = ({ rule, skills, mounted
         <span className='text-13px font-semibold text-t-primary'>{t('agent.drawer.mountedAgentsTitle')}</span>
         {mountedAgents.length > 0 ? (
           <div className='flex flex-col gap-6px'>
-            {mountedAgents.map((agent) => (
-              <div key={agent.id} className='flex items-center gap-8px py-4px'>
-                <div className='flex items-center justify-center w-24px h-24px rounded-full bg-fill-2'>
-                  {agent.avatar ? (
-                    <span className='text-12px'>{agent.avatar}</span>
-                  ) : (
-                    <People theme='outline' size='14' />
-                  )}
+            {mountedAgents.map((agent) => {
+              const logo = getAgentLogo(agent.id);
+              return (
+                <div key={agent.id} className='flex items-center gap-8px py-4px'>
+                  <div className='flex items-center justify-center w-24px h-24px rounded-full bg-fill-2 flex-shrink-0'>
+                    {logo ? (
+                      <img src={logo} alt={agent.name} className='w-16px h-16px' />
+                    ) : agent.avatar ? (
+                      <span className='text-12px'>{agent.avatar}</span>
+                    ) : (
+                      <People theme='outline' size='14' />
+                    )}
+                  </div>
+                  <span className='text-13px text-t-primary'>{agent.name}</span>
                 </div>
-                <span className='text-13px text-t-primary'>{agent.name}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <span className='text-12px text-t-secondary'>{t('agent.drawer.mountedAgentsEmpty')}</span>
