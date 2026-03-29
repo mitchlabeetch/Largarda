@@ -12,70 +12,70 @@
  * Uses terminal escape codes to update in place (no external deps).
  */
 import type { OrchestratorEvent } from '@process/task/orchestrator/types';
-import { fmt, clearLines, hr, STATUS_ICONS } from './format';
+import { fmt, clearLines, hr, physicalRows, STATUS_ICONS } from './format';
 import { stripMarkdown } from './markdown';
-
-/** Calculate terminal display width — CJK, full-width chars, and emoji occupy 2 columns. */
-function displayWidth(s: string): number {
-  let w = 0;
-  for (const ch of s) {
-    const cp = ch.codePointAt(0) ?? 0;
-    if (
-      cp > 0xffff || // surrogate pairs / supplementary (most emoji)
-      (cp >= 0x1f300 && cp <= 0x1faff) || // misc symbols, emoticons
-      (cp >= 0x2600 && cp <= 0x27bf) || // misc symbols
-      (cp >= 0x1100 && cp <= 0x115f) || // Hangul Jamo
-      (cp >= 0x2e80 && cp <= 0x303e) || // CJK radicals / Kangxi
-      (cp >= 0x3041 && cp <= 0x33ff) || // Hiragana, Katakana, CJK compat
-      (cp >= 0x3400 && cp <= 0x4dbf) || // CJK Extension A
-      (cp >= 0x4e00 && cp <= 0x9fff) || // CJK Unified
-      (cp >= 0xa000 && cp <= 0xa48f) || // Yi Syllables
-      (cp >= 0xac00 && cp <= 0xd7a3) || // Hangul Syllables
-      (cp >= 0xf900 && cp <= 0xfaff) || // CJK Compat Ideographs
-      (cp >= 0xfe10 && cp <= 0xfe19) || // Vertical forms
-      (cp >= 0xfe30 && cp <= 0xfe6f) || // CJK Compat Forms
-      (cp >= 0xff01 && cp <= 0xff60) || // Fullwidth Forms
-      (cp >= 0xffe0 && cp <= 0xffe6) || // Fullwidth Signs
-      (cp >= 0x20000 && cp <= 0x2a6df) // CJK Extension B
-    ) {
-      w += 2;
-    } else {
-      w += 1;
-    }
-  }
-  return w;
-}
-
-/** Truncate string to at most `maxCols` terminal columns. */
-function truncateToWidth(s: string, maxCols: number): string {
-  let w = 0;
-  let result = '';
-  for (const ch of s) {
-    const cw = displayWidth(ch);
-    if (w + cw > maxCols) break;
-    result += ch;
-    w += cw;
-  }
-  return result;
-}
+import { displayWidth, truncateToWidth } from './termUtils';
+import { parseProgressChunk } from './progressParser';
+import { TodoTracker } from './todoDisplay';
+import type { TodoItem } from '../agents/ICoordinatorLoop';
 
 type AgentState = {
   label: string;
   status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
   preview: string;
   startedAt?: number;
+  dependsOnLabels?: string[];
+  todos?: TodoItem[];
+};
+
+type CoordinatorPhase =
+  | 'planning'
+  | 'executing'
+  | 'reviewing'
+  | 'refining'
+  | 'synthesizing'
+  | 'verifying'
+  | 'done';
+
+const COORDINATOR_PHASE_LABELS: Record<CoordinatorPhase, string> = {
+  planning: 'Planning team',
+  executing: 'Executing',
+  reviewing: 'Reviewing outputs',
+  refining: 'Refining',
+  synthesizing: 'Synthesizing',
+  verifying: 'Verifying outputs',
+  done: '',
 };
 
 export class TeamPanel {
   private agents = new Map<string, AgentState>();
   private lastLineCount = 0;
   private goal = '';
+  private coordinatorPhase: CoordinatorPhase | null = null;
   private spinnerFrame = 0;
   private readonly SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   private renderTimer: NodeJS.Timeout | null = null;
+  private qualityScore: number | null = null;
+  private currentRound: number | null = null;
+  private maxRounds: number | null = null;
+  private readonly todoTracker = new TodoTracker();
 
   setGoal(goal: string): void {
     this.goal = goal;
+  }
+
+  /** Update the coordinator workflow phase shown at the top of the panel. */
+  setCoordinatorPhase(phase: CoordinatorPhase): void {
+    this.coordinatorPhase = phase;
+  }
+
+  setQualityScore(score: number): void {
+    this.qualityScore = score;
+  }
+
+  setRound(round: number, maxRounds: number): void {
+    this.currentRound = round;
+    this.maxRounds = maxRounds;
   }
 
   setLabel(subTaskId: string, label: string): void {
@@ -85,6 +85,23 @@ export class TeamPanel {
     } else {
       this.agents.set(subTaskId, { label, status: 'pending', preview: '' });
     }
+  }
+
+  /** Record which roles this task is waiting on (shown in "waiting for X" status). */
+  setDependsOn(subTaskId: string, dependsOnLabels: string[]): void {
+    const agent = this.agents.get(subTaskId);
+    if (agent) agent.dependsOnLabels = dependsOnLabels;
+  }
+
+  /** Start rendering immediately — shows pending state before first event fires. */
+  start(): void {
+    if (this.renderTimer) return;
+    this.renderTimer = setInterval(() => {
+      this.spinnerFrame++;
+      this.render();
+    }, 100);
+    this.renderTimer.unref();
+    this.render(); // immediate first paint
   }
 
   update(event: OrchestratorEvent): void {
@@ -102,16 +119,29 @@ export class TeamPanel {
       case 'subtask:progress': {
         const agent = this.agents.get(event.subTaskId);
         if (agent) {
-          // Strip markdown symbols so preview is clean plain text
-          const cleaned = stripMarkdown(event.text).replace(/\n/g, ' ');
-          const combined = (agent.preview + cleaned).replace(/\n/g, ' ');
-          agent.preview = Array.from(combined).slice(-200).join('');
+          const rawText = event.text;
+          // Use progressParser to filter noise and surface meaningful lines
+          const lines = parseProgressChunk(rawText);
+          if (lines.length > 0) {
+            const cleaned = lines
+              .map((l) => stripMarkdown(l.text))
+              .join(' ')
+              .replace(/\n/g, ' ');
+            const combined = (agent.preview + ' ' + cleaned).replace(/\n/g, ' ');
+            agent.preview = Array.from(combined.trim()).slice(-200).join('');
+          }
+          // Track todo items from the raw text
+          const updatedTodos = this.todoTracker.feed(event.subTaskId, rawText);
+          if (updatedTodos !== null) {
+            agent.todos = updatedTodos;
+          }
         }
         break;
       }
       case 'subtask:done': {
         const agent = this.agents.get(event.subTaskId);
         if (agent) agent.status = 'done';
+        this.todoTracker.clear(event.subTaskId);
         break;
       }
       case 'subtask:failed': {
@@ -143,6 +173,8 @@ export class TeamPanel {
   }
 
   render(): void {
+    if (!process.stdout.isTTY) return; // non-TTY: don't mess with escape codes
+    if (!this.renderTimer) return; // already cleared, don't render
     if (this.lastLineCount > 0) {
       clearLines(this.lastLineCount);
     }
@@ -150,8 +182,30 @@ export class TeamPanel {
     const lines: string[] = [];
 
     if (this.goal) {
-      lines.push(`${fmt.bold('Goal:')} ${fmt.cyan(this.goal)}`);
+      lines.push(`${fmt.dim('▸')} ${fmt.bold(this.goal)}`);
       lines.push(fmt.dim(hr()));
+    }
+
+    if (this.coordinatorPhase && this.coordinatorPhase !== 'done') {
+      const spin = this.SPIN[this.spinnerFrame % this.SPIN.length]!;
+      const phaseLabel = COORDINATOR_PHASE_LABELS[this.coordinatorPhase];
+      const roundSuffix =
+        this.currentRound !== null ? `  Round ${this.currentRound}/${this.maxRounds}` : '';
+      lines.push(
+        `  ${fmt.cyan(spin)} ${fmt.dim(`coordinator · ${phaseLabel}${roundSuffix}`)}`,
+      );
+      if (
+        this.qualityScore !== null &&
+        this.coordinatorPhase &&
+        ['reviewing', 'refining'].includes(this.coordinatorPhase)
+      ) {
+        const score = this.qualityScore;
+        const filled = Math.round(score * 16);
+        const bar = '█'.repeat(filled) + '░'.repeat(16 - filled);
+        const coloredBar =
+          score >= 0.85 ? fmt.green(bar) : score >= 0.6 ? fmt.yellow(bar) : fmt.red(bar);
+        lines.push(`  ◈ Quality  ${score.toFixed(2)}  ${coloredBar}`);
+      }
     }
 
     for (const [id, state] of this.agents) {
@@ -172,18 +226,24 @@ export class TeamPanel {
       } else if (state.status === 'failed') {
         coloredIcon = fmt.red(STATUS_ICONS.failed);
       } else if (state.status === 'cancelled') {
-        coloredIcon = fmt.yellow(STATUS_ICONS.cancelled);
-        statusSuffix = ' ' + fmt.dim('已取消');
+        coloredIcon = fmt.dim(STATUS_ICONS.cancelled);
+        statusSuffix = ' ' + fmt.dim('cancelled');
       } else {
         coloredIcon = fmt.dim(STATUS_ICONS.pending);
-        statusSuffix = ' ' + fmt.dim('等待中');
+        const depText = state.dependsOnLabels?.length
+          ? `waiting for ${state.dependsOnLabels.join(', ')}`
+          : 'waiting';
+        statusSuffix = ' ' + fmt.dim(depText);
       }
 
       let preview = '';
       const cols = process.stdout.columns ?? 80;
-      // Fixed prefix: "  X Label 00s " ≈ 2+1+1+labelWidth+6
       const labelWidth = displayWidth(state.label || id);
-      const prefixCols = 2 + 1 + 1 + labelWidth + 6;
+      // Measure actual suffix visual width (strip ANSI codes first)
+      const suffixText = statusSuffix.replace(/\x1b\[[0-9;]*m/g, '');
+      const suffixCols = displayWidth(suffixText);
+      // prefix: "  " (2) + icon (1) + " " (1) + label + suffix + " " (1) padding
+      const prefixCols = 2 + 1 + 1 + labelWidth + suffixCols + 2;
       const maxPreviewCols = Math.max(0, cols - prefixCols - 2);
       if (state.status === 'failed' && state.preview) {
         preview = fmt.red(' ' + truncateToWidth(state.preview.trim(), maxPreviewCols));
@@ -192,12 +252,31 @@ export class TeamPanel {
       }
 
       lines.push(`  ${coloredIcon} ${label}${statusSuffix}${preview}`);
+
+      const todos = state.todos;
+      if (todos && todos.length > 0) {
+        const shown = todos.slice(0, 3);
+        for (const todo of shown) {
+          const icon =
+            todo.status === 'done'
+              ? fmt.green('✓')
+              : todo.status === 'in_progress'
+                ? fmt.cyan('◐')
+                : fmt.dim('·');
+          lines.push(`    ${icon} ${fmt.dim(todo.text.slice(0, 60))}`);
+        }
+        if (todos.length > 3) {
+          lines.push(`    ${fmt.dim(`+${todos.length - 3} more`)}`);
+        }
+      }
     }
 
     if (lines.length > 0) {
       process.stdout.write(lines.join('\n') + '\n');
     }
-    this.lastLineCount = lines.length;
+    // Count physical rows (accounts for line wrapping on narrow terminals)
+    const rendered = lines.join('\n') + '\n';
+    this.lastLineCount = physicalRows(rendered);
   }
 
   clear(): void {
