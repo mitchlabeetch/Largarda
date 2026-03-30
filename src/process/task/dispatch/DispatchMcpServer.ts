@@ -20,9 +20,10 @@ import { mainLog, mainWarn } from '@process/utils/mainLogger';
  * Tool handler interface that the DispatchAgentManager implements.
  * The MCP server delegates tool calls to these handlers.
  *
- * Tools match CC's dispatch tool set:
- * start_task, start_code_task, read_transcript, list_sessions,
- * send_message, stop_child, send_user_message
+ * Tools aligned with CC's dispatch tool set:
+ * start_task, start_code_task, read_transcript, list_sessions, send_message
+ *
+ * AionUi extensions: agent_type, workspace, model (multi-engine support)
  */
 export type DispatchToolHandler = {
   parentSessionId: string;
@@ -31,8 +32,6 @@ export type DispatchToolHandler = {
   listChildren(): Promise<ChildTaskInfo[]>;
   sendMessageToChild(params: SendMessageToChildParams): Promise<string>;
   listSessions(params: ListSessionsParams): Promise<string>;
-  stopChild(sessionId: string, reason?: string): Promise<string>;
-  sendUserMessage?(message: string): Promise<string>;
 };
 
 /**
@@ -49,6 +48,7 @@ export class DispatchMcpServer {
 
   /**
    * Handle a tool call from the MCP transport.
+   * All responses use MCP content format: { content: [{ type: 'text', text }] }
    */
   async handleToolCall(tool: string, args: Record<string, unknown>): Promise<unknown> {
     if (this.disposed) {
@@ -66,26 +66,6 @@ export class DispatchMcpServer {
           params.agent_type = args.agent_type.trim() as (typeof params)['agent_type'];
         }
 
-        if (typeof args.member_id === 'string' && args.member_id.trim()) {
-          params.member_id = args.member_id.trim();
-        }
-
-        if (args.isolation === 'worktree') {
-          params.isolation = 'worktree';
-        }
-
-        if (args.teammate && typeof args.teammate === 'object') {
-          const t = args.teammate as Record<string, unknown>;
-          params.teammate = {
-            id: String(t.id ?? `teammate_${Date.now()}`),
-            name: String(t.name ?? 'Assistant'),
-            avatar: t.avatar ? String(t.avatar) : undefined,
-            presetRules: t.presetRules ? String(t.presetRules) : undefined,
-            agentType: params.agent_type || 'gemini',
-            createdAt: Date.now(),
-          };
-        }
-
         if (typeof args.workspace === 'string' && args.workspace.trim()) {
           params.workspace = args.workspace.trim();
         }
@@ -99,18 +79,22 @@ export class DispatchMcpServer {
           }
         }
 
-        if (Array.isArray(args.allowed_tools)) {
-          params.allowedTools = args.allowed_tools.map(String).filter(Boolean);
+        try {
+          const sessionId = await this.handler.startChildSession(params);
+          const children = await this.handler.listChildren();
+          const existingList = formatChildList(children);
+
+          return {
+            content: [{
+              type: 'text',
+              text: `Task started.\nsession_id: ${sessionId}\ntitle: ${params.title}\n\n${existingList}`,
+            }],
+          };
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          mainWarn('[DispatchMcpServer:start_task]', `failed: ${errMsg}`);
+          return { content: [{ type: 'text', text: `Failed to start task: ${errMsg}` }], isError: true };
         }
-
-        const sessionId = await this.handler.startChildSession(params);
-        const children = await this.handler.listChildren();
-        const existingList = children.map((c) => `- ${c.title} (${c.sessionId}): ${c.status}`).join('\n');
-
-        return {
-          session_id: sessionId,
-          message: `Task started. Session ID: ${sessionId}\n\nExisting tasks:\n${existingList}`,
-        };
       }
 
       case 'start_code_task': {
@@ -128,30 +112,22 @@ export class DispatchMcpServer {
           params.agent_type = args.agent_type.trim() as (typeof params)['agent_type'];
         }
 
-        if (typeof args.member_id === 'string' && args.member_id.trim()) {
-          params.member_id = args.member_id.trim();
-        }
+        try {
+          const sessionId = await this.handler.startChildSession(params);
+          const children = await this.handler.listChildren();
+          const existingList = formatChildList(children);
 
-        if (args.teammate && typeof args.teammate === 'object') {
-          const t = args.teammate as Record<string, unknown>;
-          params.teammate = {
-            id: String(t.id ?? `teammate_${Date.now()}`),
-            name: String(t.name ?? 'Coder'),
-            avatar: t.avatar ? String(t.avatar) : undefined,
-            presetRules: t.presetRules ? String(t.presetRules) : undefined,
-            agentType: params.agent_type || 'gemini',
-            createdAt: Date.now(),
+          return {
+            content: [{
+              type: 'text',
+              text: `Code task started with worktree isolation.\nsession_id: ${sessionId}\ntitle: ${params.title}\n\n${existingList}`,
+            }],
           };
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          mainWarn('[DispatchMcpServer:start_code_task]', `failed: ${errMsg}`);
+          return { content: [{ type: 'text', text: `Failed to start code task: ${errMsg}` }], isError: true };
         }
-
-        const sessionId = await this.handler.startChildSession(params);
-        const children = await this.handler.listChildren();
-        const existingList = children.map((c) => `- ${c.title} (${c.sessionId}): ${c.status}`).join('\n');
-
-        return {
-          session_id: sessionId,
-          message: `Code task started with worktree isolation. Session ID: ${sessionId}\n\nExisting tasks:\n${existingList}`,
-        };
       }
 
       case 'read_transcript': {
@@ -164,11 +140,10 @@ export class DispatchMcpServer {
 
         const result = await this.handler.readTranscript(options);
         return {
-          session_id: result.sessionId,
-          title: result.title,
-          status: result.status,
-          is_running: result.isRunning,
-          transcript: result.transcript,
+          content: [{
+            type: 'text',
+            text: `Session "${result.title}": ${result.isRunning ? 'running' : 'idle'}\n\n${result.transcript}`,
+          }],
         };
       }
 
@@ -185,55 +160,21 @@ export class DispatchMcpServer {
         const message = String(args.message ?? '');
         mainLog(
           '[DispatchMcpServer:send_message]',
-          `received: childId=${sessionId}, parentId=${this.handler.parentSessionId}`
+          `received: childId=${sessionId}, parentId=${this.handler.parentSessionId}`,
         );
 
         if (!sessionId || !message) {
-          return { content: 'session_id and message are required', isError: true };
+          return { content: [{ type: 'text', text: 'session_id and message are required' }], isError: true };
         }
 
         try {
           const resultMsg = await this.handler.sendMessageToChild({ sessionId, message });
           mainLog('[DispatchMcpServer:send_message]', `success: childId=${sessionId}`);
-          return { session_id: sessionId, message: resultMsg };
+          return { content: [{ type: 'text', text: resultMsg }] };
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
           mainWarn('[DispatchMcpServer:send_message]', `failed: childId=${sessionId}, error=${errMsg}`);
-          return { content: `Failed to send message: ${errMsg}`, isError: true };
-        }
-      }
-
-      case 'stop_child': {
-        const sessionId = String(args.session_id ?? '');
-        const reason = typeof args.reason === 'string' ? args.reason : undefined;
-
-        if (!sessionId) {
-          return { content: 'session_id is required', isError: true };
-        }
-
-        try {
-          const result = await this.handler.stopChild(sessionId, reason);
-          return { session_id: sessionId, message: result };
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          return { content: `Failed to stop child: ${errMsg}`, isError: true };
-        }
-      }
-
-      case 'send_user_message': {
-        const message = String(args.message ?? '');
-        if (!message) {
-          return { content: 'message is required', isError: true };
-        }
-        if (!this.handler.sendUserMessage) {
-          return { content: 'send_user_message not supported', isError: true };
-        }
-        try {
-          const result = await this.handler.sendUserMessage(message);
-          return { message: result };
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          return { content: `Failed to send message: ${errMsg}`, isError: true };
+          return { content: [{ type: 'text', text: `Failed to send message: ${errMsg}` }], isError: true };
         }
       }
 
@@ -244,7 +185,7 @@ export class DispatchMcpServer {
 
   /**
    * Get the tool schemas for MCP registration.
-   * Matches CC's dispatch tool set.
+   * Descriptions aligned with CC's dispatch tool set.
    */
   static getToolSchemas(): Array<{
     name: string;
@@ -255,36 +196,20 @@ export class DispatchMcpServer {
       {
         name: 'start_task',
         description:
-          'Start a new isolated task session. Creates an independent agent that executes the given prompt. ' +
-          'Returns a session_id for tracking.',
+          'Start a new isolated task session. Use this for non-code work — research, writing, planning, ' +
+          'anything that doesn\'t need a git repo. If the task involves a git repository (editing code, running tests, ' +
+          'making a PR), use start_code_task instead — it has worktree isolation. ' +
+          'Returns a session_id for read_transcript or send_message. Pick a short title (3-6 words).',
         inputSchema: {
           type: 'object',
           properties: {
             prompt: {
               type: 'string',
-              description: 'Detailed instructions for the child agent. Be specific and self-contained.',
+              description: 'The initial user message for the task session.',
             },
             title: {
               type: 'string',
-              description: 'Short label for the task (3-6 words).',
-            },
-            teammate: {
-              type: 'object',
-              description: 'Optional teammate configuration for the child agent.',
-              properties: {
-                name: { type: 'string', description: 'Display name for the teammate' },
-                avatar: { type: 'string', description: 'Avatar emoji or URL' },
-                presetRules: { type: 'string', description: 'System instructions for the child agent' },
-              },
-            },
-            model: {
-              type: 'object',
-              description: 'Optional model override for this child agent.',
-              properties: {
-                provider_id: { type: 'string', description: 'Provider ID' },
-                model_name: { type: 'string', description: 'Model name' },
-              },
-              required: ['provider_id', 'model_name'],
+              description: 'Short descriptive title (3-6 words) for the task.',
             },
             workspace: {
               type: 'string',
@@ -295,19 +220,14 @@ export class DispatchMcpServer {
               description: 'Engine type for the child agent.',
               enum: ['gemini', 'acp', 'codex', 'openclaw-gateway', 'nanobot', 'remote'],
             },
-            member_id: {
-              type: 'string',
-              description: 'Reference an existing group member by ID.',
-            },
-            isolation: {
-              type: 'string',
-              description: 'Isolation mode. "worktree" creates a git worktree for the child.',
-              enum: ['worktree'],
-            },
-            allowed_tools: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Optional allowlist of tool names this child can use.',
+            model: {
+              type: 'object',
+              description: 'Optional model override for this child agent.',
+              properties: {
+                provider_id: { type: 'string', description: 'Provider ID' },
+                model_name: { type: 'string', description: 'Model name' },
+              },
+              required: ['provider_id', 'model_name'],
             },
           },
           required: ['prompt', 'title'],
@@ -316,28 +236,34 @@ export class DispatchMcpServer {
       {
         name: 'start_code_task',
         description:
-          'Start a child task for code work with automatic git worktree isolation. ' +
-          'Use this instead of start_task when the task involves writing or modifying code.',
+          'Start a new task session with git worktree isolation. ALWAYS prefer this over start_task for code-related ' +
+          'work — editing a repo, running tests, fixing a bug, anything touching a codebase.\n\n' +
+          'BEFORE calling this:\n' +
+          '(1) Check your existing tasks. If the user is following up on work a code session already did, ' +
+          'route with send_message to that session_id — it already has the repo, the branch, the worktree, and the context. ' +
+          'Only start a new session for genuinely new work or a different repo.\n' +
+          '(2) When you call this tool, ALWAYS tell the user which workspace you are starting the task in.',
         inputSchema: {
           type: 'object',
           properties: {
-            prompt: { type: 'string', description: 'Detailed instructions for the child agent.' },
-            title: { type: 'string', description: 'Short label for the task (3-6 words).' },
-            workspace: { type: 'string', description: 'Working directory. Defaults to parent workspace.' },
+            prompt: {
+              type: 'string',
+              description:
+                'The user\'s message, VERBATIM. Quote their exact words first, then add context below if genuinely needed. ' +
+                'Do NOT paraphrase or interpret — the code session has the repo and can figure out what the user meant.',
+            },
+            title: {
+              type: 'string',
+              description: 'Short descriptive title (3-6 words) for the task.',
+            },
+            workspace: {
+              type: 'string',
+              description: 'Working directory. Defaults to parent workspace.',
+            },
             agent_type: {
               type: 'string',
               description: 'Engine type for the child agent.',
               enum: ['gemini', 'acp', 'codex', 'openclaw-gateway', 'nanobot', 'remote'],
-            },
-            member_id: { type: 'string', description: 'Reference an existing group member by ID.' },
-            teammate: {
-              type: 'object',
-              description: 'Optional teammate configuration.',
-              properties: {
-                name: { type: 'string', description: 'Display name' },
-                avatar: { type: 'string', description: 'Avatar emoji or URL' },
-                presetRules: { type: 'string', description: 'System instructions' },
-              },
             },
           },
           required: ['prompt', 'title'],
@@ -346,18 +272,31 @@ export class DispatchMcpServer {
       {
         name: 'read_transcript',
         description:
-          'Read the conversation transcript of a task session. ' +
-          'If the task is still running, waits up to max_wait_seconds for completion.',
+          'Read the transcript of a task session (find session IDs with list_sessions). ' +
+          'Blocks while the session is running (up to max_wait_seconds) so you get the completed outcome in one call ' +
+          'instead of polling. If still running when the wait expires, by default you\'ll get a one-line progress summary ' +
+          '— call again to keep waiting. When finished, returns the full transcript with a [result] line.',
         inputSchema: {
           type: 'object',
           properties: {
-            session_id: { type: 'string', description: 'The session ID returned by start_task.' },
-            limit: { type: 'number', description: 'Maximum number of messages to return. Default 20.' },
-            max_wait_seconds: { type: 'number', description: 'Seconds to wait for task completion. Default 30.' },
+            session_id: { type: 'string', description: 'session_id from list_sessions' },
+            limit: {
+              type: 'number',
+              description: 'Max messages to return (default 20, most recent)',
+            },
+            max_wait_seconds: {
+              type: 'number',
+              description:
+                'Wait up to this many seconds for the session\'s current turn to finish (default 30, 0 to return immediately). ' +
+                'For sessions you expect to be quick, keep the default. For long-running sessions, use a shorter wait (e.g. 15) to check in.',
+            },
             format: {
               type: 'string',
               enum: ['auto', 'full'],
-              description: '"auto" returns summary when running, full when done. "full" always returns full transcript.',
+              description:
+                '\'auto\' (default): one-line progress summary if the session is still running, full transcript once it\'s done. ' +
+                '\'full\': full transcript regardless — use this if you need to inspect a running session\'s work in detail ' +
+                '(e.g. it looks stuck). Prefer \'auto\': repeated full reads on a running session stack up overlapping partial transcripts.',
             },
           },
           required: ['session_id'],
@@ -366,8 +305,8 @@ export class DispatchMcpServer {
       {
         name: 'list_sessions',
         description:
-          'List all task sessions. Shows session ID, title, status, and last activity time. ' +
-          'Use session IDs with read_transcript or send_message.',
+          'List all task sessions you can inspect with read_transcript. ' +
+          'Returns the most recently active sessions first.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -379,43 +318,19 @@ export class DispatchMcpServer {
       {
         name: 'send_message',
         description:
-          'Send a follow-up message to a task session. ' +
-          'Works on running and idle tasks. Idle tasks will be automatically resumed.',
+          'Send a user message to a task session. Works for tasks you started AND for other sessions. ' +
+          'Use this when the user\'s message is a continuation of an existing session — not a new request. ' +
+          'For a new request, use start_task or start_code_task instead.',
         inputSchema: {
           type: 'object',
           properties: {
-            session_id: { type: 'string', description: 'session_id from start_task or list_sessions' },
-            message: { type: 'string', description: 'The follow-up message to send' },
+            session_id: {
+              type: 'string',
+              description: 'session_id from start_task, start_code_task, or list_sessions',
+            },
+            message: { type: 'string', description: 'The follow-up user message' },
           },
           required: ['session_id', 'message'],
-        },
-      },
-      {
-        name: 'stop_child',
-        description:
-          'Stop a running task and clean up its resources. ' +
-          'Use read_transcript to see partial results.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            session_id: { type: 'string', description: 'The session_id of the task to stop.' },
-            reason: { type: 'string', description: 'Optional reason for stopping.' },
-          },
-          required: ['session_id'],
-        },
-      },
-      {
-        name: 'send_user_message',
-        description:
-          'Send a message to the user in the group chat. ' +
-          'This is the ONLY way to communicate with the user. ' +
-          'Your plain text replies are internal reasoning and NOT shown to the user.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            message: { type: 'string', description: 'The message to display to the user.' },
-          },
-          required: ['message'],
         },
       },
     ];
@@ -428,4 +343,17 @@ export class DispatchMcpServer {
     this.disposed = true;
     mainLog('[DispatchMcpServer]', `Disposed for session: ${this.handler.parentSessionId}`);
   }
+}
+
+/**
+ * Format child task list for tool responses (matches CC's format).
+ */
+function formatChildList(children: ChildTaskInfo[]): string {
+  if (children.length === 0) return 'No other tasks running.';
+  return (
+    'Existing tasks:\n' +
+    children
+      .map((c) => `  - ${c.sessionId} "${c.title}" (${c.status === 'running' ? 'running' : 'idle'})`)
+      .join('\n')
+  );
 }

@@ -143,8 +143,6 @@ export class DispatchAgentManager extends BaseAgentManager<
       listChildren: this.listChildren.bind(this),
       sendMessageToChild: this.sendMessageToChild.bind(this),
       listSessions: this.listSessions.bind(this),
-      stopChild: this.stopChild.bind(this),
-      sendUserMessage: this.handleSendUserMessage.bind(this),
     };
     this.mcpServer = new DispatchMcpServer(toolHandler);
 
@@ -1041,22 +1039,6 @@ export class DispatchAgentManager extends BaseAgentManager<
    * G4.7: Handle save_memory from the admin agent.
    * Persists a memory entry to the workspace memory directory.
    */
-  /**
-   * Gap-3: Handle send_user_message tool — emit message to group chat UI.
-   */
-  private async handleSendUserMessage(message: string): Promise<string> {
-    this.emitGroupChatEvent({
-      sourceSessionId: this.conversation_id,
-      sourceRole: 'dispatcher',
-      displayName: this.dispatcherName,
-      content: message,
-      messageType: 'text',
-      timestamp: Date.now(),
-    });
-    return 'Message sent to user.';
-  }
-
-
   /**
    * G2.2: Monitor child tool calls for permission violations.
    * Called when child task reports a tool_call event.

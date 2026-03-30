@@ -10,6 +10,7 @@
  */
 
 import http from 'node:http';
+import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { mainLog, mainWarn, mainError } from '@process/utils/mainLogger';
@@ -100,16 +101,24 @@ export class DispatchHttpMcpServer {
 
   /**
    * Register all dispatch tools on the MCP server.
+   *
+   * McpServer.tool() requires Zod raw shapes, not JSON Schema objects.
+   * We convert each tool's JSON Schema properties into Zod equivalents.
    */
   private registerTools(): void {
     if (!this.mcpServer) return;
 
     const schemas = DispatchMcpServer.getToolSchemas();
     for (const schema of schemas) {
+      const zodShape = jsonSchemaPropertiesToZod(
+        schema.inputSchema.properties as Record<string, JsonSchemaProperty>,
+        (schema.inputSchema.required as string[] | undefined) ?? [],
+      );
+
       this.mcpServer.tool(
         schema.name,
         schema.description,
-        schema.inputSchema.properties as Record<string, unknown>,
+        zodShape,
         async (args: Record<string, unknown>) => {
           try {
             const result = await this.toolHandler.handleToolCall(schema.name, args);
@@ -173,5 +182,80 @@ export class DispatchHttpMcpServer {
     }
 
     mainLog('[DispatchHttpMcpServer]', `Disposed for conversation ${this.conversationId}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// JSON Schema → Zod conversion helpers
+// ---------------------------------------------------------------------------
+
+type JsonSchemaProperty = {
+  type?: string;
+  description?: string;
+  enum?: string[];
+  items?: JsonSchemaProperty;
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: string[];
+};
+
+/**
+ * Convert a JSON Schema `properties` object into a Zod raw shape
+ * that McpServer.tool() accepts.
+ */
+function jsonSchemaPropertiesToZod(
+  properties: Record<string, JsonSchemaProperty>,
+  required: string[],
+): Record<string, z.ZodTypeAny> {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  const requiredSet = new Set(required);
+
+  for (const [key, prop] of Object.entries(properties)) {
+    let schema = jsonSchemaPropToZod(prop);
+    if (!requiredSet.has(key)) {
+      schema = schema.optional();
+    }
+    shape[key] = schema;
+  }
+
+  return shape;
+}
+
+function jsonSchemaPropToZod(prop: JsonSchemaProperty): z.ZodTypeAny {
+  if (prop.enum && prop.enum.length > 0) {
+    const enumSchema = z.enum(prop.enum as [string, ...string[]]);
+    return prop.description ? enumSchema.describe(prop.description) : enumSchema;
+  }
+
+  switch (prop.type) {
+    case 'string': {
+      const s = z.string();
+      return prop.description ? s.describe(prop.description) : s;
+    }
+    case 'number': {
+      const n = z.number();
+      return prop.description ? n.describe(prop.description) : n;
+    }
+    case 'boolean': {
+      const b = z.boolean();
+      return prop.description ? b.describe(prop.description) : b;
+    }
+    case 'array': {
+      const itemSchema = prop.items ? jsonSchemaPropToZod(prop.items) : z.unknown();
+      const a = z.array(itemSchema);
+      return prop.description ? a.describe(prop.description) : a;
+    }
+    case 'object': {
+      if (prop.properties) {
+        const nested = jsonSchemaPropertiesToZod(prop.properties, prop.required ?? []);
+        const o = z.object(nested);
+        return prop.description ? o.describe(prop.description) : o;
+      }
+      const rec = z.record(z.unknown());
+      return prop.description ? rec.describe(prop.description) : rec;
+    }
+    default: {
+      const u = z.unknown();
+      return prop.description ? u.describe(prop.description) : u;
+    }
   }
 }
