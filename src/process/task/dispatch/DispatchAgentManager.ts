@@ -23,12 +23,18 @@ import BaseAgentManager from '../BaseAgentManager';
 import { IpcAgentEventEmitter } from '../IpcAgentEventEmitter';
 import type { IWorkerTaskManager } from '../IWorkerTaskManager';
 import type { IAgentManager } from '../IAgentManager';
+import type { AgentType } from '../agentTypes';
 import { DispatchMcpServer } from './DispatchMcpServer';
 import type { DispatchToolHandler } from './DispatchMcpServer';
 import { DispatchSessionTracker } from './DispatchSessionTracker';
 import { DispatchNotifier } from './DispatchNotifier';
 import { DispatchResourceGuard } from './DispatchResourceGuard';
 import { buildDispatchSystemPrompt } from './dispatchPrompt';
+import { scanProjectContext } from './projectContextScanner';
+import { loadMemory, saveMemory } from './memoryManager';
+import type { MemoryEntry } from './memoryManager';
+import { createWorktree, cleanupWorktree } from './worktreeManager';
+import { checkPermission } from './permissionPolicy';
 import type {
   ChildTaskInfo,
   StartChildTaskParams,
@@ -49,6 +55,8 @@ type DispatchAgentData = {
   yoloMode?: boolean;
   dispatchSessionType?: string;
   dispatcherName?: string;
+  /** Admin worker engine type. Defaults to 'gemini'. */
+  adminAgentType?: AgentType;
 };
 
 /**
@@ -71,6 +79,7 @@ export class DispatchAgentManager extends BaseAgentManager<
   workspace: string;
   conversation_id: string;
 
+  private readonly adminWorkerType: AgentType;
   private readonly model: TProviderWithModel;
   private readonly dispatcherName: string;
   private readonly tracker: DispatchSessionTracker;
@@ -98,8 +107,10 @@ export class DispatchAgentManager extends BaseAgentManager<
   private bootstrap: Promise<void>;
 
   constructor(data: DispatchAgentData) {
-    // type='dispatch' (public), workerType='gemini' (reuse gemini.js worker)
-    super('dispatch', { ...data, model: data.model }, new IpcAgentEventEmitter(), true, 'gemini');
+    const adminWorkerType: AgentType = data.adminAgentType || 'gemini';
+    // type='dispatch' (public), workerType resolved from adminAgentType (defaults to 'gemini')
+    super('dispatch', { ...data, model: data.model }, new IpcAgentEventEmitter(), true, adminWorkerType);
+    this.adminWorkerType = adminWorkerType;
     this.workspace = data.workspace;
     this.conversation_id = data.conversation_id;
     this.model = data.model;
@@ -116,6 +127,11 @@ export class DispatchAgentManager extends BaseAgentManager<
       listChildren: this.listChildren.bind(this),
       sendMessageToChild: this.sendMessageToChild.bind(this),
       listSessions: this.listSessions.bind(this),
+      // G2 additions:
+      stopChild: this.stopChild.bind(this),
+      askUser: this.handleAskUser.bind(this),
+      // G4.7: Cross-session memory
+      saveMemory: this.handleSaveMemory.bind(this),
     };
     this.mcpServer = new DispatchMcpServer(toolHandler);
 
@@ -146,6 +162,7 @@ export class DispatchAgentManager extends BaseAgentManager<
     let leaderProfile: string | undefined;
     let customInstructions: string | undefined;
     let maxConcurrentChildren: number | undefined;
+    let teamConfigPrompt: string | undefined;
     if (this.conversationRepo) {
       try {
         const conv = await this.conversationRepo.getConversation(this.conversation_id);
@@ -154,10 +171,12 @@ export class DispatchAgentManager extends BaseAgentManager<
             leaderPresetRules?: string;
             seedMessages?: string;
             maxConcurrentChildren?: number;
+            teamConfig?: string;
           };
           leaderProfile = extra.leaderPresetRules;
           customInstructions = extra.seedMessages;
           maxConcurrentChildren = extra.maxConcurrentChildren;
+          teamConfigPrompt = extra.teamConfig;
         }
       } catch (err) {
         mainWarn('[DispatchAgentManager]', 'Failed to read extra for leader/seed', err);
@@ -172,12 +191,55 @@ export class DispatchAgentManager extends BaseAgentManager<
     // F-4.2: Build available model list for orchestrator prompt
     const availableModels = await this.getAvailableModels();
 
+    // G4.1: Scan project context (non-blocking, cached)
+    let projectContextSummary: string | undefined;
+    try {
+      const cachedContext = (await this.conversationRepo?.getConversation(this.conversation_id))?.extra as
+        | { projectContext?: string }
+        | undefined;
+
+      if (cachedContext?.projectContext) {
+        projectContextSummary = cachedContext.projectContext;
+        mainLog('[DispatchAgentManager]', 'Using cached project context');
+      } else {
+        const projectContext = await scanProjectContext(this.workspace, { maxChars: 4000 });
+        projectContextSummary = projectContext.summary || undefined;
+        // Store in conversation extra for cache
+        if (projectContextSummary && this.conversationRepo) {
+          const conv = await this.conversationRepo.getConversation(this.conversation_id);
+          if (conv) {
+            const updatedExtra = { ...(conv.extra as Record<string, unknown>), projectContext: projectContextSummary };
+            await this.conversationRepo.updateConversation(this.conversation_id, {
+              extra: updatedExtra as typeof conv.extra,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      mainWarn('[DispatchAgentManager]', 'Project context scan failed', err);
+    }
+
+    // G4.7: Load cross-session memory
+    let memoryContent: string | undefined;
+    try {
+      const raw = await loadMemory(this.workspace);
+      memoryContent = raw.trim() || undefined;
+      if (memoryContent) {
+        mainLog('[DispatchAgentManager]', 'Loaded cross-session memory');
+      }
+    } catch (err) {
+      mainWarn('[DispatchAgentManager]', 'Failed to load memory', err);
+    }
+
     const systemPrompt = buildDispatchSystemPrompt(this.dispatcherName, {
       leaderProfile,
       customInstructions,
       availableModels,
       workspace: this.workspace,
       maxConcurrentChildren: maxConcurrentChildren ?? DEFAULT_CONCURRENT_CHILDREN,
+      projectContext: projectContextSummary,
+      teamConfig: teamConfigPrompt,
+      memory: memoryContent,
     });
     const combinedRules = systemPrompt;
 
@@ -208,6 +270,17 @@ export class DispatchAgentManager extends BaseAgentManager<
     const restoredChildren = this.tracker.getChildren(this.conversation_id);
     if (restoredChildren.length > 0 && this.notifier) {
       this.notifier.injectResumeContext(this.conversation_id, restoredChildren);
+    }
+
+    // G3.2: Auto-trigger welcome message on first bootstrap (no children = fresh group)
+    if (restoredChildren.length === 0) {
+      void this.sendMessage({
+        input: '[System] Group chat created. Please welcome the user.',
+        msg_id: uuid(),
+        isSystemNotification: true,
+      }).catch((err) => {
+        mainWarn('[DispatchAgentManager]', 'Welcome auto-trigger failed', err);
+      });
     }
   }
 
@@ -259,7 +332,7 @@ export class DispatchAgentManager extends BaseAgentManager<
   protected init(): void {
     super.init();
 
-    this.on('gemini.message', (data: Record<string, unknown>) => {
+    this.on(`${this.adminWorkerType}.message`, (data: Record<string, unknown>) => {
       // Status tracking
       if (data.type === 'start') {
         this.status = 'running';
@@ -296,7 +369,7 @@ export class DispatchAgentManager extends BaseAgentManager<
       if (!skipTransformTypes.includes(responseMsg.type)) {
         const tMessage = transformMessage(responseMsg);
         if (tMessage) {
-          addOrUpdateMessage(this.conversation_id, tMessage, 'gemini');
+          addOrUpdateMessage(this.conversation_id, tMessage);
         }
       }
 
@@ -337,6 +410,11 @@ export class DispatchAgentManager extends BaseAgentManager<
     const limitError = this.resourceGuard.checkConcurrencyLimit(this.conversation_id, this.transcriptReadChildren);
     if (limitError) {
       throw new Error(limitError);
+    }
+
+    // G1: member_id resolution not yet implemented
+    if (params.member_id) {
+      throw new Error('member_id resolution not yet implemented (planned for G3).');
     }
 
     // Store teammate config if provided
@@ -395,12 +473,33 @@ export class DispatchAgentManager extends BaseAgentManager<
       }
     }
 
+    // Resolve child agent type
+    const childAgentType: AgentType = params.agent_type || 'gemini';
+
+    // G2.1: Worktree isolation
+    let worktreePath: string | undefined;
+    let worktreeBranch: string | undefined;
+    if (params.isolation === 'worktree') {
+      try {
+        const wtInfo = await createWorktree(childWorkspace, uuid(8));
+        childWorkspace = wtInfo.worktreePath; // child works in the worktree
+        worktreePath = wtInfo.worktreePath;
+        worktreeBranch = wtInfo.branchName;
+        mainLog('[DispatchAgentManager]', `Created worktree: ${wtInfo.worktreePath}`);
+      } catch (err) {
+        // Graceful degradation: not a git repo or git error
+        mainWarn('[DispatchAgentManager]', `Worktree creation failed, using shared workspace`, err);
+      }
+    }
+
     // Create child conversation in DB.
+    // Cast to TChatConversation — childAgentType determines the actual runtime type.
+    // The AgentFactory routes by conversation.type, so the child worker is created correctly.
     const childId = uuid(16);
-    const childConversation: TChatConversation = {
+    const childConversation = {
       id: childId,
       name: params.title,
-      type: 'gemini',
+      type: childAgentType,
       createTime: Date.now(),
       modifyTime: Date.now(),
       model: childModel,
@@ -413,8 +512,13 @@ export class DispatchAgentManager extends BaseAgentManager<
         teammateConfig: params.teammate ? { name: params.teammate.name, avatar: params.teammate.avatar } : undefined,
         yoloMode: true,
         childModelName,
+        // G2.1: store worktree info
+        worktreePath,
+        worktreeBranch,
+        // G2.2: store allowed tools
+        allowedTools: params.allowedTools,
       },
-    };
+    } as unknown as TChatConversation;
     await this.conversationRepo.createConversation(childConversation);
 
     // Register in tracker
@@ -426,6 +530,12 @@ export class DispatchAgentManager extends BaseAgentManager<
       createdAt: Date.now(),
       lastActivityAt: Date.now(),
       workspace: childWorkspace,
+      agentType: childAgentType,
+      // G2.1: store worktree info
+      worktreePath,
+      worktreeBranch,
+      // G2.2: store allowed tools
+      allowedTools: params.allowedTools,
     };
     this.tracker.registerChild(this.conversation_id, childInfo);
 
@@ -827,6 +937,149 @@ export class DispatchAgentManager extends BaseAgentManager<
     mainLog('[DispatchAgentManager]', `cancelChild success: childId=${childSessionId}, workerKilled=true`);
   }
 
+  /**
+   * G2.3: Stop a running child task.
+   * Kills the worker, cleans up worktree if present, updates tracker.
+   */
+  private async stopChild(sessionId: string, reason?: string): Promise<string> {
+    if (!this.taskManager) throw new Error('Dependencies not set');
+
+    const childInfo = this.tracker.getChildInfo(sessionId);
+    if (!childInfo) {
+      throw new Error(`Session "${sessionId}" not found. Use list_sessions to see available sessions.`);
+    }
+
+    if (childInfo.status === 'cancelled' || childInfo.status === 'finished') {
+      return `Session "${childInfo.title}" is already ${childInfo.status}.`;
+    }
+
+    const displayName = childInfo.teammateName ?? 'Agent';
+
+    // 1. Kill worker
+    this.taskManager.kill(sessionId);
+
+    // 2. Cleanup worktree if present
+    if (childInfo.worktreePath && childInfo.worktreeBranch) {
+      try {
+        await cleanupWorktree(this.workspace, childInfo.worktreePath, childInfo.worktreeBranch);
+        mainLog('[DispatchAgentManager]', `Cleaned up worktree for stopped child: ${sessionId}`);
+      } catch (err) {
+        mainWarn('[DispatchAgentManager]', `Failed to cleanup worktree on stop: ${sessionId}`, err);
+      }
+    }
+
+    // 3. Update tracker
+    this.tracker.updateChildStatus(sessionId, 'cancelled');
+
+    // 4. Emit UI event
+    this.emitGroupChatEvent({
+      sourceSessionId: sessionId,
+      sourceRole: 'child',
+      displayName,
+      content: reason ? `Stopped: ${reason}` : 'Stopped by admin',
+      messageType: 'task_cancelled',
+      timestamp: Date.now(),
+      childTaskId: sessionId,
+    });
+
+    const reasonSuffix = reason ? ` Reason: ${reason}` : '';
+    return `Stopped "${childInfo.title}" (${sessionId}).${reasonSuffix} Use read_transcript to see partial results.`;
+  }
+
+  /**
+   * G2.4: Handle ask_user from the admin agent.
+   * Relays the question to the group chat event stream.
+   * Non-blocking: returns immediately, admin answers asynchronously.
+   */
+  private async handleAskUser(params: { question: string; context?: string; options?: string[] }): Promise<string> {
+    const optionsText = params.options ? `\nSuggested answers: ${params.options.join(', ')}` : '';
+    const contextText = params.context ? `\nContext: ${params.context}` : '';
+
+    // Emit as a group chat event for user awareness
+    this.emitGroupChatEvent({
+      sourceSessionId: this.conversation_id,
+      sourceRole: 'dispatcher',
+      displayName: this.dispatcherName,
+      content: `Question for user: ${params.question}${contextText}${optionsText}`,
+      messageType: 'system',
+      timestamp: Date.now(),
+    });
+
+    // Hot injection: if admin task is running, inject as system notification
+    if (this.taskManager && this.notifier) {
+      const parentTask = this.taskManager.getTask(this.conversation_id);
+      if (parentTask?.status === 'running') {
+        try {
+          await parentTask.sendMessage({
+            input: `[System Notification] [User Question]: ${params.question}${contextText}${optionsText}\nPlease relay this to the user and send the answer back via send_message.`,
+            msg_id: uuid(),
+            isSystemNotification: true,
+          });
+        } catch (err) {
+          mainWarn('[DispatchAgentManager]', 'Failed to inject ask_user notification', err);
+        }
+      }
+    }
+
+    return (
+      'Question submitted to user via group chat. ' +
+      'Continue with your best judgment. ' +
+      'If the user responds, it will arrive via a follow-up message.'
+    );
+  }
+
+  /**
+   * G4.7: Handle save_memory from the admin agent.
+   * Persists a memory entry to the workspace memory directory.
+   */
+  private async handleSaveMemory(entry: { type: string; title: string; content: string }): Promise<string> {
+    const memoryEntry: MemoryEntry = {
+      id: uuid(8),
+      type: entry.type as MemoryEntry['type'],
+      title: entry.title,
+      content: entry.content,
+      createdAt: Date.now(),
+    };
+    await saveMemory(this.workspace, memoryEntry);
+    return `Memory saved: "${entry.title}"`;
+  }
+
+  /**
+   * G2.2: Monitor child tool calls for permission violations.
+   * Called when child task reports a tool_call event.
+   * SOFT enforcement: log + notify admin, do not block.
+   */
+  private handleChildToolCallReport(childId: string, toolName: string, args: Record<string, unknown>): void {
+    const childInfo = this.tracker.getChildInfo(childId);
+    if (!childInfo) return;
+
+    const allowedTools = childInfo.allowedTools;
+    const result = checkPermission(toolName, args, allowedTools);
+
+    if (!result.allowed) {
+      mainWarn(
+        '[DispatchAgentManager]',
+        `Permission violation: child=${childId} tool=${toolName} reason=${result.reason}`
+      );
+    }
+
+    if (result.requiresApproval) {
+      mainWarn(
+        '[DispatchAgentManager]',
+        `Dangerous tool call: child=${childId} tool=${toolName} -- requires user approval`
+      );
+      this.emitGroupChatEvent({
+        sourceSessionId: childId,
+        sourceRole: 'child',
+        displayName: childInfo.teammateName ?? 'Agent',
+        content: `Dangerous operation detected: ${toolName}(${JSON.stringify(args).slice(0, 200)})`,
+        messageType: 'system',
+        timestamp: Date.now(),
+        childTaskId: childId,
+      });
+    }
+  }
+
   // ==================== Helper Methods ====================
 
   private formatTranscript(messages: TMessage[]): string {
@@ -918,7 +1171,7 @@ export class DispatchAgentManager extends BaseAgentManager<
   dispose(): void {
     this.mcpServer.dispose();
     if (this.resourceGuard) {
-      this.resourceGuard.cascadeKill(this.conversation_id);
+      this.resourceGuard.cascadeKill(this.conversation_id, this.workspace);
     } else {
       // No resourceGuard means dependencies weren't set, just kill self
       this.kill();

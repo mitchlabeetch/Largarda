@@ -29,6 +29,11 @@ export type DispatchToolHandler = {
   // Phase 2a additions:
   sendMessageToChild(params: SendMessageToChildParams): Promise<string>;
   listSessions(params: ListSessionsParams): Promise<string>;
+  // G2 additions:
+  stopChild(sessionId: string, reason?: string): Promise<string>;
+  askUser(params: { question: string; context?: string; options?: string[] }): Promise<string>;
+  // G4.7: Cross-session memory
+  saveMemory(entry: { type: string; title: string; content: string }): Promise<string>;
 };
 
 /**
@@ -63,6 +68,21 @@ export class DispatchMcpServer {
           title: String(args.title ?? 'Untitled Task'),
         };
 
+        // Parse agent_type if provided
+        if (typeof args.agent_type === 'string' && args.agent_type.trim()) {
+          params.agent_type = args.agent_type.trim() as (typeof params)['agent_type'];
+        }
+
+        // Parse member_id if provided
+        if (typeof args.member_id === 'string' && args.member_id.trim()) {
+          params.member_id = args.member_id.trim();
+        }
+
+        // Parse isolation if provided
+        if (args.isolation === 'worktree') {
+          params.isolation = 'worktree';
+        }
+
         // Parse teammate config if provided
         if (args.teammate && typeof args.teammate === 'object') {
           const t = args.teammate as Record<string, unknown>;
@@ -71,7 +91,7 @@ export class DispatchMcpServer {
             name: String(t.name ?? 'Assistant'),
             avatar: t.avatar ? String(t.avatar) : undefined,
             presetRules: t.presetRules ? String(t.presetRules) : undefined,
-            agentType: 'gemini',
+            agentType: params.agent_type || 'gemini',
             createdAt: Date.now(),
           };
         }
@@ -89,6 +109,11 @@ export class DispatchMcpServer {
           if (providerId && modelName) {
             params.model = { providerId, modelName };
           }
+        }
+
+        // G2.2: Parse allowed_tools if provided
+        if (Array.isArray(args.allowed_tools)) {
+          params.allowedTools = args.allowed_tools.map(String).filter(Boolean);
         }
 
         const sessionId = await this.handler.startChildSession(params);
@@ -171,6 +196,109 @@ export class DispatchMcpServer {
         }
       }
 
+      // G2.3: stop_child tool
+      case 'stop_child': {
+        const sessionId = String(args.session_id ?? '');
+        const reason = typeof args.reason === 'string' ? args.reason : undefined;
+
+        if (!sessionId) {
+          return { content: 'session_id is required', isError: true };
+        }
+
+        try {
+          const result = await this.handler.stopChild(sessionId, reason);
+          return { session_id: sessionId, message: result };
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { content: `Failed to stop child: ${errMsg}`, isError: true };
+        }
+      }
+
+      // G2.4: ask_user tool
+      case 'ask_user': {
+        const question = String(args.question ?? '');
+        const context = typeof args.context === 'string' ? args.context : undefined;
+        const options = Array.isArray(args.options) ? args.options.map(String) : undefined;
+
+        if (!question) {
+          return { content: 'question is required', isError: true };
+        }
+
+        try {
+          const result = await this.handler.askUser({ question, context, options });
+          return { message: result };
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { content: `Failed to ask user: ${errMsg}`, isError: true };
+        }
+      }
+
+      // G4.6: generate_plan tool (advisory only, does NOT create child tasks)
+      case 'generate_plan': {
+        const task = String(args.task ?? '');
+        const constraints = typeof args.constraints === 'string' ? args.constraints : undefined;
+
+        if (!task) {
+          return { content: 'task is required', isError: true };
+        }
+
+        // Build context for plan generation
+        const children = await this.handler.listChildren();
+        const contextParts = [
+          `Task: ${task}`,
+          constraints ? `Constraints: ${constraints}` : '',
+          children.length > 0
+            ? `Active sessions: ${children.map((c) => `${c.title}(${c.status})`).join(', ')}`
+            : '',
+        ].filter(Boolean);
+
+        // Return structured prompt — the LLM will fill in the plan
+        return {
+          instruction: 'Based on the context below, generate a structured execution plan.',
+          context: contextParts.join('\n'),
+          output_format: {
+            phases: [
+              {
+                title: 'string: phase name',
+                description: 'string: what this phase does',
+                agent_role: 'string: suggested role (Architect/Developer/Evaluator/etc)',
+                dependencies: 'string[]: phase titles this depends on',
+                estimated_effort: 'string: S/M/L',
+              },
+            ],
+            parallel_groups: 'number[][]: indices of phases that can run in parallel',
+            estimated_total: 'string: overall effort estimate',
+          },
+        };
+      }
+
+      // G4.7: save_memory tool (admin only)
+      case 'save_memory': {
+        const type = String(args.type ?? '');
+        const title = String(args.title ?? '');
+        const content = String(args.content ?? '');
+
+        if (!type || !title || !content) {
+          return { content: 'type, title, and content are required', isError: true };
+        }
+
+        const validTypes = ['user', 'feedback', 'project', 'reference'];
+        if (!validTypes.includes(type)) {
+          return {
+            content: `Invalid type "${type}". Must be one of: ${validTypes.join(', ')}`,
+            isError: true,
+          };
+        }
+
+        try {
+          const result = await this.handler.saveMemory({ type, title, content });
+          return { message: result };
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { content: `Failed to save memory: ${errMsg}`, isError: true };
+        }
+      }
+
       default:
         throw new Error(`Unknown tool: ${tool}`);
     }
@@ -248,6 +376,29 @@ export class DispatchMcpServer {
               description:
                 'Optional working directory for the child agent. Must be an existing directory. Omit to inherit parent workspace.',
             },
+            agent_type: {
+              type: 'string',
+              description:
+                'Engine type for the child agent. Options: gemini, acp, codex, openclaw-gateway, nanobot, remote. ' +
+                'Defaults to gemini if omitted.',
+              enum: ['gemini', 'acp', 'codex', 'openclaw-gateway', 'nanobot', 'remote'],
+            },
+            member_id: {
+              type: 'string',
+              description: 'Reference an existing group member by ID. Auto-fills config from their profile.',
+            },
+            isolation: {
+              type: 'string',
+              description: 'Isolation mode for the child workspace. Currently only "worktree" is planned (G2).',
+              enum: ['worktree'],
+            },
+            allowed_tools: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional allowlist of tool names this child can use (e.g., ["Read", "Edit", "Bash"]). ' +
+                'Omit to allow all tools. Safe tools (Read, Grep, Glob) are always allowed.',
+            },
           },
           required: ['prompt', 'title'],
         },
@@ -322,6 +473,104 @@ export class DispatchMcpServer {
             },
           },
           required: ['session_id', 'message'],
+        },
+      },
+      // G2.3: stop_child tool
+      {
+        name: 'stop_child',
+        description:
+          'Stop a running child task and clean up its resources (including worktree if any). ' +
+          'The child process is killed immediately. Use read_transcript to see partial results.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: {
+              type: 'string',
+              description: 'The session_id of the child task to stop.',
+            },
+            reason: {
+              type: 'string',
+              description: 'Optional reason for stopping (logged and included in notification).',
+            },
+          },
+          required: ['session_id'],
+        },
+      },
+      // G2.4: ask_user tool
+      {
+        name: 'ask_user',
+        description:
+          'Ask the user a question when you cannot make a decision autonomously. ' +
+          'The question is relayed to the group chat via the admin. ' +
+          'Returns the user response when available, or a timeout message. ' +
+          'Use sparingly -- only for critical decisions that require human judgment.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            question: {
+              type: 'string',
+              description: 'The question to ask the user. Be specific and provide context.',
+            },
+            context: {
+              type: 'string',
+              description: 'Optional additional context about why you need this answer.',
+            },
+            options: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional list of suggested answers for the user to choose from.',
+            },
+          },
+          required: ['question'],
+        },
+      },
+      // G4.6: generate_plan tool
+      {
+        name: 'generate_plan',
+        description:
+          'Generate a structured execution plan before delegating tasks. ' +
+          'Does NOT start any tasks. Returns a plan with phases, dependencies, and estimates. ' +
+          'Use this for complex multi-step requests before calling start_task.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            task: {
+              type: 'string',
+              description: 'The high-level task description from the user.',
+            },
+            constraints: {
+              type: 'string',
+              description: 'Optional constraints (time, cost, quality priorities).',
+            },
+          },
+          required: ['task'],
+        },
+      },
+      // G4.7: save_memory tool
+      {
+        name: 'save_memory',
+        description:
+          'Save an important piece of information to persistent memory. ' +
+          'Memories persist across sessions and are auto-loaded in future conversations. ' +
+          'Use for: user preferences, project decisions, feedback, important references.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['user', 'feedback', 'project', 'reference'],
+              description: 'Memory category.',
+            },
+            title: {
+              type: 'string',
+              description: 'Short title for this memory entry (used in MEMORY.md index).',
+            },
+            content: {
+              type: 'string',
+              description: 'The memory content to save.',
+            },
+          },
+          required: ['type', 'title', 'content'],
         },
       },
     ];

@@ -94,6 +94,7 @@ agentFactory.register('dispatch', (conv, opts) => {
     yoloMode: opts?.yoloMode ?? c.extra?.yoloMode,
     dispatchSessionType: c.extra?.dispatchSessionType || 'dispatcher',
     dispatcherName: c.name || 'Dispatcher',
+    adminAgentType: c.extra?.adminAgentType || 'gemini',
   });
   // Dependencies are injected after WorkerTaskManager is created (see below)
   return manager as unknown as ReturnType<typeof agentFactory.create>;

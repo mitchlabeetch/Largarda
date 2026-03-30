@@ -998,12 +998,12 @@ export const dispatch = {
     {
       name?: string;
       workspace?: string;
-      /** Selected leader agent ID (from acp.customAgents) */
+      /** Selected admin agent ID (from acp.customAgents). Required. */
       leaderAgentId?: string;
-      /** Model override, takes priority over gemini.defaultModel */
-      modelOverride?: { providerId: string; useModel: string };
-      /** User custom system prompt */
-      seedMessages?: string;
+      /** Engine type for the admin (orchestrator) worker. Defaults to 'gemini'. */
+      adminAgentType?: string;
+      /** G4.2: Team config name (from .claude/teams/{name}.json) */
+      teamConfigName?: string;
     }
   >('dispatch.create-group-chat'),
 
@@ -1106,6 +1106,57 @@ export const dispatch = {
       maxConcurrentChildren?: number;
     }
   >('dispatch.update-group-chat-settings'),
+
+  /** G3.6: Add a member to the group chat */
+  addMember: bridge.buildProvider<
+    IBridgeResponse,
+    {
+      conversationId: string;
+      agentId: string;
+    }
+  >('dispatch.add-member'),
+
+  /** G3.5: Update a child session's model */
+  updateChildModel: bridge.buildProvider<
+    IBridgeResponse,
+    {
+      conversationId: string;
+      childSessionId: string;
+      model: { providerId: string; modelName: string };
+    }
+  >('dispatch.update-child-model'),
+
+  /** G4.1: Rescan project context for a dispatch session */
+  rescanProjectContext: bridge.buildProvider<
+    IBridgeResponse<{ summary: string; scannedFiles: string[] }>,
+    { conversationId: string }
+  >('dispatch.rescan-project-context'),
+
+  /** G4.2: List available team configs from workspace .claude/teams/ */
+  listTeamConfigs: bridge.buildProvider<
+    IBridgeResponse<{ configs: Array<{ name: string }> }>,
+    { workspace: string }
+  >('dispatch.list-team-configs'),
+
+  /** G4.4: Get aggregated cost summary for a group chat */
+  getGroupCostSummary: bridge.buildProvider<
+    IBridgeResponse<{
+      totalTokens: number;
+      totalEstimatedCost: number;
+      sessions: Array<{
+        sessionId: string;
+        displayName: string;
+        role: 'admin' | 'child';
+        totalTokens: number;
+        inputTokens?: number;
+        outputTokens?: number;
+        modelName?: string;
+        estimatedCost?: number;
+      }>;
+      updatedAt: number;
+    }>,
+    { conversationId: string }
+  >('dispatch.get-group-cost-summary'),
 };
 
 // ==================== Extensions API ====================

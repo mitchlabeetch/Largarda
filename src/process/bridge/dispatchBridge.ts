@@ -15,6 +15,10 @@ import type { IConversationService } from '@process/services/IConversationServic
 import type { IConversationRepository } from '@process/services/database/IConversationRepository';
 import { mainLog, mainWarn } from '@process/utils/mainLogger';
 import { ProcessConfig, ProcessEnv } from '@process/utils/initStorage';
+import { scanProjectContext } from '@process/task/dispatch/projectContextScanner';
+import { listAvailableTeamConfigs, loadTeamConfig } from '@process/task/dispatch/teamConfigLoader';
+import { aggregateGroupCost } from '@process/task/dispatch/costTracker';
+import type { AgentStatus } from '@process/task/agentTypes';
 
 /**
  * Initialize dispatch-related IPC bridge handlers.
@@ -51,14 +55,9 @@ export function initDispatchBridge(
         model: string[];
       }>;
 
-      // Phase 2b: Model override support
+      // Model resolved from admin agent's default model (G3.1: modelOverride removed)
       let defaultModel: TProviderWithModel;
-      if (params.modelOverride) {
-        const overrideProvider = providers.find((p) => p.id === params.modelOverride!.providerId);
-        defaultModel = overrideProvider
-          ? { ...overrideProvider, useModel: params.modelOverride.useModel }
-          : ({ id: params.modelOverride.providerId, useModel: params.modelOverride.useModel } as TProviderWithModel);
-      } else {
+      {
         // gemini.defaultModel only stores { id, useModel } — a reference to the provider.
         // We must look up the full provider (with apiKey, baseUrl, platform) from model.config
         // to avoid "OpenAI API key is required" errors in the Gemini CLI worker.
@@ -82,11 +81,19 @@ export function initDispatchBridge(
       let leaderPresetRules: string | undefined;
       let leaderName: string | undefined;
       let leaderAvatar: string | undefined;
+      let leaderPresetAgentType: string | undefined;
       if (params.leaderAgentId) {
         // AcpBackendConfig uses 'context' field; stored as 'leaderPresetRules' in dispatch extra
         const customAgents =
           ((await ProcessConfig.get('acp.customAgents')) as Array<
-            Record<string, unknown> & { id: string; name: string; avatar?: string; context?: string; enabled?: boolean }
+            Record<string, unknown> & {
+              id: string;
+              name: string;
+              avatar?: string;
+              context?: string;
+              enabled?: boolean;
+              presetAgentType?: string;
+            }
           >) || [];
         const leaderAgent = customAgents.find((a) => a.id === params.leaderAgentId);
         if (leaderAgent) {
@@ -94,16 +101,32 @@ export function initDispatchBridge(
           leaderPresetRules = leaderAgent.context; // AcpBackendConfig.context → leaderPresetRules
           leaderName = leaderAgent.name;
           leaderAvatar = leaderAgent.avatar;
+          leaderPresetAgentType = leaderAgent.presetAgentType;
         } else {
           mainWarn('[DispatchBridge:createGroupChat]', 'Leader agent not found: ' + params.leaderAgentId);
         }
       }
 
-      // Phase 2b: Seed messages
-      const seedMessages = params.seedMessages?.trim() || undefined;
-
       // Use leader name as dispatcher name if available
       const displayName = leaderName || params.name || 'Group Chat';
+
+      // Resolve adminAgentType: explicit param > leader's presetAgentType > default 'gemini'
+      const adminAgentType: string = params.adminAgentType || leaderPresetAgentType || 'gemini';
+
+      // G4.2: Load team config if specified
+      let teamConfigData: string | undefined;
+      const teamConfigName = (params as Record<string, unknown>).teamConfigName as string | undefined;
+      if (teamConfigName && workspace) {
+        try {
+          const teamConfig = await loadTeamConfig(workspace, teamConfigName);
+          if (teamConfig) {
+            teamConfigData = teamConfig.promptSection;
+            mainLog('[DispatchBridge:createGroupChat]', `Team config loaded: ${teamConfigName}`);
+          }
+        } catch (err) {
+          mainWarn('[DispatchBridge:createGroupChat]', 'Team config load failed', err);
+        }
+      }
 
       await conversationService.createConversation({
         id,
@@ -118,7 +141,10 @@ export function initDispatchBridge(
           leaderPresetRules,
           leaderName,
           leaderAvatar,
-          seedMessages,
+          adminAgentType,
+          // G4.2: Persist team config for bootstrap
+          teamConfig: teamConfigData,
+          teamConfigName,
         },
       });
 
@@ -603,6 +629,215 @@ export function initDispatchBridge(
       };
     } catch (error) {
       mainWarn('[DispatchBridge:getChildTranscript]', 'ERROR: ' + String(error));
+      return { success: false, msg: String(error) };
+    }
+  });
+
+  // --- dispatch.add-member (G3.6) ---
+  ipcBridge.dispatch.addMember.provider(async (params) => {
+    mainLog('[DispatchBridge:addMember]', 'received', params);
+    try {
+      // 1. Look up agent profile from registry
+      const customAgents =
+        ((await ProcessConfig.get('acp.customAgents')) as Array<
+          Record<string, unknown> & {
+            id: string;
+            name: string;
+            avatar?: string;
+            description?: string;
+            context?: string;
+            presetAgentType?: string;
+            enabledSkills?: string[];
+          }
+        >) || [];
+      const agent = customAgents.find((a) => a.id === params.agentId);
+
+      if (!agent) {
+        return { success: false, msg: 'Agent not found' };
+      }
+
+      // 2. Store member in conversation extra.members[]
+      const conversation = await conversationService.getConversation(params.conversationId);
+      if (!conversation || conversation.type !== 'dispatch') {
+        return { success: false, msg: 'Conversation not found or not a dispatch type' };
+      }
+
+      const extra = { ...(conversation.extra as Record<string, unknown>) };
+      const memberList = ((extra.members || []) as Array<{ agentId: string; addedAt: number }>).slice();
+      memberList.push({ agentId: params.agentId, addedAt: Date.now() });
+      extra.members = memberList;
+      await conversationService.updateConversation(params.conversationId, { extra });
+
+      // 3. Inject system notification to admin agent
+      const task = _workerTaskManager.getTask(params.conversationId);
+      if (task) {
+        const agentDescription = agent.description || (agent.context ? agent.context.slice(0, 100) : '');
+        const notification = [
+          `[System]: User added "${agent.name}" as a group member.`,
+          agentDescription ? `  - Description: ${agentDescription}` : '',
+          agent.presetAgentType ? `  - Base Agent: ${agent.presetAgentType}` : '',
+          agent.enabledSkills?.length ? `  - Skills: ${agent.enabledSkills.join(', ')}` : '',
+          'Please acknowledge the new member and ask the user what task to assign them.',
+        ]
+          .filter(Boolean)
+          .join('\n');
+
+        const dispatchAgent = task as unknown as {
+          sendMessage?(msg: { input: string; msg_id: string; isSystemNotification?: boolean }): Promise<void>;
+        };
+        if (typeof dispatchAgent.sendMessage === 'function') {
+          void dispatchAgent
+            .sendMessage({
+              input: notification,
+              msg_id: uuid(),
+              isSystemNotification: true,
+            })
+            .catch((err: unknown) => {
+              mainWarn('[DispatchBridge:addMember]', 'Notification failed', err);
+            });
+        }
+      }
+
+      mainLog('[DispatchBridge:addMember]', 'success', params.agentId);
+      return { success: true };
+    } catch (error) {
+      mainWarn('[DispatchBridge:addMember]', 'ERROR: ' + String(error));
+      return { success: false, msg: String(error) };
+    }
+  });
+
+  // --- dispatch.update-child-model (G3.5) ---
+  ipcBridge.dispatch.updateChildModel.provider(async (params) => {
+    mainLog('[DispatchBridge:updateChildModel]', 'received', params);
+    try {
+      const conversation = await conversationService.getConversation(params.childSessionId);
+      if (!conversation) {
+        return { success: false, msg: 'Child session not found' };
+      }
+
+      const extra = { ...(conversation.extra as Record<string, unknown>) };
+      extra.childModelName = params.model.modelName;
+      await conversationService.updateConversation(params.childSessionId, { extra });
+
+      mainLog('[DispatchBridge:updateChildModel]', 'success', params.childSessionId);
+      return { success: true };
+    } catch (error) {
+      mainWarn('[DispatchBridge:updateChildModel]', 'ERROR: ' + String(error));
+      return { success: false, msg: String(error) };
+    }
+  });
+
+  // --- dispatch.rescan-project-context (G4.1) ---
+  ipcBridge.dispatch.rescanProjectContext.provider(async (params) => {
+    mainLog('[DispatchBridge:rescanProjectContext]', 'received', params);
+    try {
+      const conversation = await conversationService.getConversation(params.conversationId);
+      if (!conversation || conversation.type !== 'dispatch') {
+        return { success: false, msg: 'Conversation not found or not a dispatch type' };
+      }
+
+      const extra = conversation.extra as { workspace?: string } | undefined;
+      const workspace = extra?.workspace;
+      if (!workspace) {
+        return { success: false, msg: 'No workspace configured for this dispatch session' };
+      }
+
+      // Perform fresh scan
+      const projectContext = await scanProjectContext(workspace, { maxChars: 4000 });
+
+      // Update conversation extra cache
+      const updatedExtra = { ...(conversation.extra as Record<string, unknown>) };
+      updatedExtra.projectContext = projectContext.summary || undefined;
+      await conversationService.updateConversation(params.conversationId, { extra: updatedExtra });
+
+      // Inject notification to running admin agent
+      const task = _workerTaskManager.getTask(params.conversationId);
+      if (task) {
+        const dispatchAgent = task as unknown as {
+          sendMessage?(msg: { input: string; msg_id: string; isSystemNotification?: boolean }): Promise<void>;
+        };
+        if (typeof dispatchAgent.sendMessage === 'function' && projectContext.summary) {
+          void dispatchAgent
+            .sendMessage({
+              input: `[System Notification] Project context has been rescanned.\n\n${projectContext.summary}`,
+              msg_id: `rescan-${Date.now()}`,
+              isSystemNotification: true,
+            })
+            .catch((err: unknown) => {
+              mainWarn('[DispatchBridge:rescanProjectContext]', 'Notification injection failed', err);
+            });
+        }
+      }
+
+      mainLog('[DispatchBridge:rescanProjectContext]', 'success', params.conversationId);
+      return {
+        success: true,
+        data: {
+          summary: projectContext.summary,
+          scannedFiles: projectContext.scannedFiles,
+        },
+      };
+    } catch (error) {
+      mainWarn('[DispatchBridge:rescanProjectContext]', 'ERROR: ' + String(error));
+      return { success: false, msg: String(error) };
+    }
+  });
+
+  // --- dispatch.list-team-configs (G4.2) ---
+  ipcBridge.dispatch.listTeamConfigs.provider(async (params) => {
+    mainLog('[DispatchBridge:listTeamConfigs]', 'received', params);
+    try {
+      const configs = await listAvailableTeamConfigs(params.workspace);
+      return {
+        success: true,
+        data: { configs: configs.map((c) => ({ name: c.name })) },
+      };
+    } catch (error) {
+      mainWarn('[DispatchBridge:listTeamConfigs]', 'ERROR: ' + String(error));
+      return { success: false, msg: String(error) };
+    }
+  });
+
+  // --- dispatch.get-group-cost-summary (G4.4) ---
+  ipcBridge.dispatch.getGroupCostSummary.provider(async (params) => {
+    try {
+      const conversation = await conversationService.getConversation(params.conversationId);
+      if (!conversation || conversation.type !== 'dispatch') {
+        return { success: false, msg: 'Conversation not found or not a dispatch type' };
+      }
+
+      if (!conversationRepo) {
+        return { success: false, msg: 'Conversation repository not available' };
+      }
+
+      // Get child conversations
+      const allConversations = await conversationService.listAllConversations();
+      const childInfos = allConversations
+        .filter((conv) => {
+          const childExtra = conv.extra as { dispatchSessionType?: string; parentSessionId?: string } | undefined;
+          return (
+            childExtra?.dispatchSessionType === 'dispatch_child' && childExtra.parentSessionId === params.conversationId
+          );
+        })
+        .map((conv) => {
+          const childExtra = conv.extra as {
+            dispatchTitle?: string;
+            teammateConfig?: { name: string };
+          };
+          return {
+            sessionId: conv.id,
+            title: childExtra.dispatchTitle || conv.name,
+            status: (conv.status || 'idle') as AgentStatus,
+            teammateName: childExtra.teammateConfig?.name,
+            createdAt: conv.createTime,
+            lastActivityAt: conv.modifyTime,
+          };
+        });
+
+      const summary = await aggregateGroupCost(conversationRepo, params.conversationId, childInfos);
+      return { success: true, data: summary };
+    } catch (error) {
+      mainWarn('[DispatchBridge:getGroupCostSummary]', 'ERROR: ' + String(error));
       return { success: false, msg: String(error) };
     }
   });

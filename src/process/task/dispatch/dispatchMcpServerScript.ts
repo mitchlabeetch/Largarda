@@ -48,6 +48,29 @@ const TOOL_SCHEMAS = [
           description:
             'Optional working directory for the child agent. Must be an existing directory. Omit to inherit parent workspace.',
         },
+        agent_type: {
+          type: 'string',
+          description:
+            'Engine type for the child agent. Options: gemini, acp, codex, openclaw-gateway, nanobot, remote. ' +
+            'Defaults to gemini if omitted.',
+          enum: ['gemini', 'acp', 'codex', 'openclaw-gateway', 'nanobot', 'remote'],
+        },
+        member_id: {
+          type: 'string',
+          description: 'Reference an existing group member by ID. Auto-fills config from their profile.',
+        },
+        isolation: {
+          type: 'string',
+          description: 'Isolation mode for the child workspace. Currently only "worktree" is planned (G2).',
+          enum: ['worktree'],
+        },
+        allowed_tools: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Optional allowlist of tool names this child can use (e.g., ["Read", "Edit", "Bash"]). ' +
+            'Omit to allow all tools. Safe tools (Read, Grep, Glob) are always allowed.',
+        },
       },
       required: ['prompt', 'title'],
     },
@@ -94,6 +117,82 @@ const TOOL_SCHEMAS = [
         message: { type: 'string', description: 'The follow-up user message to send' },
       },
       required: ['session_id', 'message'],
+    },
+  },
+  // G2.3: stop_child tool
+  {
+    name: 'stop_child',
+    description:
+      'Stop a running child task and clean up its resources (including worktree if any). ' +
+      'The child process is killed immediately. Use read_transcript to see partial results.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        session_id: { type: 'string', description: 'The session_id of the child task to stop.' },
+        reason: {
+          type: 'string',
+          description: 'Optional reason for stopping (logged and included in notification).',
+        },
+      },
+      required: ['session_id'],
+    },
+  },
+  // G2.4: ask_user tool
+  {
+    name: 'ask_user',
+    description:
+      'Ask the user a question when you cannot make a decision autonomously. ' +
+      'The question is relayed to the group chat. ' +
+      'Use sparingly -- only for critical decisions that require human judgment.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        question: { type: 'string', description: 'The question to ask the user.' },
+        context: { type: 'string', description: 'Optional additional context.' },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional list of suggested answers.',
+        },
+      },
+      required: ['question'],
+    },
+  },
+  // G4.6: generate_plan tool
+  {
+    name: 'generate_plan',
+    description:
+      'Generate a structured execution plan before delegating tasks. ' +
+      'Does NOT start any tasks. Returns a plan with phases, dependencies, and estimates. ' +
+      'Use this for complex multi-step requests before calling start_task.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        task: { type: 'string', description: 'The high-level task description from the user.' },
+        constraints: { type: 'string', description: 'Optional constraints (time, cost, quality priorities).' },
+      },
+      required: ['task'],
+    },
+  },
+  // G4.7: save_memory tool
+  {
+    name: 'save_memory',
+    description:
+      'Save an important piece of information to persistent memory. ' +
+      'Memories persist across sessions and are auto-loaded in future conversations. ' +
+      'Use for: user preferences, project decisions, feedback, important references.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['user', 'feedback', 'project', 'reference'],
+          description: 'Memory category.',
+        },
+        title: { type: 'string', description: 'Short title for this memory entry.' },
+        content: { type: 'string', description: 'The memory content to save.' },
+      },
+      required: ['type', 'title', 'content'],
     },
   },
 ];

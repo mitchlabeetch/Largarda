@@ -6,7 +6,7 @@
 
 // src/process/task/dispatch/dispatchTypes.ts
 
-import type { AgentStatus } from '../agentTypes';
+import type { AgentStatus, AgentType } from '../agentTypes';
 
 /** Dispatch session role type, maps to CC's agent/dispatch_child/scheduled */
 export type DispatchSessionType = 'dispatcher' | 'dispatch_child' | 'normal';
@@ -30,11 +30,8 @@ export type TemporaryTeammateConfig = {
   avatar?: string;
   /** System rules */
   presetRules?: string;
-  /**
-   * Phase 1: fixed to 'gemini', not configurable.
-   * Phase 2 will open agentType selection.
-   */
-  agentType: 'gemini';
+  /** Engine type for this teammate. Supports any registered AgentType. */
+  agentType: AgentType;
   /** Creation timestamp */
   createdAt: number;
 };
@@ -54,6 +51,14 @@ export type StartChildTaskParams = {
   };
   /** F-6.1: Optional working directory override for child agent */
   workspace?: string;
+  /** Engine type for the child worker. Defaults to 'gemini'. */
+  agent_type?: AgentType;
+  /** Reference an existing group member; auto-fills config from their profile. */
+  member_id?: string;
+  /** Isolation mode. Declared here for forward-compat; G2 implements 'worktree'. */
+  isolation?: 'worktree';
+  /** Tool allowlist for permission policy. Omit = all tools allowed. */
+  allowedTools?: string[];
 };
 
 /** Child task info (for listing/querying) */
@@ -67,6 +72,14 @@ export type ChildTaskInfo = {
   lastActivityAt: number;
   /** F-6.1: Working directory for this child */
   workspace?: string;
+  /** Engine type of this child worker */
+  agentType?: AgentType;
+  /** G2.1: Worktree path if isolation='worktree' was used */
+  worktreePath?: string;
+  /** G2.1: Worktree branch name for merge/cleanup */
+  worktreeBranch?: string;
+  /** G2.2: Allowed tools for this child (permission policy) */
+  allowedTools?: string[];
 };
 
 /** Options for reading child task transcript */
