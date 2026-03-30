@@ -42,11 +42,12 @@ const ChatSider: React.FC<{
       ></ChatWorkspace>
     );
   } else if (conversation?.type === 'dispatch' && conversation.extra?.workspace) {
+    // Dispatch orchestrator uses Gemini worker internally, so workspace events use 'gemini' prefix
     workspaceNode = (
       <ChatWorkspace
         conversation_id={conversation.id}
         workspace={conversation.extra.workspace}
-        eventPrefix='dispatch'
+        eventPrefix='gemini'
         messageApi={messageApi}
       ></ChatWorkspace>
     );

@@ -292,6 +292,8 @@ export type TeammateTab = {
   hasUnread: boolean;
   /** Whether closable (completed tabs can be closed) */
   closable: boolean;
+  /** Member type (admin for the first tab, permanent/temporary for teammates) */
+  memberType?: MemberType;
 };
 
 /** G3.3: Props for MemberBar */
@@ -301,13 +303,13 @@ export type MemberBarProps = {
   onAddMemberClick: () => void;
 };
 
-/** G3.3: Props for TeammateTabBar */
+/** G3.3: Props for TeammateTabBar (unified member + tab bar) */
 export type TeammateTabBarProps = {
   tabs: TeammateTab[];
   activeTabKey: string;
   onTabChange: (key: string) => void;
   onTabClose: (key: string) => void;
-  onSettingsClick?: () => void;
+  onAddMemberClick?: () => void;
 };
 
 /** Backend GroupChatMessage shape (matches dispatchTypes.ts without importing from process layer) */

@@ -53,12 +53,14 @@ export function useGroupChatTabs(
     return result;
   }, [conversationId, dispatcher.name, dispatcher.avatar, info?.children]);
 
-  // Derive tabs for TeammateTabBar
+  // Derive tabs for unified TeammateTabBar (admin first, then members)
   const tabs = useMemo<TeammateTab[]>(() => {
     const result: TeammateTab[] = [
       {
         key: 'group-chat',
-        label: t('dispatch.tabs.groupChat'),
+        label: dispatcher.name,
+        avatar: dispatcher.avatar,
+        memberType: 'admin',
         status: 'idle',
         hasUnread: false,
         closable: false,
@@ -72,6 +74,7 @@ export function useGroupChatTabs(
           key: child.sessionId,
           label: child.teammateName || child.title,
           avatar: child.teammateAvatar,
+          memberType: child.isPermanent ? 'permanent' : 'temporary',
           status: childStatusToTabStatus(child.status),
           hasUnread: unreadTabs.has(child.sessionId),
           closable: child.status !== 'running' && child.status !== 'pending',
@@ -80,7 +83,7 @@ export function useGroupChatTabs(
     }
 
     return result;
-  }, [info?.children, closedTabs, unreadTabs, t]);
+  }, [info?.children, closedTabs, unreadTabs, dispatcher.name, dispatcher.avatar]);
 
   // Mark unread when child emits content and tab is not active
   useEffect(() => {

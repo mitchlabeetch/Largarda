@@ -143,7 +143,8 @@
     "addMember": "添加成员"
   },
   "tabs": {
-    "groupChat": "群聊"
+    "groupChat": "群聊",
+    "admin": "管理员"
   },
   "profile": {
     "baseAgent": "基础 Agent",

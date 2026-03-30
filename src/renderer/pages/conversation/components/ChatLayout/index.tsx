@@ -46,14 +46,18 @@ const ChatLayout: React.FC<{
   agentLogoIsEmoji?: boolean;
   headerExtra?: React.ReactNode;
   headerLeft?: React.ReactNode;
+  /** Icon rendered between headerLeft and the title (e.g. agent avatar for DMs, # for channels) */
+  titleIcon?: React.ReactNode;
   workspaceEnabled?: boolean;
+  /** Hide the workspace ConversationTabs bar (e.g. dispatch group chats have their own tab bar) */
+  hideTabs?: boolean;
   /** Conversation ID for mode switching */
   conversationId?: string;
   /** Resolved agent ID for opening the profile drawer */
   agentId?: string;
 }> = (props) => {
   const { conversationId, agentId: propsAgentId } = props;
-  const { backend, agentName, agentLogo, agentLogoIsEmoji, workspaceEnabled = true } = props;
+  const { backend, agentName, agentLogo, agentLogoIsEmoji, workspaceEnabled = true, hideTabs = false } = props;
   const navigate = useNavigate();
 
   // Agent profile drawer state
@@ -104,7 +108,7 @@ const ChatLayout: React.FC<{
 
   // --- Hook C: title rename ---
   const { openTabs, updateTabName } = useConversationTabs();
-  const hasTabs = openTabs.length > 0;
+  const hasTabs = !hideTabs && openTabs.length > 0;
 
   const { editingTitle, setEditingTitle, titleDraft, setTitleDraft, renameLoading, canRenameTitle, submitTitleRename } =
     useTitleRename({
@@ -201,7 +205,7 @@ const ChatLayout: React.FC<{
 
   const headerBlock = (
     <>
-      <ConversationTabs />
+      {!hideTabs && <ConversationTabs />}
       <ArcoLayout.Header
         className={classNames(
           'min-h-44px flex items-center justify-between px-16px pt-8px pb-10px gap-16px !bg-1 chat-layout-header chat-layout-header--glass overflow-hidden',
@@ -209,6 +213,7 @@ const ChatLayout: React.FC<{
         )}
       >
         <div className='shrink-0'>{props.headerLeft}</div>
+        {props.titleIcon && <div className='shrink-0 flex-center'>{props.titleIcon}</div>}
         <FlexFullContainer className='h-full min-w-0' containerClassName='flex items-center gap-16px'>
           {!layout?.isMobile && !hasTabs && (
             <ChatTitleEditor

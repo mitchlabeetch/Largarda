@@ -30,7 +30,8 @@ const parseDbMessage = (
   msg: TMessage,
   conversationId: string,
   index: number,
-  t: (key: string) => string
+  t: (key: string) => string,
+  dispatcherName?: string
 ): GroupChatTimelineMessage | null => {
   // CF-1 Fix Part B: Parse dispatch_event messages from DB
   if ((msg.type as string) === 'dispatch_event' && msg.content) {
@@ -81,7 +82,7 @@ const parseDbMessage = (
       id: msg.id || `db-${index}`,
       sourceSessionId: conversationId,
       sourceRole: 'dispatcher',
-      displayName: t('dispatch.timeline.dispatcherDisplayName'),
+      displayName: dispatcherName || t('dispatch.timeline.dispatcherDisplayName'),
       content,
       messageType: 'text',
       timestamp: msg.createdAt || Date.now(),
@@ -103,7 +104,7 @@ const parseDbMessage = (
  * CF-1: dispatch_event messages are now persisted to DB and parsed on reload.
  * CF-2: progressSummary is preserved separately from content.
  */
-export function useGroupChatMessages(conversationId: string) {
+export function useGroupChatMessages(conversationId: string, dispatcherDisplayName?: string) {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<GroupChatTimelineMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +127,7 @@ export function useGroupChatMessages(conversationId: string) {
         // For task status messages (non-started), keep only the latest per childTaskId.
         const childTaskLatest = new Map<string, number>();
         for (let i = 0; i < dbMessages.length; i++) {
-          const result = parseDbMessage(dbMessages[i], conversationId, i, t);
+          const result = parseDbMessage(dbMessages[i], conversationId, i, t, dispatcherDisplayName);
           if (result) {
             if (result.childTaskId && result.messageType !== 'task_started') {
               const existingIdx = childTaskLatest.get(result.childTaskId);
@@ -148,7 +149,7 @@ export function useGroupChatMessages(conversationId: string) {
         console.warn('[useGroupChatMessages] Failed to load from DB:', err);
         setIsLoading(false);
       });
-  }, [conversationId, t]);
+  }, [conversationId, t, dispatcherDisplayName]);
 
   // Subscribe to live stream
   useEffect(() => {
@@ -196,7 +197,8 @@ export function useGroupChatMessages(conversationId: string) {
       }
 
       // Handle regular text messages (dispatcher responses)
-      if (message.type === 'text') {
+      // 'content' = raw type from Gemini worker; 'text' = transformed type
+      if (message.type === 'content' || message.type === 'text') {
         const data = message.data as { content?: string; msg_id?: string } | string;
         const content = typeof data === 'string' ? data : (data?.content ?? '');
         if (!content) return;
@@ -207,7 +209,7 @@ export function useGroupChatMessages(conversationId: string) {
             id: `${conversationId}-${message.msg_id || Date.now()}`,
             sourceSessionId: conversationId,
             sourceRole: 'dispatcher',
-            displayName: t('dispatch.timeline.dispatcherDisplayName'),
+            displayName: dispatcherDisplayName || t('dispatch.timeline.dispatcherDisplayName'),
             content,
             messageType: 'text',
             timestamp: Date.now(),
@@ -217,7 +219,7 @@ export function useGroupChatMessages(conversationId: string) {
     });
 
     return unsub;
-  }, [conversationId, t]);
+  }, [conversationId, t, dispatcherDisplayName]);
 
   /** Optimistic insert of a user message (renders immediately before IPC roundtrip) */
   const appendUserMessage = useCallback(

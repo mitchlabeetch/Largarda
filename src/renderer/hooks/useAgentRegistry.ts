@@ -8,7 +8,6 @@
  */
 
 import { ipcBridge } from '@/common';
-import { ASSISTANT_PRESETS } from '@/common/config/presets/assistantPresets';
 import { ConfigStorage } from '@/common/config/storage';
 import { resolveLocaleKey } from '@/common/utils';
 import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
@@ -20,6 +19,7 @@ import useSWR from 'swr';
 type AcpBackendConfig = {
   id: string;
   name: string;
+  nameI18n?: Record<string, string>;
   avatar?: string;
   isPreset?: boolean;
   enabled?: boolean;
@@ -27,6 +27,7 @@ type AcpBackendConfig = {
   presetAgentType?: string;
   source?: string;
   description?: string;
+  descriptionI18n?: Record<string, string>;
 };
 
 /**
@@ -48,11 +49,14 @@ async function fetchCustomAgents(): Promise<AcpBackendConfig[]> {
     list.push({
       id,
       name: typeof ext.name === 'string' ? ext.name : id,
+      nameI18n: ext.nameI18n as Record<string, string> | undefined,
       avatar: typeof ext.avatar === 'string' ? ext.avatar : undefined,
       isPreset: true,
       enabled: true,
       presetAgentType: typeof ext.presetAgentType === 'string' ? ext.presetAgentType : undefined,
       context: typeof ext.context === 'string' ? ext.context : undefined,
+      description: typeof ext.description === 'string' ? ext.description : undefined,
+      descriptionI18n: ext.descriptionI18n as Record<string, string> | undefined,
     });
   }
 
@@ -61,12 +65,11 @@ async function fetchCustomAgents(): Promise<AcpBackendConfig[]> {
 
 /**
  * Hook that builds a unified agent registry from all sources:
- * - Built-in preset assistants (assistantPresets.ts)
- * - Custom agents (acp.customAgents config)
- * - CLI agents (ACP_BACKENDS_ALL)
+ * - CLI agents (ACP_BACKENDS_ALL + Gemini)
+ * - Custom/preset agents (acp.customAgents config — includes user-enabled presets)
  *
+ * Only enabled agents are included, matching the homepage (GuidPage) behavior.
  * Returns a Map<agentId, AgentIdentity> for O(1) lookups.
- * Re-fetches automatically when SWR cache for 'acp.customAgents' is invalidated.
  */
 export function useAgentRegistry(): Map<string, AgentIdentity> {
   const { i18n } = useTranslation();
@@ -79,9 +82,16 @@ export function useAgentRegistry(): Map<string, AgentIdentity> {
   return useMemo(() => {
     const registry = new Map<string, AgentIdentity>();
 
-    // 1. CLI agents (temporary employees)
+    // 1. CLI agents (temporary employees) — Gemini first
+    registry.set('gemini', {
+      id: 'gemini',
+      name: 'Gemini CLI',
+      employeeType: 'temporary',
+      source: 'cli_agent',
+      backendType: 'gemini',
+    });
     for (const [key, config] of Object.entries(ACP_BACKENDS_ALL)) {
-      if (!config.enabled) continue;
+      if (!config.enabled || !config.cliCommand) continue;
       registry.set(key, {
         id: key,
         name: config.name,
@@ -91,40 +101,22 @@ export function useAgentRegistry(): Map<string, AgentIdentity> {
       });
     }
 
-    // Also add gemini as a CLI agent
-    registry.set('gemini', {
-      id: 'gemini',
-      name: 'Gemini',
-      employeeType: 'temporary',
-      source: 'cli_agent',
-      backendType: 'gemini',
-    });
-
-    // 2. Built-in preset assistants (permanent employees)
-    for (const preset of ASSISTANT_PRESETS) {
-      const id = `preset:${preset.id}`;
-      registry.set(id, {
-        id,
-        name: preset.nameI18n?.[localeKey] || preset.nameI18n?.['en-US'] || preset.id,
-        avatar: preset.avatar,
-        employeeType: 'permanent',
-        source: 'preset',
-        presetAgentType: preset.presetAgentType,
-      });
-    }
-
-    // 3. Custom agents (permanent employees — user-created or dispatch-saved)
+    // 2. Custom agents (permanent employees — user-enabled presets, user-created, dispatch-saved)
+    // This is the same source as the homepage (GuidPage), so agent count and names match.
     for (const agent of customAgents) {
       const id = `custom:${agent.id}`;
       const source = agent.source === 'dispatch_teammate' ? 'dispatch_teammate' : 'custom';
+      const name = agent.nameI18n?.[localeKey] || agent.nameI18n?.['en-US'] || agent.name;
+      const description =
+        agent.descriptionI18n?.[localeKey] || agent.descriptionI18n?.['en-US'] || agent.description;
       registry.set(id, {
         id,
-        name: agent.name,
+        name,
         avatar: agent.avatar,
         employeeType: 'permanent',
         source,
         backendType: agent.presetAgentType,
-        description: agent.description,
+        description,
       });
     }
 

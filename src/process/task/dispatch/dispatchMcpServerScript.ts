@@ -197,9 +197,14 @@ const TOOL_SCHEMAS = [
   },
 ];
 
+import fs from 'node:fs';
+import net from 'node:net';
+
 let buffer = '';
 let pendingRequests = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
 let requestIdCounter = 0;
+let socketClient: net.Socket | null = null;
+let socketBuffer = '';
 
 /**
  * Send a JSON-RPC response to stdout.
@@ -212,17 +217,19 @@ function sendResponse(id: string | number | null, result: unknown, error?: { cod
     response.result = result;
   }
   const json = JSON.stringify(response);
-  process.stdout.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`);
+  // Send both Content-Length framing (MCP standard) and newline (Gemini CLI compatibility)
+  process.stdout.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}\n`);
 }
 
 /**
- * Forward a tool call to the main process via IPC and wait for result.
+ * Forward a tool call to the main process and wait for result.
  *
- * CR-008: When launched via spawn() (no IPC channel), falls back to writing
- * the tool call request to stderr as a JSON envelope. The parent process
- * (DispatchAgentManager) monitors stderr for these messages and responds
- * via stdin. This ensures the MCP server works regardless of whether
- * Gemini CLI uses fork() or spawn() to start it.
+ * Communication channel priority:
+ * 1. Unix domain socket (AIONUI_DISPATCH_SOCKET env var) — works with ALL agent types
+ * 2. Node.js IPC channel (process.send) — only available with child_process.fork()
+ *
+ * The MCP SDK (StdioClientTransport) uses child_process.spawn() which does NOT
+ * create an IPC channel. The Unix socket is the primary reliable communication path.
  */
 function callMainProcess(tool: string, args: Record<string, unknown>): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -231,13 +238,16 @@ function callMainProcess(tool: string, args: Record<string, unknown>): Promise<u
 
     const message = { type: 'tool_call', id: callId, tool, args };
 
-    if (process.send) {
-      // Primary path: Node.js IPC channel (fork)
+    if (socketClient && !socketClient.destroyed) {
+      // Primary path: Unix domain socket (works with all agent types)
+      socketClient.write(JSON.stringify(message) + '\n');
+    } else if (process.send) {
+      // Legacy path: Node.js IPC channel (only available with fork)
       process.send(message);
     } else {
-      // Fallback path: write to stderr as JSON envelope (spawn)
-      // The parent process reads stderr and responds via a separate channel.
-      process.stderr.write(`__DISPATCH_IPC__${JSON.stringify(message)}__DISPATCH_IPC_END__\n`);
+      pendingRequests.delete(callId);
+      reject(new Error(`No IPC channel available for tool call: ${tool}. Socket not connected and process.send unavailable.`));
+      return;
     }
 
     // Timeout after 120 seconds
@@ -255,6 +265,7 @@ function callMainProcess(tool: string, args: Record<string, unknown>): Promise<u
  */
 async function handleRequest(request: { id: string | number | null; method: string; params?: unknown }): Promise<void> {
   const { id, method, params } = request;
+  fs.appendFileSync('/tmp/mcp-script-debug.log', `[${new Date().toISOString()}] handleRequest: method=${method}, id=${id}\n`);
 
   switch (method) {
     case 'initialize': {
@@ -301,38 +312,70 @@ async function handleRequest(request: { id: string | number | null; method: stri
 }
 
 /**
- * Parse JSON-RPC messages from stdin (Content-Length framing).
+ * Parse JSON-RPC messages from stdin.
+ * Supports both Content-Length framing (standard MCP) and newline-delimited JSON (Gemini CLI).
  */
 function processBuffer(): void {
   while (true) {
+    // Try Content-Length framing first
     const headerEnd = buffer.indexOf('\r\n\r\n');
-    if (headerEnd === -1) break;
+    if (headerEnd !== -1) {
+      const header = buffer.slice(0, headerEnd);
+      const match = header.match(/Content-Length:\s*(\d+)/i);
+      if (match) {
+        const contentLength = parseInt(match[1], 10);
+        const bodyStart = headerEnd + 4;
+        if (buffer.length < bodyStart + contentLength) break;
 
-    const header = buffer.slice(0, headerEnd);
-    const match = header.match(/Content-Length:\s*(\d+)/i);
-    if (!match) {
-      buffer = buffer.slice(headerEnd + 4);
-      continue;
+        const body = buffer.slice(bodyStart, bodyStart + contentLength);
+        buffer = buffer.slice(bodyStart + contentLength);
+
+        try {
+          const request = JSON.parse(body);
+          void handleRequest(request);
+        } catch (err) {
+          process.stderr.write(`[MCP Server Script] Failed to parse Content-Length message: ${err}\n`);
+        }
+        continue;
+      }
     }
 
-    const contentLength = parseInt(match[1], 10);
-    const bodyStart = headerEnd + 4;
-    if (buffer.length < bodyStart + contentLength) break;
+    // Fall back to newline-delimited JSON (Gemini CLI sends this format)
+    const newlineIndex = buffer.indexOf('\n');
+    if (newlineIndex === -1) {
+      // No newline yet — try to parse the entire buffer as a single JSON object
+      // (handles case where message arrives without trailing newline)
+      const trimmed = buffer.trim();
+      if (trimmed && trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const request = JSON.parse(trimmed);
+          buffer = '';
+          void handleRequest(request);
+          continue;
+        } catch {
+          // Incomplete JSON, wait for more data
+        }
+      }
+      break;
+    }
 
-    const body = buffer.slice(bodyStart, bodyStart + contentLength);
-    buffer = buffer.slice(bodyStart + contentLength);
+    const line = buffer.slice(0, newlineIndex).trim();
+    buffer = buffer.slice(newlineIndex + 1);
+    if (!line) continue;
 
     try {
-      const request = JSON.parse(body);
+      const request = JSON.parse(line);
       void handleRequest(request);
     } catch (err) {
-      process.stderr.write(`[MCP Server Script] Failed to parse JSON-RPC message: ${err}\n`);
+      process.stderr.write(`[MCP Server Script] Failed to parse NDJSON message: ${err}\n`);
     }
   }
 }
 
-// Listen for IPC responses from main process
-process.on('message', (msg: { type: string; id: string; result?: unknown; error?: string }) => {
+/**
+ * Handle a tool_result message from the main process (via socket or IPC).
+ */
+function handleToolResult(msg: { type: string; id: string; result?: unknown; error?: string }): void {
   if (msg.type === 'tool_result' && pendingRequests.has(msg.id)) {
     const pending = pendingRequests.get(msg.id)!;
     pendingRequests.delete(msg.id);
@@ -342,23 +385,86 @@ process.on('message', (msg: { type: string; id: string; result?: unknown; error?
       pending.resolve(msg.result);
     }
   }
+}
+
+/**
+ * Connect to the main process via Unix domain socket.
+ * Returns a promise that resolves when connected.
+ */
+function connectSocket(socketPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath, () => {
+      socketClient = client;
+      // Signal ready to main process
+      client.write(JSON.stringify({ type: 'ready' }) + '\n');
+      resolve();
+    });
+
+    client.on('data', (chunk) => {
+      socketBuffer += chunk.toString();
+      let newlineIndex: number;
+      while ((newlineIndex = socketBuffer.indexOf('\n')) !== -1) {
+        const line = socketBuffer.slice(0, newlineIndex).trim();
+        socketBuffer = socketBuffer.slice(newlineIndex + 1);
+        if (line) {
+          try {
+            handleToolResult(JSON.parse(line));
+          } catch {
+            process.stderr.write(`[MCP Server Script] Failed to parse socket message: ${line.slice(0, 200)}\n`);
+          }
+        }
+      }
+    });
+
+    client.on('error', (err) => {
+      process.stderr.write(`[MCP Server Script] Socket error: ${err.message}\n`);
+      if (!socketClient) reject(err);
+    });
+
+    client.on('close', () => {
+      socketClient = null;
+    });
+
+    // Timeout connection attempt
+    setTimeout(() => {
+      if (!socketClient) {
+        client.destroy();
+        reject(new Error(`Socket connection timeout: ${socketPath}`));
+      }
+    }, 10_000);
+  });
+}
+
+// Listen for IPC responses from main process (legacy fork path)
+process.on('message', (msg: { type: string; id: string; result?: unknown; error?: string }) => {
+  handleToolResult(msg);
 });
 
-// Read stdin
+// Read MCP JSON-RPC from stdin
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk: string) => {
+  fs.appendFileSync('/tmp/mcp-script-debug.log', `[${new Date().toISOString()}] stdin data: ${chunk.slice(0, 200)}\n`);
   buffer += chunk;
   processBuffer();
 });
 
 process.stdin.on('end', () => {
+  if (socketClient) socketClient.destroy();
   process.exit(0);
 });
 
-// Signal ready to parent
-if (process.send) {
+// Initialize: connect via Unix socket if available, otherwise fall back to IPC
+const dispatchSocketPath = process.env.AIONUI_DISPATCH_SOCKET;
+if (dispatchSocketPath) {
+  connectSocket(dispatchSocketPath).catch((err) => {
+    process.stderr.write(`[MCP Server Script] Socket connect failed: ${err.message}, falling back to IPC\n`);
+    // Fall back to IPC ready signal
+    if (process.send) {
+      process.send({ type: 'ready' });
+    }
+  });
+} else if (process.send) {
   process.send({ type: 'ready' });
 } else {
-  // CR-008 fallback: signal ready via stderr when no IPC channel
-  process.stderr.write(`__DISPATCH_IPC__${JSON.stringify({ type: 'ready' })}__DISPATCH_IPC_END__\n`);
+  process.stderr.write('[MCP Server Script] Warning: No IPC channel available (no socket path, no process.send)\n');
 }

@@ -14,7 +14,7 @@ import type { TChatConversation } from '@/common/config/storage';
 export type AgentEmployeeType = 'permanent' | 'temporary';
 
 /** Source of the agent identity */
-export type AgentSource = 'preset' | 'custom' | 'dispatch_teammate' | 'cli_agent' | 'temporary_teammate';
+export type AgentSource = 'custom' | 'dispatch_teammate' | 'cli_agent' | 'temporary_teammate';
 
 /** Unified agent identity */
 export type AgentIdentity = {
@@ -62,11 +62,11 @@ export function resolveAgentId(conversation: TChatConversation): string {
     return `custom:${extra.customAgentId}`;
   }
 
-  // 3. Preset assistant — strip "builtin-" prefix so IDs match registry keys (preset:word-creator)
+  // 3. Preset assistant — strip "builtin-" prefix, map to custom:xxx (presets are stored in acp.customAgents)
   if (extra?.presetAssistantId && typeof extra.presetAssistantId === 'string') {
     const rawId = extra.presetAssistantId;
     const normalizedId = rawId.startsWith('builtin-') ? rawId.slice('builtin-'.length) : rawId;
-    return `preset:${normalizedId}`;
+    return `custom:${normalizedId}`;
   }
 
   // 4. ACP backend

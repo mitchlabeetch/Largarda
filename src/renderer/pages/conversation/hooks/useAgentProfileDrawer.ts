@@ -23,6 +23,7 @@ type CustomAgentConfig = {
   context?: string;
   enabledSkills?: string[];
   presetAgentType?: string;
+  isPreset?: boolean;
 };
 
 /**
@@ -36,12 +37,22 @@ export function useAgentProfileDrawer(agentId: string): AgentProfileDrawerData |
   const { i18n } = useTranslation();
   const localeKey = resolveLocaleKey(i18n.language);
 
-  const isPreset = agentId.startsWith('preset:');
   const isCustom = agentId.startsWith('custom:');
   const customId = isCustom ? agentId.slice('custom:'.length) : null;
 
-  // Fetch preset assistant rule via IPC (cached with SWR)
-  const presetAssistantId = isPreset ? `builtin-${agentId.replace('preset:', '')}` : null;
+  // Fetch custom agents config for rule/skills
+  const { data: customAgents } = useSWR<CustomAgentConfig[]>(
+    isCustom ? 'acp.customAgents' : null,
+    () => ConfigStorage.get('acp.customAgents') as Promise<CustomAgentConfig[]>,
+    { revalidateOnFocus: false },
+  );
+
+  // Determine if this custom agent is actually a built-in preset
+  const customConfig = customAgents?.find((a) => a.id === customId);
+  const isBuiltinPreset = customConfig?.isPreset === true;
+  const presetAssistantId = isBuiltinPreset ? `builtin-${customId}` : null;
+
+  // Fetch preset assistant rule via IPC (only for built-in presets)
   const { data: presetRule } = useSWR<string>(
     presetAssistantId ? `assistant-rule:${presetAssistantId}:${localeKey}` : null,
     () =>
@@ -49,14 +60,7 @@ export function useAgentProfileDrawer(agentId: string): AgentProfileDrawerData |
         assistantId: presetAssistantId!,
         locale: localeKey,
       }),
-    { revalidateOnFocus: false }
-  );
-
-  // Fetch custom agents config for custom agent rule/skills
-  const { data: customAgents } = useSWR<CustomAgentConfig[]>(
-    isCustom ? 'acp.customAgents' : null,
-    () => ConfigStorage.get('acp.customAgents') as Promise<CustomAgentConfig[]>,
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false },
   );
 
   return useMemo(() => {
@@ -67,15 +71,12 @@ export function useAgentProfileDrawer(agentId: string): AgentProfileDrawerData |
     let mountedAgents: AgentIdentity[] = [];
     const groupChats: GroupChatSummary[] = [];
 
-    if (identity.employeeType === 'permanent') {
-      if (identity.source === 'preset') {
-        // Preset assistant: resolve from ASSISTANT_PRESETS
-        const presetId = agentId.replace('preset:', '');
-        const preset = ASSISTANT_PRESETS.find((p) => p.id === presetId);
+    if (identity.employeeType === 'permanent' && isCustom && customConfig) {
+      if (isBuiltinPreset) {
+        // Built-in preset assistant: resolve skills from ASSISTANT_PRESETS, rule from IPC
+        const preset = ASSISTANT_PRESETS.find((p) => p.id === customId);
         if (preset) {
           skills = preset.defaultEnabledSkills ?? [];
-
-          // Resolve mounted agent from presetAgentType
           if (preset.presetAgentType) {
             const mountedIdentity = registry.get(preset.presetAgentType);
             if (mountedIdentity) {
@@ -83,19 +84,15 @@ export function useAgentProfileDrawer(agentId: string): AgentProfileDrawerData |
             }
           }
         }
-        rule = presetRule || undefined;
-      } else if (isCustom && customAgents) {
-        // Custom agent: resolve from config
-        const customConfig = customAgents.find((a) => a.id === customId);
-        if (customConfig) {
-          rule = customConfig.context;
-          skills = customConfig.enabledSkills ?? [];
-
-          if (customConfig.presetAgentType) {
-            const mountedIdentity = registry.get(customConfig.presetAgentType);
-            if (mountedIdentity) {
-              mountedAgents = [mountedIdentity];
-            }
+        rule = presetRule || customConfig.context || undefined;
+      } else {
+        // User-created custom agent
+        rule = customConfig.context;
+        skills = customConfig.enabledSkills ?? [];
+        if (customConfig.presetAgentType) {
+          const mountedIdentity = registry.get(customConfig.presetAgentType);
+          if (mountedIdentity) {
+            mountedAgents = [mountedIdentity];
           }
         }
       }
@@ -108,5 +105,5 @@ export function useAgentProfileDrawer(agentId: string): AgentProfileDrawerData |
       mountedAgents,
       groupChats,
     };
-  }, [identity, agentId, isPreset, isCustom, customId, presetRule, customAgents, registry]);
+  }, [identity, isCustom, customId, isBuiltinPreset, customConfig, presetRule, registry]);
 }

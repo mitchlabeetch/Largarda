@@ -62,6 +62,8 @@ interface AcpAgentManagerData {
   /** Persisted model ID for resume support / 持久化的模型 ID，用于恢复 */
   currentModelId?: string;
   sandboxMode?: CodexSandboxMode;
+  /** External MCP servers to inject into the ACP session (e.g. dispatch tools) */
+  externalMcpServers?: import('@process/agent/acp/mcpSessionConfig').AcpSessionMcpServer[];
 }
 
 type BufferedStreamTextMessage = {
@@ -283,6 +285,7 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
           acpSessionId: data.acpSessionId,
           acpSessionUpdatedAt: data.acpSessionUpdatedAt,
           currentModelId: this.persistedModelId ?? undefined,
+          externalMcpServers: data.externalMcpServers,
         },
         onSessionIdUpdate: (sessionId: string) => {
           // Save ACP session ID to database for resume support

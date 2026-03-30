@@ -143,7 +143,8 @@
     "addMember": "Add member"
   },
   "tabs": {
-    "groupChat": "Group Chat"
+    "groupChat": "Group Chat",
+    "admin": "Admin"
   },
   "profile": {
     "baseAgent": "Base Agent",

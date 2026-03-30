@@ -30,12 +30,14 @@ const AgentDMGroup: React.FC<AgentDMGroupProps> = ({
   const isActive = group.hasActiveConversation;
   const conversationCount = group.conversations.length;
 
-  // Auto-expand if the selected conversation belongs to this group
-  const hasSelectedConversation = selectedConversationId
-    ? group.conversations.some((c) => c.id === selectedConversationId)
-    : false;
+  // Find the selected conversation in this group (if any)
+  const selectedConversation = selectedConversationId
+    ? group.conversations.find((c) => c.id === selectedConversationId)
+    : undefined;
 
-  const isExpanded = expanded || hasSelectedConversation;
+  // Allow manual collapse even when a conversation is selected.
+  // The selected conversation will be shown below the collapsed header.
+  const isExpanded = expanded;
 
   const handleToggle = useCallback(() => {
     setExpanded((prev) => !prev);
@@ -147,7 +149,7 @@ const AgentDMGroup: React.FC<AgentDMGroupProps> = ({
       <div
         className={classNames(
           'px-12px py-8px rd-8px flex items-center gap-8px cursor-pointer transition-colors min-w-0',
-          'hover:bg-[rgba(var(--primary-6),0.08)]'
+          'hover:bg-[rgba(var(--primary-6),0.08)]',
         )}
         onClick={handleToggle}
       >
@@ -170,8 +172,13 @@ const AgentDMGroup: React.FC<AgentDMGroupProps> = ({
         )}
       </div>
 
-      {/* Expanded conversation list */}
+      {/* Expanded: show all conversations */}
       {isExpanded && renderExpandedContent()}
+
+      {/* Collapsed but has active conversation: show it below the header (Slack-like) */}
+      {!isExpanded && selectedConversation && (
+        <div className='ml-20px'>{renderConversation(selectedConversation)}</div>
+      )}
     </div>
   );
 };

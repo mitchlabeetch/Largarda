@@ -14,10 +14,13 @@ import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
 import type { IConversationService } from '@process/services/IConversationService';
 import type { IConversationRepository } from '@process/services/database/IConversationRepository';
 import { mainLog, mainWarn } from '@process/utils/mainLogger';
-import { ProcessConfig, ProcessEnv } from '@process/utils/initStorage';
+import { ProcessConfig, ProcessEnv, getSystemDir } from '@process/utils/initStorage';
+import { mkdir } from 'fs/promises';
+import path from 'path';
 import { scanProjectContext } from '@process/task/dispatch/projectContextScanner';
 import { listAvailableTeamConfigs, loadTeamConfig } from '@process/task/dispatch/teamConfigLoader';
 import { aggregateGroupCost } from '@process/task/dispatch/costTracker';
+import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
 import type { AgentStatus } from '@process/task/agentTypes';
 
 /**
@@ -72,16 +75,22 @@ export function initDispatchBridge(
           : ({ id: modelRef.id, useModel: modelRef.useModel } as TProviderWithModel);
       }
 
-      // Determine workspace from params or use system default via ProcessEnv
-      const envDirs = await ProcessEnv.get('aionui.dir');
-      const workspace = params.workspace || envDirs?.workDir || '';
+      // Determine workspace: user-specified > system temp dir (same as single-chat)
+      let workspace = params.workspace || '';
+      const customWorkspace = !!params.workspace;
+      if (!workspace) {
+        const tempPath = getSystemDir().workDir;
+        workspace = path.join(tempPath, `dispatch-temp-${Date.now()}`);
+        await mkdir(workspace, { recursive: true });
+        mainLog('[DispatchBridge:createGroupChat]', 'Created temp workspace:', workspace);
+      }
 
       // Phase 2b: Leader agent snapshot
-      let leaderAgentId: string | undefined;
       let leaderPresetRules: string | undefined;
       let leaderName: string | undefined;
       let leaderAvatar: string | undefined;
-      let leaderPresetAgentType: string | undefined;
+      // Always store the raw leaderAgentId so frontend can resolve name/logo dynamically
+      const leaderAgentId: string | undefined = params.leaderAgentId || undefined;
       if (params.leaderAgentId) {
         // AcpBackendConfig uses 'context' field; stored as 'leaderPresetRules' in dispatch extra
         const customAgents =
@@ -97,21 +106,46 @@ export function initDispatchBridge(
           >) || [];
         const leaderAgent = customAgents.find((a) => a.id === params.leaderAgentId);
         if (leaderAgent) {
-          leaderAgentId = leaderAgent.id;
           leaderPresetRules = leaderAgent.context; // AcpBackendConfig.context → leaderPresetRules
           leaderName = leaderAgent.name;
           leaderAvatar = leaderAgent.avatar;
-          leaderPresetAgentType = leaderAgent.presetAgentType;
         } else {
-          mainWarn('[DispatchBridge:createGroupChat]', 'Leader agent not found: ' + params.leaderAgentId);
+          // Check CLI/built-in agents (Gemini, Claude Code, etc.)
+          const cliBackend = (ACP_BACKENDS_ALL as Record<string, { id: string; name: string }>)[params.leaderAgentId];
+          if (cliBackend) {
+            leaderName = params.leaderAgentId === 'gemini' ? 'Gemini CLI' : cliBackend.name;
+          } else {
+            mainWarn('[DispatchBridge:createGroupChat]', 'Leader agent not found: ' + params.leaderAgentId);
+          }
         }
       }
 
-      // Use leader name as dispatcher name if available
-      const displayName = leaderName || params.name || 'Group Chat';
+      // conversation.name = user-given group chat name (shown in sidebar channel list)
+      // Leader agent name is stored separately in extra.leaderName (shown in tab bar)
+      const displayName = params.name || leaderName || 'Group Chat';
 
-      // Resolve adminAgentType: explicit param > leader's presetAgentType > default 'gemini'
-      const adminAgentType: string = params.adminAgentType || leaderPresetAgentType || 'gemini';
+      // Admin agent type determines which engine runs the orchestrator.
+      // 'gemini' forks a Gemini CLI worker; 'acp' (CC/Claude/Codex/etc.) uses AcpAgentManager.
+      // MCP dispatch tools are injected into whichever engine is selected.
+      const adminAgentType: string = params.adminAgentType || 'gemini';
+
+      // For ACP admin types, resolve backend from the leader agent's config
+      let acpBackend: import('@/common/types/acpTypes').AcpBackendAll | undefined;
+      let acpCliPath: string | undefined;
+      if (adminAgentType !== 'gemini' && params.leaderAgentId) {
+        const customAgents =
+          ((await ProcessConfig.get('acp.customAgents')) as unknown as Array<
+            Record<string, unknown> & { id: string; presetAgentType?: string }
+          >) || [];
+        const agent = customAgents.find((a) => a.id === params.leaderAgentId);
+        if (agent) {
+          acpBackend = (agent.presetAgentType || adminAgentType) as import('@/common/types/acpTypes').AcpBackendAll;
+          acpCliPath = agent.cliPath as string | undefined;
+        } else {
+          // CLI/built-in agent — backend matches the adminAgentType
+          acpBackend = adminAgentType as import('@/common/types/acpTypes').AcpBackendAll;
+        }
+      }
 
       // G4.2: Load team config if specified
       let teamConfigData: string | undefined;
@@ -135,6 +169,7 @@ export function initDispatchBridge(
         model: defaultModel,
         extra: {
           workspace,
+          customWorkspace,
           dispatchSessionType: 'dispatcher',
           groupChatName: params.name || undefined,
           leaderAgentId,
@@ -142,6 +177,9 @@ export function initDispatchBridge(
           leaderName,
           leaderAvatar,
           adminAgentType,
+          // ACP admin: store backend and cliPath for AcpAgentManager construction
+          backend: acpBackend,
+          cliPath: acpCliPath,
           // G4.2: Persist team config for bootstrap
           teamConfig: teamConfigData,
           teamConfigName,
@@ -185,6 +223,7 @@ export function initDispatchBridge(
         groupChatName?: string;
         pendingNotifications?: string[];
         leaderAgentId?: string;
+        leaderName?: string;
         seedMessages?: string;
         maxConcurrentChildren?: number;
       };
@@ -241,7 +280,7 @@ export function initDispatchBridge(
         success: true,
         data: {
           dispatcherId: conversation.id,
-          dispatcherName: extra.groupChatName || conversation.name,
+          dispatcherName: extra.leaderName || 'Dispatcher',
           children,
           pendingNotificationCount: extra.pendingNotifications?.length ?? 0,
           leaderAgentId: extra.leaderAgentId,

@@ -439,7 +439,44 @@ export class GeminiAgent {
     // 注册对话级别的自定义工具
     await this.toolConfig.registerCustomTools(this.config, this.geminiClient);
 
+    // Wait for MCP tool discovery to complete (runs async in interactive mode)
+    // Without this, the first API request may not include MCP function declarations
+    await this.waitForMcpDiscovery();
+
     this.initToolScheduler(settings);
+  }
+
+  /**
+   * Wait for MCP server tool discovery to complete.
+   * In interactive mode, aioncli-core starts MCP discovery asynchronously
+   * (fire-and-forget) during config.initialize(). This method polls the
+   * discovery state and re-syncs tools once discovery is done, ensuring
+   * MCP function declarations are included in the first API request.
+   */
+  private async waitForMcpDiscovery(): Promise<void> {
+    if (!this.mcpServers || Object.keys(this.mcpServers).length === 0) return;
+
+    const mcpManager = this.config.getMcpClientManager();
+    if (!mcpManager) return;
+
+    const state = mcpManager.getDiscoveryState();
+    if (state === 'completed' || state === 'not_started') return;
+
+    console.log('[GeminiAgent] Waiting for MCP tool discovery to complete...');
+    const startTime = Date.now();
+    const timeout = 15_000; // 15 seconds max
+
+    while (mcpManager.getDiscoveryState() !== 'completed') {
+      if (Date.now() - startTime > timeout) {
+        console.warn('[GeminiAgent] MCP discovery timeout after 15s, proceeding without MCP tools');
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Re-sync tools to include discovered MCP function declarations
+    await this.geminiClient.setTools();
+    console.log(`[GeminiAgent] MCP discovery completed in ${Date.now() - startTime}ms, tools synced`);
   }
 
   // 初始化调度工具

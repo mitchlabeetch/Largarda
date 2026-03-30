@@ -305,14 +305,24 @@ export class DispatchMcpServer {
   }
 
   /**
-   * Get MCP server configuration for Gemini CLI.
+   * Get MCP server configuration for the admin agent CLI.
    * Returns the command/args to start the inline MCP server script.
+   *
+   * @param socketPath - Unix domain socket path for IPC with the main process.
+   *   When provided, the MCP script connects to this socket for bidirectional
+   *   tool_call/tool_result communication. This is the primary (and only reliable)
+   *   IPC mechanism, since the MCP SDK spawns the script via child_process.spawn()
+   *   which does NOT create a Node.js IPC channel.
    */
-  getMcpServerConfig(): { command: string; args: string[]; env: Record<string, string> } {
+  getMcpServerConfig(socketPath?: string): { command: string; args: string[]; env: Record<string, string> } {
+    const env: Record<string, string> = {};
+    if (socketPath) {
+      env.AIONUI_DISPATCH_SOCKET = socketPath;
+    }
     return {
       command: process.execPath,
       args: [path.resolve(__dirname, 'dispatchMcpServerScript.js'), this.handler.parentSessionId],
-      env: {},
+      env,
     };
   }
 

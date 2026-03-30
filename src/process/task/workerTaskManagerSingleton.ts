@@ -93,7 +93,7 @@ agentFactory.register('dispatch', (conv, opts) => {
     // Use yoloMode from build options first, fall back to persisted extra value
     yoloMode: opts?.yoloMode ?? c.extra?.yoloMode,
     dispatchSessionType: c.extra?.dispatchSessionType || 'dispatcher',
-    dispatcherName: c.name || 'Dispatcher',
+    dispatcherName: c.extra?.leaderName || 'Dispatcher',
     adminAgentType: c.extra?.adminAgentType || 'gemini',
   });
   // Dependencies are injected after WorkerTaskManager is created (see below)

@@ -411,6 +411,12 @@ export type TChatConversation =
         pinnedAt?: number;
         /** Explicit marker for temporary health-check conversations */
         isHealthCheck?: boolean;
+        /** Admin agent engine type (defaults to 'gemini') */
+        adminAgentType?: string;
+        /** ACP backend type (for non-gemini admin) */
+        backend?: AcpBackendAll;
+        /** CLI path override (for non-gemini admin) */
+        cliPath?: string;
       }
     >;
 

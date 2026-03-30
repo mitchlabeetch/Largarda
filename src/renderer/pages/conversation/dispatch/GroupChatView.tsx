@@ -5,31 +5,93 @@
  */
 
 import { ipcBridge } from '@/common';
+import type { TMessage } from '@/common/chat/chatLib';
 import { uuid } from '@/common/utils';
 import SendBox from '@/renderer/components/chat/sendbox';
-import { Alert, Button, Drawer, Message, Tag } from '@arco-design/web-react';
-import { Close, Info } from '@icon-park/react';
+import ThoughtDisplay from '@/renderer/components/chat/ThoughtDisplay';
+import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
+import { ConversationProvider } from '@/renderer/hooks/context/ConversationContext';
+import { MessageListProvider, useAddOrUpdateMessage, useMessageLstCache } from '@/renderer/pages/conversation/Messages/hooks';
+import MessageList from '@/renderer/pages/conversation/Messages/MessageList';
+import HOC from '@/renderer/utils/ui/HOC';
+import { Alert, Button, Drawer, Tag, Tooltip } from '@arco-design/web-react';
+import { Close, Info, Pound, SettingTwo } from '@icon-park/react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CronJobManager } from '@/renderer/pages/cron';
 import { emitter } from '@/renderer/utils/emitter';
+import { useAgentRegistry } from '@/renderer/hooks/useAgentRegistry';
+import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 
 import ChatLayout from '../components/ChatLayout';
 import ChatSider from '../components/ChatSider';
+import ConversationChatConfirm from '../components/ConversationChatConfirm';
 import AddMemberModal from './components/AddMemberModal';
 import CostPanel from './components/CostPanel';
-import MemberBar from './components/MemberBar';
 import MemberProfileDrawer from './components/MemberProfileDrawer';
 import TeammateTabBar from './components/TeammateTabBar';
 import TeammateTabView from './components/TeammateTabView';
-import GroupChatTimeline from './GroupChatTimeline';
+import { useDispatchAdminStream } from './hooks/useDispatchAdminStream';
 import { useGroupChatInfo } from './hooks/useGroupChatInfo';
-import { useGroupChatMessages } from './hooks/useGroupChatMessages';
 import { useGroupChatTabs } from './hooks/useGroupChatTabs';
 import type { GroupChatViewProps } from './types';
 
+/**
+ * Resolve admin agent name from conversation extra.
+ * Priority: registry (dynamic, i18n-aware) > DB snapshot > conversation.name fallback
+ */
+function resolveAdminAgentName(
+  extra: { leaderName?: string; leaderAgentId?: string },
+  fallback: string,
+  agentRegistry?: Map<string, { name: string }>,
+): string {
+  const id = extra.leaderAgentId;
+  // Prefer registry name (dynamic, reflects current naming like "Gemini CLI")
+  if (id && agentRegistry) {
+    const registryAgent = agentRegistry.get(id);
+    if (registryAgent) return registryAgent.name;
+  }
+  if (extra.leaderName) return extra.leaderName;
+  return fallback;
+}
+
+/**
+ * Resolve admin agent avatar from conversation extra.
+ * Priority: DB snapshot > CLI agent logo > undefined
+ */
+function resolveAdminAgentAvatar(extra: { leaderAvatar?: string; teammateConfig?: { avatar?: string }; leaderAgentId?: string }): string | undefined {
+  if (extra.leaderAvatar) return extra.leaderAvatar;
+  if (extra.teammateConfig?.avatar) return extra.teammateConfig.avatar;
+  if (extra.leaderAgentId) return getAgentLogo(extra.leaderAgentId) ?? undefined;
+  return undefined;
+}
+
 const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   const { t } = useTranslation();
-  const { messages, isLoading: messagesLoading, appendUserMessage } = useGroupChatMessages(conversation.id);
+  const agentRegistry = useAgentRegistry();
+
+  // ── Extract extra fields once ──
+  const extra = conversation.extra as {
+    groupChatName?: string;
+    teammateConfig?: { avatar?: string };
+    leaderAgentId?: string;
+    leaderName?: string;
+    leaderAvatar?: string;
+  };
+
+  // ── Two distinct identities ──
+  // 1. Channel name: user-given title for the group chat (header, sidebar, placeholder)
+  const groupChatName = extra.groupChatName || conversation.name;
+  // 2. Admin agent: the AI orchestrator (tab label, message attribution, avatar)
+  const leaderAgentId = extra.leaderAgentId;
+  const leaderAgentName = resolveAdminAgentName(extra, conversation.name, agentRegistry);
+  const leaderAgentAvatar = resolveAdminAgentAvatar(extra);
+
+  // ── Message list: load from DB + subscribe to live stream ──
+  useMessageLstCache(conversation.id);
+  const { running: adminRunning, thought: adminThought } = useDispatchAdminStream(conversation.id);
+  const addOrUpdateMessage = useAddOrUpdateMessage();
+
   const {
     info,
     error: infoError,
@@ -42,15 +104,6 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   const [sending, setSending] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const extra = conversation.extra as {
-    groupChatName?: string;
-    teammateConfig?: { avatar?: string };
-    leaderAgentId?: string;
-  };
-
-  const dispatcherName = info?.dispatcherName || extra.groupChatName || conversation.name;
-  const dispatcherAvatar = extra.teammateConfig?.avatar;
-
   const activeChildCount = useMemo(() => {
     if (!info?.children) return 0;
     return info.children.filter((c) => c.status === 'running' || c.status === 'pending').length;
@@ -59,10 +112,10 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   const pendingCount = info?.pendingNotificationCount ?? 0;
   const showBanner = pendingCount > 0 && !bannerDismissed;
 
-  // G3.3: Tab state (replaces memberSider + taskPanel state)
+  // G3.3: Tab state — admin row uses leader agent name/avatar
   const { members, tabs, activeTabKey, onTabChange, onTabClose } = useGroupChatTabs(conversation.id, info, {
-    name: dispatcherName,
-    avatar: dispatcherAvatar,
+    name: leaderAgentName,
+    avatar: leaderAgentAvatar,
   });
 
   // G3.5: Member profile drawer
@@ -74,27 +127,6 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   // Settings drawer
   const [settingsVisible, setSettingsVisible] = useState(false);
 
-  // F-2.5: Cancel child task handler
-  const handleCancelChild = useCallback(
-    async (childTaskId: string) => {
-      try {
-        const result = await ipcBridge.dispatch.cancelChildTask.invoke({
-          conversationId: conversation.id,
-          childSessionId: childTaskId,
-        });
-        if (!result || !result.success) {
-          Message.error(t('dispatch.childTask.cancelFailed'));
-        } else {
-          refreshInfo();
-        }
-      } catch (err) {
-        console.error('[GroupChatView] cancel failed:', err);
-        Message.error(t('dispatch.childTask.cancelFailed'));
-      }
-    },
-    [conversation.id, refreshInfo, t]
-  );
-
   const handleSend = useCallback(
     async (message: string) => {
       if (!message.trim()) return;
@@ -102,33 +134,58 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
       setSending(true);
       setBannerDismissed(true);
 
-      // Optimistic update: show user message immediately
-      appendUserMessage(msgId, message);
+      // Optimistic update: show user message immediately via MessageList
+      const userMessage: TMessage = {
+        id: msgId,
+        type: 'text',
+        position: 'right',
+        conversation_id: conversation.id,
+        content: { content: message },
+        createdAt: Date.now(),
+      };
+      addOrUpdateMessage(userMessage, true);
 
       try {
-        await ipcBridge.conversation.sendMessage.invoke({
+        console.log('[GroupChatView] handleSend: invoking sendMessage', { conversation_id: conversation.id, msgId, message });
+        const result = await ipcBridge.conversation.sendMessage.invoke({
           input: message,
           msg_id: msgId,
           conversation_id: conversation.id,
         });
+        console.log('[GroupChatView] handleSend: result', result);
         emitter.emit('chat.history.refresh');
         refreshInfo();
+      } catch (err) {
+        console.error('[GroupChatView] handleSend: error', err);
       } finally {
         setSending(false);
       }
     },
-    [conversation.id, refreshInfo, appendUserMessage]
+    [conversation.id, refreshInfo, addOrUpdateMessage],
   );
 
+  // Header extra: task count + cron + settings icon (replaces AgentModeSelector position)
   const headerExtra = useMemo(
     () => (
       <div className='flex items-center gap-8px'>
         {activeChildCount > 0 && (
           <Tag color='arcoblue'>{t('dispatch.header.taskCount', { count: activeChildCount })}</Tag>
         )}
+        <div className='shrink-0'>
+          <CronJobManager conversationId={conversation.id} />
+        </div>
+        <Tooltip content={t('dispatch.settings.title')}>
+          <div
+            className='shrink-0 p-4px rd-4px cursor-pointer text-t-secondary hover:text-t-primary hover:bg-fill-2 transition-colors'
+            onClick={() => setSettingsVisible(true)}
+            style={{ lineHeight: 0 }}
+          >
+            <SettingTwo theme='outline' size='18' />
+          </div>
+        </Tooltip>
       </div>
     ),
-    [activeChildCount, t]
+    [activeChildCount, t, conversation.id],
   );
 
   // CF-3: Error state for group chat info fetch failure
@@ -136,11 +193,13 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
     return (
       <ChatLayout
         workspaceEnabled={true}
-        agentName={conversation.name}
+        hideTabs
+        agentId={leaderAgentId}
+        titleIcon={<Pound theme='outline' size='18' className='text-t-secondary' />}
         sider={<ChatSider conversation={conversation} />}
-      siderTitle={<span className='text-16px font-bold text-t-primary'>{t('conversation.workspace.title')}</span>}
+        siderTitle={<span className='text-16px font-bold text-t-primary'>{t('conversation.workspace.title')}</span>}
         conversationId={conversation.id}
-        title={conversation.name}
+        title={groupChatName}
       >
         <div className='flex-center flex-1 flex-col gap-12px'>
           <Alert type='error' content={t('dispatch.error.groupChatLoadFailed')} style={{ maxWidth: '400px' }} />
@@ -155,29 +214,22 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   return (
     <ChatLayout
       workspaceEnabled={true}
-      agentName={dispatcherName}
-      agentLogo={dispatcherAvatar}
-      agentLogoIsEmoji={Boolean(dispatcherAvatar)}
+      hideTabs
+      agentId={leaderAgentId}
+      titleIcon={<Pound theme='outline' size='18' className='text-t-secondary' />}
       headerExtra={headerExtra}
       sider={<ChatSider conversation={conversation} />}
       siderTitle={<span className='text-16px font-bold text-t-primary'>{t('conversation.workspace.title')}</span>}
       conversationId={conversation.id}
-      title={conversation.name}
+      title={groupChatName}
     >
-      {/* G3.3: MemberBar */}
-      <MemberBar
-        members={members}
-        onMemberClick={(id) => setProfileTarget(id)}
-        onAddMemberClick={() => setAddMemberVisible(true)}
-      />
-
-      {/* G3.3: TeammateTabBar */}
+      {/* Unified member tab bar (Slack-like): admin first, then members, then [+] */}
       <TeammateTabBar
         tabs={tabs}
         activeTabKey={activeTabKey}
         onTabChange={onTabChange}
         onTabClose={onTabClose}
-        onSettingsClick={() => setSettingsVisible(true)}
+        onAddMemberClick={() => setAddMemberVisible(true)}
       />
 
       {/* Active tab content */}
@@ -205,27 +257,28 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
             </div>
           )}
 
-          <GroupChatTimeline
-            messages={messages}
-            isLoading={messagesLoading}
-            dispatcherName={dispatcherName}
-            dispatcherAvatar={dispatcherAvatar}
-            onCancelChild={handleCancelChild}
-            conversationId={conversation.id}
-          />
-
-          <div className='max-w-800px w-full mx-auto mb-16px px-20px'>
-            <SendBox
-              value={sendBoxContent}
-              onChange={setSendBoxContent}
-              loading={sending}
-              placeholder={t('dispatch.timeline.sendPlaceholder', { name: dispatcherName })}
-              onSend={handleSend}
-              defaultMultiLine={true}
-              lockMultiLine={true}
-              className='z-10'
-            />
-          </div>
+          <ConversationProvider value={{ conversationId: conversation.id, type: 'dispatch' }}>
+            <div className='flex-1 flex flex-col px-20px min-h-0'>
+              <FlexFullContainer>
+                <MessageList className='flex-1' />
+              </FlexFullContainer>
+              <ConversationChatConfirm conversation_id={conversation.id}>
+                <div className='max-w-800px w-full mx-auto flex flex-col mt-auto mb-16px'>
+                  <ThoughtDisplay thought={adminThought} running={adminRunning} />
+                  <SendBox
+                    value={sendBoxContent}
+                    onChange={setSendBoxContent}
+                    loading={sending || adminRunning}
+                    placeholder={t('dispatch.timeline.sendPlaceholder', { name: leaderAgentName })}
+                    onSend={handleSend}
+                    defaultMultiLine={true}
+                    lockMultiLine={true}
+                    className='z-10'
+                  />
+                </div>
+              </ConversationChatConfirm>
+            </div>
+          </ConversationProvider>
         </div>
 
         {/* G3.4: Teammate tabs (read-only conversation view) */}
@@ -252,7 +305,6 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
         onClose={() => setProfileTarget(null)}
         onModelChange={() => refreshInfo()}
         onRemoveMember={(_memberId) => {
-          // TODO: Implement actual remove member IPC in G4
           setProfileTarget(null);
         }}
       />
@@ -284,4 +336,4 @@ const GroupChatView: React.FC<GroupChatViewProps> = ({ conversation }) => {
   );
 };
 
-export default GroupChatView;
+export default HOC(MessageListProvider)(GroupChatView);

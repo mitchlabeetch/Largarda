@@ -652,6 +652,7 @@ export type I18nKey =
   | 'dispatch.sidebar.noDirectMessages'
   | 'dispatch.sidebar.savedAssistant'
   | 'dispatch.tabs.groupChat'
+  | 'dispatch.tabs.admin'
   | 'dispatch.taskPanel.childAgent'
   | 'dispatch.taskPanel.noTranscript'
   | 'dispatch.taskPanel.refresh'

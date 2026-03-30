@@ -26,6 +26,8 @@ import type { IAgentManager } from '../IAgentManager';
 import type { AgentType } from '../agentTypes';
 import { DispatchMcpServer } from './DispatchMcpServer';
 import type { DispatchToolHandler } from './DispatchMcpServer';
+import { DispatchIpcSocketServer } from './DispatchIpcSocket';
+import { toAcpSessionMcpServer } from './mcpFormatConvert';
 import { DispatchSessionTracker } from './DispatchSessionTracker';
 import { DispatchNotifier } from './DispatchNotifier';
 import { DispatchResourceGuard } from './DispatchResourceGuard';
@@ -62,9 +64,12 @@ type DispatchAgentData = {
 /**
  * Dispatch agent manager that orchestrates multi-agent collaboration.
  *
- * Public type is 'dispatch', but internally reuses 'gemini' worker (workerType).
- * Injects dispatch system prompt and MCP tools (start_task, read_transcript,
- * list_sessions, send_message).
+ * Supports multiple admin agent types via composition:
+ * - 'gemini': Forks gemini.js worker (existing behavior via BaseAgentManager)
+ * - 'acp' (CC/Claude/Codex/etc.): Creates internal AcpAgentManager with dispatch MCP tools
+ *
+ * MCP tool calls from the admin agent's CLI are received via Unix domain socket,
+ * which works regardless of how the CLI spawns the MCP server script (spawn/fork).
  */
 export class DispatchAgentManager extends BaseAgentManager<
   {
@@ -88,6 +93,17 @@ export class DispatchAgentManager extends BaseAgentManager<
   private readonly mcpServer: DispatchMcpServer;
   private readonly temporaryTeammates = new Map<string, TemporaryTeammateConfig>();
 
+  /** Unix domain socket for MCP tool call IPC (works with all admin agent types) */
+  private ipcSocket: DispatchIpcSocketServer | null = null;
+
+  /**
+   * Inner AcpAgentManager for non-gemini admin types.
+   * When adminWorkerType is 'acp' (CC/Claude/Codex/etc.), we don't fork a gemini worker.
+   * Instead, we compose an AcpAgentManager that handles the actual agent lifecycle.
+   * Uses a looser type because AcpAgentManager.sendMessage returns a richer type than IAgentManager.
+   */
+  private innerAcpManager: (IAgentManager & { sendMessage(data: unknown): Promise<unknown> }) | null = null;
+
   /** Tool call phase state machine for message filtering */
   private isToolCallPhase = false;
 
@@ -104,22 +120,28 @@ export class DispatchAgentManager extends BaseAgentManager<
   private taskManager: IWorkerTaskManager | undefined;
   private conversationRepo: IConversationRepository | undefined;
 
+  /** ACP-specific data needed for inner manager creation */
+  private readonly initData: DispatchAgentData;
+
   private bootstrap: Promise<void>;
 
   constructor(data: DispatchAgentData) {
     const adminWorkerType: AgentType = data.adminAgentType || 'gemini';
+    // For non-gemini admin types, disable fork — we use an inner manager instead
+    const isGeminiAdmin = adminWorkerType === 'gemini';
     // type='dispatch' (public), workerType resolved from adminAgentType (defaults to 'gemini')
-    super('dispatch', { ...data, model: data.model }, new IpcAgentEventEmitter(), true, adminWorkerType);
+    super('dispatch', { ...data, model: data.model }, new IpcAgentEventEmitter(), isGeminiAdmin, adminWorkerType);
     this.adminWorkerType = adminWorkerType;
     this.workspace = data.workspace;
     this.conversation_id = data.conversation_id;
     this.model = data.model;
     this.dispatcherName = data.dispatcherName ?? 'Dispatcher';
+    this.initData = data;
 
     this.tracker = new DispatchSessionTracker();
     // notifier and resourceGuard need repo, will be set via setDependencies()
 
-    // MCP server: handles tool calls from Gemini CLI
+    // MCP server: handles tool calls from admin agent CLI
     const toolHandler: DispatchToolHandler = {
       parentSessionId: this.conversation_id,
       startChildSession: this.startChildSession.bind(this),
@@ -243,18 +265,33 @@ export class DispatchAgentManager extends BaseAgentManager<
     });
     const combinedRules = systemPrompt;
 
-    // Build MCP server config for Gemini CLI
-    const mcpConfig = this.mcpServer.getMcpServerConfig();
-
-    await this.start({
-      workspace: this.workspace,
-      model: this.model,
-      presetRules: combinedRules,
-      yoloMode: true, // Dispatch agents auto-approve tool calls
-      mcpServers: {
-        'aionui-dispatch': mcpConfig,
+    // Start Unix domain socket server for MCP tool call IPC
+    this.ipcSocket = new DispatchIpcSocketServer(
+      this.conversation_id,
+      async (tool, args) => {
+        return this.mcpServer.handleToolCall(tool, args);
       },
-    });
+    );
+    await this.ipcSocket.start();
+
+    // Build MCP server config with socket path for the admin agent CLI
+    const mcpConfig = this.mcpServer.getMcpServerConfig(this.ipcSocket.socketPath);
+
+    if (this.adminWorkerType === 'gemini') {
+      // Gemini path: fork gemini.js worker with dispatch config
+      await this.start({
+        workspace: this.workspace,
+        model: this.model,
+        presetRules: combinedRules,
+        yoloMode: true, // Dispatch agents auto-approve tool calls
+        mcpServers: {
+          'aionui-dispatch': mcpConfig,
+        },
+      });
+    } else {
+      // ACP path (CC/Claude/Codex/etc.): create inner AcpAgentManager
+      await this.bootAcpAdmin(combinedRules, mcpConfig);
+    }
 
     // Restore parent-child mappings from DB (handles app restart)
     if (this.conversationRepo) {
@@ -272,8 +309,19 @@ export class DispatchAgentManager extends BaseAgentManager<
       this.notifier.injectResumeContext(this.conversation_id, restoredChildren);
     }
 
-    // G3.2: Auto-trigger welcome message on first bootstrap (no children = fresh group)
-    if (restoredChildren.length === 0) {
+    // G3.2: Auto-trigger welcome message on first bootstrap (only once per group chat)
+    // Check DB for existing messages to avoid re-triggering on app restart / lazy rebuild
+    let hasExistingMessages = false;
+    if (this.conversationRepo) {
+      try {
+        const result = await this.conversationRepo.getMessages(this.conversation_id, 1, 1);
+        hasExistingMessages = result.total > 0;
+      } catch (_err) {
+        // Non-fatal: skip welcome if we can't check
+        hasExistingMessages = true;
+      }
+    }
+    if (!hasExistingMessages) {
       void this.sendMessage({
         input: '[System] Group chat created. Please welcome the user.',
         msg_id: uuid(),
@@ -283,6 +331,88 @@ export class DispatchAgentManager extends BaseAgentManager<
       });
     }
   }
+
+  /**
+   * Boot an ACP-based admin agent (CC, Claude, Codex, etc.).
+   * Creates an inner AcpAgentManager with dispatch MCP tools injected.
+   */
+  private async bootAcpAdmin(
+    systemPrompt: string,
+    mcpConfig: { command: string; args: string[]; env: Record<string, string> },
+  ): Promise<void> {
+    if (!this.conversationRepo) {
+      throw new Error('conversationRepo not set');
+    }
+
+    // Read the conversation to get ACP-specific config
+    const conv = await this.conversationRepo.getConversation(this.conversation_id);
+    const extra = (conv?.extra ?? {}) as Record<string, unknown>;
+
+    // Convert dispatch MCP config to ACP session format
+    const acpMcpServer = toAcpSessionMcpServer('aionui-dispatch', mcpConfig);
+
+    // Resolve ACP backend from adminAgentType or conversation extra
+    // Cast is safe: adminWorkerType is validated at createGroupChat time
+    const backend = ((extra.backend as string) || this.adminWorkerType) as import('@/common/types/acpTypes').AcpBackendAll;
+
+    // Build AcpAgentManager data
+    const acpData = {
+      workspace: this.workspace,
+      backend,
+      conversation_id: this.conversation_id,
+      presetContext: systemPrompt,
+      yoloMode: true,
+      externalMcpServers: [acpMcpServer],
+      cliPath: extra.cliPath as string | undefined,
+      customWorkspace: !!this.workspace,
+      // Preserve session resume fields
+      acpSessionId: extra.acpSessionId as string | undefined,
+      acpSessionUpdatedAt: extra.acpSessionUpdatedAt as number | undefined,
+      sessionMode: (extra.sessionMode as string) || 'plan',
+      currentModelId: extra.currentModelId as string | undefined,
+    };
+
+    // Dynamically import AcpAgentManager to avoid circular dependency
+    const { default: AcpAgentManager } = await import('../AcpAgentManager');
+    const acpManager = new AcpAgentManager(acpData) as unknown as typeof this.innerAcpManager;
+    this.innerAcpManager = acpManager;
+
+    // Subscribe to ACP response stream to forward events
+    this.subscribeAcpResponseStream();
+
+    mainLog('[DispatchAgentManager]', `ACP admin booted: backend=${backend}`);
+  }
+
+  /**
+   * Subscribe to the ACP response stream and forward events for this conversation.
+   * Re-emits ACP events on the dispatch response channel (geminiConversation.responseStream)
+   * so the GroupChatView can render them uniformly.
+   */
+  private subscribeAcpResponseStream(): void {
+    const unsubscribe = ipcBridge.acpConversation.responseStream.on((msg: IResponseMessage) => {
+      if (msg.conversation_id !== this.conversation_id) return;
+
+      // Status tracking
+      if (msg.type === 'start') {
+        this.status = 'running';
+      }
+      if (msg.type === 'finish') {
+        this.status = 'finished';
+      }
+
+      // NOTE: Do NOT persist messages here — AcpAgentManager already handles
+      // its own DB persistence via addOrUpdateMessage() in its response pipeline.
+
+      // Re-emit on the dispatch stream so GroupChatView picks it up
+      ipcBridge.geminiConversation.responseStream.emit(msg);
+    });
+
+    // Store unsubscribe function for cleanup
+    this._acpStreamUnsubscribe = unsubscribe;
+  }
+
+  /** Cleanup function for ACP response stream subscription */
+  private _acpStreamUnsubscribe: (() => void) | null = null;
 
   /**
    * Override sendMessage to inject pending notifications before user message.
@@ -301,11 +431,19 @@ export class DispatchAgentManager extends BaseAgentManager<
     }
 
     this.status = 'pending';
+    mainLog('[DispatchAgentManager]', `sendMessage: conv=${this.conversation_id}, input="${data.input.slice(0, 50)}"`);
 
     await this.bootstrap.catch((e) => {
       this.status = 'failed';
+      mainError('[DispatchAgentManager]', 'sendMessage: bootstrap failed', e);
       throw e;
     });
+
+    // Determine which manager handles the actual message send
+    const sendToAdmin = this.innerAcpManager
+      ? (msg: { input: string; msg_id: string }) => this.innerAcpManager!.sendMessage(msg)
+      : (msg: { input: string; msg_id: string }) => super.sendMessage(msg);
+    mainLog('[DispatchAgentManager]', `sendMessage: using ${this.innerAcpManager ? 'ACP' : 'Gemini'} admin`);
 
     // Check for pending notifications (cold parent wakeup)
     if (!data.isSystemNotification && this.notifier) {
@@ -313,7 +451,7 @@ export class DispatchAgentManager extends BaseAgentManager<
       if (pending) {
         mainLog('[DispatchAgentManager]', `Injecting ${pending.split('\n').length} pending notification(s)`);
         // Inject as system notification first (separate turn)
-        await super.sendMessage({
+        await sendToAdmin({
           input: `[System Notification]\n${pending}`,
           msg_id: uuid(),
         });
@@ -323,16 +461,28 @@ export class DispatchAgentManager extends BaseAgentManager<
     }
 
     // Then send the actual message
-    return super.sendMessage(data);
+    this.status = 'running';
+    return sendToAdmin(data);
   }
 
   /**
    * Initialize event listeners for worker messages.
+   * Only active for Gemini admin (fork-based). ACP admin uses subscribeAcpResponseStream().
    */
   protected init(): void {
     super.init();
 
-    this.on(`${this.adminWorkerType}.message`, (data: Record<string, unknown>) => {
+    // Resolve adminWorkerType from ForkTask's data because init() is called inside
+    // ForkTask's constructor (via super()), BEFORE DispatchAgentManager's own constructor
+    // finishes setting this.adminWorkerType.
+    const initData = (this.data as unknown as { data: DispatchAgentData }).data;
+    const workerType: AgentType = initData.adminAgentType || 'gemini';
+    const conversationId = initData.conversation_id;
+
+    // Only listen to worker messages when using fork (Gemini admin)
+    mainLog('[DispatchAgentManager]', `init: listening on '${workerType}.message' for conversation ${conversationId}`);
+    this.on(`${workerType}.message`, (data: Record<string, unknown>) => {
+      mainLog('[DispatchAgentManager]', `worker message received: type=${data.type}, conv=${conversationId}`);
       // Status tracking
       if (data.type === 'start') {
         this.status = 'running';
@@ -350,9 +500,9 @@ export class DispatchAgentManager extends BaseAgentManager<
         this.isToolCallPhase = false;
       }
 
-      // Handle MCP tool call IPC messages from MCP server script
+      // MCP tool calls are now handled via Unix domain socket (DispatchIpcSocket).
+      // Skip any legacy tool_call messages from the worker IPC path.
       if (data.type === 'tool_call') {
-        void this.handleMcpToolCall(data);
         return;
       }
 
@@ -376,24 +526,6 @@ export class DispatchAgentManager extends BaseAgentManager<
       // Emit to group chat stream
       ipcBridge.geminiConversation.responseStream.emit(responseMsg);
     });
-  }
-
-  /**
-   * Handle MCP tool call forwarded from the MCP server script via IPC.
-   */
-  private async handleMcpToolCall(data: Record<string, unknown>): Promise<void> {
-    const callId = data.id as string;
-    const tool = data.tool as string;
-    const args = (data.args ?? {}) as Record<string, unknown>;
-
-    try {
-      const result = await this.mcpServer.handleToolCall(tool, args);
-      // Send result back to MCP server script
-      this.postMessage('tool_result', { type: 'tool_result', id: callId, result });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.postMessage('tool_result', { type: 'tool_result', id: callId, error: msg });
-    }
   }
 
   // ==================== Tool Handler Implementations ====================
@@ -473,8 +605,8 @@ export class DispatchAgentManager extends BaseAgentManager<
       }
     }
 
-    // Resolve child agent type
-    const childAgentType: AgentType = params.agent_type || 'gemini';
+    // Resolve child agent type — default to same type as leader agent
+    const childAgentType: AgentType = params.agent_type || this.adminWorkerType;
 
     // G2.1: Worktree isolation
     let worktreePath: string | undefined;
@@ -496,6 +628,23 @@ export class DispatchAgentManager extends BaseAgentManager<
     // Cast to TChatConversation — childAgentType determines the actual runtime type.
     // The AgentFactory routes by conversation.type, so the child worker is created correctly.
     const childId = uuid(16);
+
+    // For ACP-type children, inherit backend/cliPath from parent conversation
+    let acpChildExtra: Record<string, unknown> = {};
+    if (childAgentType !== 'gemini' && this.conversationRepo) {
+      try {
+        const parentConv = await this.conversationRepo.getConversation(this.conversation_id);
+        const parentExtra = (parentConv?.extra ?? {}) as Record<string, unknown>;
+        acpChildExtra = {
+          backend: parentExtra.backend || this.adminWorkerType,
+          cliPath: parentExtra.cliPath,
+        };
+      } catch (_err) {
+        // Fallback: use adminWorkerType as backend
+        acpChildExtra = { backend: this.adminWorkerType };
+      }
+    }
+
     const childConversation = {
       id: childId,
       name: params.title,
@@ -517,6 +666,8 @@ export class DispatchAgentManager extends BaseAgentManager<
         worktreeBranch,
         // G2.2: store allowed tools
         allowedTools: params.allowedTools,
+        // ACP-type children need backend config from parent
+        ...acpChildExtra,
       },
     } as unknown as TChatConversation;
     await this.conversationRepo.createConversation(childConversation);
@@ -1141,10 +1292,10 @@ export class DispatchAgentManager extends BaseAgentManager<
           message.messageType === 'task_progress' && message.childTaskId
             ? `dispatch-progress-${message.childTaskId}`
             : msgId,
-        type: 'dispatch_event' as TMessage['type'],
+        type: 'dispatch_event',
         position: 'left',
         conversation_id: this.conversation_id,
-        content: { ...message } as unknown as TMessage['content'],
+        content: { ...message },
         createdAt: message.timestamp,
       };
       if (message.messageType === 'task_progress' && message.childTaskId) {
@@ -1166,14 +1317,46 @@ export class DispatchAgentManager extends BaseAgentManager<
   }
 
   /**
+   * Override kill to also kill the inner ACP manager.
+   */
+  kill(): void {
+    if (this.innerAcpManager) {
+      this.innerAcpManager.kill();
+    }
+    this.cleanupAcpSubscription();
+    super.kill();
+  }
+
+  /**
+   * Override stop to also stop the inner ACP manager.
+   */
+  stop(): Promise<void> {
+    if (this.innerAcpManager) {
+      return this.innerAcpManager.stop();
+    }
+    return super.stop();
+  }
+
+  private cleanupAcpSubscription(): void {
+    if (this._acpStreamUnsubscribe) {
+      this._acpStreamUnsubscribe();
+      this._acpStreamUnsubscribe = null;
+    }
+  }
+
+  /**
    * Clean up all resources when the dispatcher is disposed.
    */
   dispose(): void {
     this.mcpServer.dispose();
+    if (this.ipcSocket) {
+      this.ipcSocket.dispose();
+      this.ipcSocket = null;
+    }
+    this.cleanupAcpSubscription();
     if (this.resourceGuard) {
       this.resourceGuard.cascadeKill(this.conversation_id, this.workspace);
     } else {
-      // No resourceGuard means dependencies weren't set, just kill self
       this.kill();
     }
   }

@@ -85,18 +85,6 @@ function mapRegistryIdToGuidKey(
     }
   }
 
-  // Preset agent: "preset:word-creator" → find in availableAgents by isPreset + customAgentId match
-  if (registryId.startsWith('preset:')) {
-    const presetId = registryId.slice(7);
-    const match = availableAgents.find(
-      (a) =>
-        a.isPreset && a.customAgentId && (a.customAgentId === presetId || a.customAgentId === `builtin-${presetId}`)
-    );
-    if (match) {
-      return getAgentKeyUtil(match);
-    }
-  }
-
   return null;
 }
 

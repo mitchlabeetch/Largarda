@@ -143,7 +143,8 @@
     "addMember": "멤버 추가"
   },
   "tabs": {
-    "groupChat": "그룹 채팅"
+    "groupChat": "그룹 채팅",
+    "admin": "관리자"
   },
   "profile": {
     "baseAgent": "기본 에이전트",

@@ -5,9 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
-import { ConfigStorage } from '@/common/config/storage';
-import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import { useAgentRegistry } from '@/renderer/hooks/useAgentRegistry';
 import { Button, Input, Message, Modal, Select, Tooltip } from '@arco-design/web-react';
 import { FolderOpen } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -15,8 +13,40 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { emitter } from '@/renderer/utils/emitter';
 import { iconColors } from '@/renderer/styles/colors';
+import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
+import CoworkLogo from '@/renderer/assets/icons/cowork.svg';
 
 import type { GroupChatCreationModalProps } from './types';
+
+/** Render avatar for an agent in the selector dropdown */
+export const AgentAvatar: React.FC<{ avatar?: string; agentId?: string; size?: number }> = ({ avatar, agentId, size = 16 }) => {
+  const value = (avatar || '').trim();
+
+  // Special case: cowork.svg
+  if (value === 'cowork.svg') {
+    return <img src={CoworkLogo} alt='cowork' className={`w-${size}px h-${size}px object-contain`} />;
+  }
+
+  // Image URL or file extension
+  if (value && (/\.(svg|png|jpe?g|webp|gif)$/i.test(value) || /^(https?:|aion-asset:\/\/|file:\/\/|data:)/i.test(value))) {
+    return <img src={value} alt='' className={`w-${size}px h-${size}px rounded-50% object-contain`} />;
+  }
+
+  // Emoji
+  if (value) {
+    return <span className={`text-${size}px leading-none`}>{value}</span>;
+  }
+
+  // CLI agent logo
+  if (agentId) {
+    const logo = getAgentLogo(agentId);
+    if (logo) {
+      return <img src={logo} alt={agentId} className={`w-${size}px h-${size}px object-contain`} />;
+    }
+  }
+
+  return null;
+};
 
 const CreateGroupChatModal: React.FC<GroupChatCreationModalProps> = ({ visible, onClose, onCreated }) => {
   const { t } = useTranslation();
@@ -30,29 +60,21 @@ const CreateGroupChatModal: React.FC<GroupChatCreationModalProps> = ({ visible, 
   const [teamConfigs, setTeamConfigs] = useState<Array<{ name: string }>>([]);
   const [teamConfigName, setTeamConfigName] = useState<string | undefined>();
 
-  // CLI agents (通用 Agent: Gemini, Claude Code, etc.)
-  const cliAgents = useMemo(() => {
-    const agents: Array<{ id: string; name: string }> = [];
-    // Add Gemini as first CLI agent
-    agents.push({ id: 'gemini', name: 'Gemini' });
-    // Add other enabled CLI backends
-    for (const [key, config] of Object.entries(ACP_BACKENDS_ALL)) {
-      if (config.enabled) {
-        agents.push({ id: key, name: config.name });
+  // Unified agent list from registry (same source as AddMemberModal)
+  const agentRegistry = useAgentRegistry();
+  const { cliAgents, assistantAgents } = useMemo(() => {
+    const cli: Array<{ id: string; name: string; avatar?: string; description?: string }> = [];
+    const assistants: Array<{ id: string; name: string; avatar?: string; description?: string }> = [];
+    for (const [id, agent] of agentRegistry) {
+      const item = { id, name: agent.name, avatar: agent.avatar, description: agent.description };
+      if (agent.source === 'cli_agent') {
+        cli.push(item);
+      } else {
+        assistants.push(item);
       }
     }
-    return agents;
-  }, []);
-
-  // Admin Agent list (custom assistants)
-  const [customAgents, setCustomAgents] = useState<AcpBackendConfig[]>([]);
-  useEffect(() => {
-    void ConfigStorage.get('acp.customAgents')
-      .then((agents) => {
-        setCustomAgents((agents || []).filter((a) => a.enabled !== false));
-      })
-      .catch(() => setCustomAgents([]));
-  }, []);
+    return { cliAgents: cli, assistantAgents: assistants };
+  }, [agentRegistry]);
 
   // G4.2: Fetch team configs when workspace changes
   useEffect(() => {
@@ -169,17 +191,21 @@ const CreateGroupChatModal: React.FC<GroupChatCreationModalProps> = ({ visible, 
           {cliAgents.map((agent) => (
             <Select.Option key={agent.id} value={agent.id}>
               <span className='flex items-center gap-6px'>
+                <AgentAvatar avatar={agent.avatar} agentId={agent.id} />
                 <span>{agent.name}</span>
                 <span className='text-12px text-t-secondary'>CLI</span>
               </span>
             </Select.Option>
           ))}
-          {/* Custom assistants (助手) */}
-          {customAgents.map((agent) => (
+          {/* Assistants (助手) */}
+          {assistantAgents.map((agent) => (
             <Select.Option key={agent.id} value={agent.id}>
               <span className='flex items-center gap-6px'>
-                {agent.avatar && <span className='text-16px leading-none'>{agent.avatar}</span>}
+                <AgentAvatar avatar={agent.avatar} agentId={agent.id} />
                 <span>{agent.name}</span>
+                {agent.description && (
+                  <span className='text-12px text-t-secondary ml-4px truncate'>{agent.description}</span>
+                )}
               </span>
             </Select.Option>
           ))}

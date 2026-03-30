@@ -5,8 +5,8 @@
  *
  * G3.6: Add member modal.
  * Uses Arco Modal with Select for agent selection.
- * Shows agents from useAgentRegistry, disables already-added ones.
- * Search/filter support via showSearch.
+ * Shows agents from useAgentRegistry (same source as CreateGroupChatModal),
+ * split into CLI agents + assistants, with already-added members disabled.
  */
 
 import { ipcBridge } from '@/common';
@@ -14,6 +14,7 @@ import { useAgentRegistry } from '@/renderer/hooks/useAgentRegistry';
 import { Message, Modal, Select } from '@arco-design/web-react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AgentAvatar } from '../CreateGroupChatModal';
 
 type AddMemberModalProps = {
   visible: boolean;
@@ -35,9 +36,10 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
   const [adding, setAdding] = useState(false);
 
-  // Convert registry Map to array for Select options
-  const availableAgents = useMemo(() => {
-    const agents: Array<{
+  // Split agents into CLI + assistants (same structure as CreateGroupChatModal)
+  const { cliAgents, assistantAgents } = useMemo(() => {
+    const cli: Array<{ id: string; name: string; avatar?: string; isDisabled: boolean }> = [];
+    const assistants: Array<{
       id: string;
       name: string;
       avatar?: string;
@@ -46,17 +48,26 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
     }> = [];
 
     for (const [id, agent] of agentRegistry) {
-      agents.push({
-        id,
-        name: agent.name,
-        avatar: agent.avatar,
-        description: agent.description,
-        isDisabled: existingMemberIds.includes(id),
-      });
+      const isDisabled = existingMemberIds.includes(id);
+      if (agent.source === 'cli_agent') {
+        cli.push({ id, name: agent.name, avatar: agent.avatar, isDisabled });
+      } else {
+        assistants.push({
+          id,
+          name: agent.name,
+          avatar: agent.avatar,
+          description: agent.description,
+          isDisabled,
+        });
+      }
     }
-
-    return agents;
+    return { cliAgents: cli, assistantAgents: assistants };
   }, [agentRegistry, existingMemberIds]);
+
+  const allAgents = useMemo(
+    () => [...cliAgents, ...assistantAgents],
+    [cliAgents, assistantAgents],
+  );
 
   const handleAdd = useCallback(async () => {
     if (!selectedAgentId) return;
@@ -105,7 +116,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
           const props = option?.props as { value?: string } | undefined;
           const optionValue = props?.value;
           if (typeof optionValue === 'string') {
-            const agent = availableAgents.find((a) => a.id === optionValue);
+            const agent = allAgents.find((a) => a.id === optionValue);
             if (agent) {
               return agent.name.toLowerCase().includes(input.toLowerCase());
             }
@@ -114,10 +125,24 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
         }}
         className='w-full'
       >
-        {availableAgents.map((agent) => (
+        {/* CLI agents (通用 Agent) */}
+        {cliAgents.map((agent) => (
           <Select.Option key={agent.id} value={agent.id} disabled={agent.isDisabled}>
             <span className='flex items-center gap-6px'>
-              {agent.avatar && <span className='text-16px leading-none'>{agent.avatar}</span>}
+              <AgentAvatar avatar={agent.avatar} agentId={agent.id} />
+              <span>{agent.name}</span>
+              <span className='text-12px text-t-secondary'>CLI</span>
+              {agent.isDisabled && (
+                <span className='text-11px text-t-secondary ml-auto'>{t('dispatch.addMember.alreadyAdded')}</span>
+              )}
+            </span>
+          </Select.Option>
+        ))}
+        {/* Assistants (助手) */}
+        {assistantAgents.map((agent) => (
+          <Select.Option key={agent.id} value={agent.id} disabled={agent.isDisabled}>
+            <span className='flex items-center gap-6px'>
+              <AgentAvatar avatar={agent.avatar} agentId={agent.id} />
               <span>{agent.name}</span>
               {agent.description && (
                 <span className='text-12px text-t-secondary ml-4px truncate'>{agent.description}</span>

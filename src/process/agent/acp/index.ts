@@ -110,6 +110,8 @@ export interface AcpAgentConfig {
     acpSessionUpdatedAt?: number;
     /** Initial model ID to apply at session start (from channel config or persisted user choice) */
     currentModelId?: string;
+    /** External MCP servers to inject alongside built-in servers (e.g. dispatch tools) */
+    externalMcpServers?: AcpSessionMcpServer[];
   };
   onStreamEvent: (data: IResponseMessage) => void;
   onSignalEvent?: (data: IResponseMessage) => void; // 新增：仅发送信号，不更新UI
@@ -140,6 +142,8 @@ export class AcpAgent {
     acpSessionUpdatedAt?: number;
     /** Initial model ID to apply at session start (from channel config or persisted user choice) */
     currentModelId?: string;
+    /** External MCP servers to inject alongside built-in servers (e.g. dispatch tools) */
+    externalMcpServers?: AcpSessionMcpServer[];
   };
   private connection: AcpConnection;
   private adapter: AcpAdapter;
@@ -1429,7 +1433,11 @@ export class AcpAgent {
   private async createOrResumeSession(): Promise<void> {
     const resumeSessionId = this.extra.acpSessionId;
     const resumeConversationId = this.extra.acpSessionConversationId;
-    const mcpServers = await this.loadBuiltinSessionMcpServers();
+    const builtinServers = await this.loadBuiltinSessionMcpServers();
+    // Merge external MCP servers (e.g. dispatch tools) with built-in servers
+    const mcpServers: AcpSessionMcpServer[] = this.extra.externalMcpServers?.length
+      ? [...builtinServers, ...this.extra.externalMcpServers]
+      : builtinServers;
 
     // Validate session ownership: only resume if the stored session belongs to this conversation.
     if (resumeSessionId && resumeConversationId && resumeConversationId !== this.id) {
@@ -1445,7 +1453,7 @@ export class AcpAgent {
           // Codex ACP bridge implements session/load (load_session) which calls
           // resume_thread_from_rollout internally to restore full conversation history.
           // Codex ignores resumeSessionId in session/new, so we must use session/load.
-          response = await this.connection.loadSession(resumeSessionId, this.extra.workspace);
+          response = await this.connection.loadSession(resumeSessionId, this.extra.workspace, mcpServers);
         } else {
           // Claude/CodeBuddy use _meta in session/new; others use generic resumeSessionId
           response = await this.connection.newSession(this.extra.workspace, {

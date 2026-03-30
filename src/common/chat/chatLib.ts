@@ -76,7 +76,8 @@ type TMessageType =
   | 'codex_permission'
   | 'codex_tool_call'
   | 'plan'
-  | 'available_commands';
+  | 'available_commands'
+  | 'dispatch_event';
 
 interface IMessage<T extends TMessageType, Content extends Record<string, any>> {
   /**
@@ -306,6 +307,31 @@ export type IMessageAvailableCommands = IMessage<
   }
 >;
 
+/** Dispatch event message type for group chat task lifecycle events */
+export type DispatchEventMessageType =
+  | 'text'
+  | 'system'
+  | 'task_started'
+  | 'task_completed'
+  | 'task_failed'
+  | 'task_progress'
+  | 'task_cancelled';
+
+export type IMessageDispatchEvent = IMessage<
+  'dispatch_event',
+  {
+    sourceSessionId: string;
+    sourceRole: 'dispatcher' | 'child' | 'user';
+    displayName: string;
+    content: string;
+    messageType: DispatchEventMessageType;
+    timestamp: number;
+    childTaskId?: string;
+    avatar?: string;
+    progressSummary?: string;
+  }
+>;
+
 // eslint-disable-next-line max-len
 export type TMessage =
   | IMessageText
@@ -318,7 +344,8 @@ export type TMessage =
   | IMessageCodexPermission
   | IMessageCodexToolCall
   | IMessagePlan
-  | IMessageAvailableCommands;
+  | IMessageAvailableCommands
+  | IMessageDispatchEvent;
 
 // 统一所有需要用户交互的用户类型
 export interface IConfirmation<Option extends any = any> {
@@ -452,6 +479,27 @@ export const transformMessage = (message: IResponseMessage): TMessage => {
         position: 'left',
         conversation_id: message.conversation_id,
         content: message.data as any,
+      };
+    }
+    case 'dispatch_event': {
+      const eventData = message.data as Record<string, unknown>;
+      return {
+        id: message.msg_id || uuid(),
+        type: 'dispatch_event',
+        msg_id: message.msg_id,
+        position: 'left' as const,
+        conversation_id: message.conversation_id,
+        content: {
+          sourceSessionId: String(eventData.sourceSessionId || ''),
+          sourceRole: (eventData.sourceRole as 'dispatcher' | 'child' | 'user') || 'child',
+          displayName: String(eventData.displayName || ''),
+          content: String(eventData.content || ''),
+          messageType: (eventData.messageType as DispatchEventMessageType) || 'system',
+          timestamp: Number(eventData.timestamp) || Date.now(),
+          childTaskId: eventData.childTaskId ? String(eventData.childTaskId) : undefined,
+          avatar: eventData.avatar ? String(eventData.avatar) : undefined,
+          progressSummary: eventData.progressSummary ? String(eventData.progressSummary) : undefined,
+        },
       };
     }
     // Disabled: available_commands messages are too noisy and distracting in the chat UI
