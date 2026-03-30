@@ -71,6 +71,7 @@
   "historySearch": {
     "tooltip": "检索会话",
     "title": "检索会话内容",
+    "shortTitle": "搜索",
     "description": "输入关键词搜索历史消息，支持分页加载并跳转到对应消息。",
     "placeholder": "搜索消息内容...",
     "idle": "输入关键词检索历史消息",

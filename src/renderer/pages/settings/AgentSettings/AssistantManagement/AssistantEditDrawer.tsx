@@ -4,7 +4,6 @@
  */
 import type { AssistantListItem, SkillInfo } from './types';
 import { hasBuiltinSkills } from './assistantUtils';
-import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
 import EmojiPicker from '@/renderer/components/chat/EmojiPicker';
 import MarkdownView from '@/renderer/components/Markdown';
 import { Avatar, Button, Checkbox, Collapse, Drawer, Input, Select, Tag, Typography } from '@arco-design/web-react';
@@ -81,7 +80,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
   selectedSkills,
   setSelectedSkills,
   pendingSkills,
-  customSkills,
+  customSkills: _customSkills,
   setDeletePendingSkillName,
   setDeleteCustomSkillName,
   setSkillsModalVisible,
@@ -97,6 +96,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
   const { t } = useTranslation();
   const textareaWrapperRef = useRef<HTMLDivElement>(null);
   const [drawerWidth, setDrawerWidth] = useState(500);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
 
   // Auto focus textarea when drawer opens in edit mode
   useEffect(() => {
@@ -113,7 +113,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
   useEffect(() => {
     const updateDrawerWidth = () => {
       if (typeof window === 'undefined') return;
-      const nextWidth = Math.min(500, Math.max(320, Math.floor(window.innerWidth - 32)));
+      const nextWidth = Math.min(1024, Math.max(480, Math.floor(window.innerWidth * 0.5)));
       setDrawerWidth(nextWidth);
     };
 
@@ -127,6 +127,21 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
     isCreating ||
     (activeAssistantId !== null && hasBuiltinSkills(activeAssistantId)) ||
     (activeAssistant !== null && !activeAssistant.isBuiltin && !isExtensionAssistant(activeAssistant));
+
+  const customSkillItems = availableSkills.filter((skill) => skill.isCustom);
+  const builtinSkillItems = availableSkills.filter((skill) => !skill.isCustom);
+  const customActiveCount = selectedSkills.filter(
+    (name) => pendingSkills.some((skill) => skill.name === name) || customSkillItems.some((skill) => skill.name === name)
+  ).length;
+  const builtinActiveCount = selectedSkills.filter((name) => builtinSkillItems.some((skill) => skill.name === name)).length;
+  const customStatusDotColor = customActiveCount > 0 ? 'rgb(var(--success-6))' : 'var(--color-text-4)';
+  const builtinStatusDotColor = builtinActiveCount > 0 ? 'rgb(var(--success-6))' : 'var(--color-text-4)';
+  const totalSkillsCount = pendingSkills.length + customSkillItems.length + builtinSkillItems.length;
+  const totalActiveSkillsCount = selectedSkills.filter((name) =>
+    pendingSkills.some((skill) => skill.name === name) || availableSkills.some((skill) => skill.name === name)
+  ).length;
+  const isRuleEditable = !activeAssistant?.isBuiltin && !isReadonlyAssistant;
+  const rulesContainerHeight = rulesExpanded ? '420px' : isRuleEditable && promptViewMode === 'edit' ? '260px' : '220px';
 
   return (
     <Drawer
@@ -154,6 +169,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
       placement='right'
       width={drawerWidth}
       zIndex={1200}
+      getPopupContainer={() => document.body}
       autoFocus={false}
       onCancel={() => {
         setEditVisible(false);
@@ -262,11 +278,15 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
               onChange={(value) => setEditAgent(value as string)}
               disabled={isReadonlyAssistant}
             >
-              {Array.from(availableBackends)
-                .map((id) => {
-                  const config = ACP_BACKENDS_ALL[id as keyof typeof ACP_BACKENDS_ALL];
-                  return { value: id, label: config?.name ?? id };
-                })
+              {[
+                { value: 'gemini', label: 'Gemini CLI' },
+                { value: 'claude', label: 'Claude Code' },
+                { value: 'qwen', label: 'Qwen Code' },
+                { value: 'codex', label: 'Codex' },
+                { value: 'codebuddy', label: 'CodeBuddy' },
+                { value: 'opencode', label: 'OpenCode' },
+              ]
+                .filter((opt) => availableBackends.has(opt.value))
                 .map((opt) => (
                   <Select.Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -290,13 +310,32 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
             </Select>
           </div>
 
+          {/* Summary */}
+          <div className='flex flex-wrap items-center gap-8px p-10px rd-10px bg-fill-1'>
+            <span className='text-12px text-t-secondary'>{t('settings.assistantMainAgent', { defaultValue: 'Main Agent' })}:</span>
+            <Tag size='small' color='arcoblue'>
+              {editAgent}
+            </Tag>
+            <span className='text-12px text-t-secondary ml-6px'>
+              {t('settings.assistantSkills', { defaultValue: 'Skills' })}:
+            </span>
+            <Tag size='small' color={totalActiveSkillsCount > 0 ? 'green' : 'gray'}>
+              {totalActiveSkillsCount > 0 ? `${totalActiveSkillsCount}/${totalSkillsCount}` : totalSkillsCount}
+            </Tag>
+          </div>
+
           {/* Rules / Prompt */}
           <div className='flex-shrink-0'>
-            <Typography.Text bold className='flex-shrink-0'>
-              {t('settings.assistantRules', { defaultValue: 'Rules' })}
-            </Typography.Text>
-            <div className='mt-10px border border-border-2 overflow-hidden rounded-4px' style={{ height: '300px' }}>
-              {!activeAssistant?.isBuiltin && !isReadonlyAssistant && (
+            <div className='flex items-center justify-between'>
+              <Typography.Text bold className='flex-shrink-0'>
+                {t('settings.assistantRules', { defaultValue: 'Rules' })}
+              </Typography.Text>
+              <Button type='text' size='mini' onClick={() => setRulesExpanded((prev) => !prev)}>
+                {rulesExpanded ? t('common.collapse', { defaultValue: 'Collapse' }) : t('common.expand', { defaultValue: 'Expand' })}
+              </Button>
+            </div>
+            <div className='mt-10px border border-border-2 overflow-hidden rounded-4px' style={{ height: rulesContainerHeight }}>
+              {isRuleEditable && (
                 <div className='flex items-center h-36px bg-fill-2 border-b border-border-2 flex-shrink-0'>
                   <div
                     className={`flex items-center h-full px-16px cursor-pointer transition-all text-13px font-medium ${promptViewMode === 'edit' ? 'text-primary border-b-2 border-primary bg-bg-1' : 'text-t-secondary hover:text-t-primary'}`}
@@ -315,11 +354,11 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
               <div
                 className='bg-fill-2'
                 style={{
-                  height: activeAssistant?.isBuiltin || isReadonlyAssistant ? '100%' : 'calc(100% - 36px)',
+                  height: isRuleEditable ? 'calc(100% - 36px)' : '100%',
                   overflow: 'auto',
                 }}
               >
-                {promptViewMode === 'edit' && !activeAssistant?.isBuiltin && !isReadonlyAssistant ? (
+                {promptViewMode === 'edit' && isRuleEditable ? (
                   <div ref={textareaWrapperRef} className='h-full'>
                     <Input.TextArea
                       value={editContext}
@@ -332,7 +371,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
                     />
                   </div>
                 ) : (
-                  <div className='p-16px'>
+                  <div className='p-16px text-14px leading-7'>
                     {editContext ? (
                       <MarkdownView hiddenCodeCopyButton>{editContext}</MarkdownView>
                     ) : (
@@ -373,9 +412,18 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
                   name='custom-skills'
                   className='mb-8px'
                   extra={
-                    <span className='text-12px text-t-secondary'>
-                      {pendingSkills.length + availableSkills.filter((skill) => skill.isCustom).length}
-                    </span>
+                    <div className='flex items-center gap-8px'>
+                      <span
+                        className='inline-block w-8px h-8px rd-50%'
+                        style={{ background: customStatusDotColor }}
+                        aria-hidden='true'
+                      />
+                      <span className='text-12px text-t-secondary'>
+                        {customActiveCount > 0
+                          ? `${customActiveCount}/${pendingSkills.length + customSkillItems.length}`
+                          : pendingSkills.length + customSkillItems.length}
+                      </span>
+                    </div>
                   }
                 >
                   <div className='space-y-4px'>
@@ -420,9 +468,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
                       </div>
                     ))}
                     {/* All imported custom skills */}
-                    {availableSkills
-                      .filter((skill) => skill.isCustom)
-                      .map((skill) => (
+                    {customSkillItems.map((skill) => (
                         <div
                           key={`custom-${skill.name}`}
                           className='flex items-start gap-8px p-8px hover:bg-fill-1 rounded-4px group'
@@ -461,7 +507,7 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
                           </button>
                         </div>
                       ))}
-                    {pendingSkills.length === 0 && availableSkills.filter((skill) => skill.isCustom).length === 0 && (
+                    {pendingSkills.length === 0 && customSkillItems.length === 0 && (
                       <div className='text-center text-t-secondary text-12px py-16px'>
                         {t('settings.noCustomSkills', { defaultValue: 'No custom skills added' })}
                       </div>
@@ -478,16 +524,21 @@ const AssistantEditDrawer: React.FC<AssistantEditDrawerProps> = ({
                   }
                   name='builtin-skills'
                   extra={
-                    <span className='text-12px text-t-secondary'>
-                      {availableSkills.filter((skill) => !skill.isCustom).length}
-                    </span>
+                    <div className='flex items-center gap-8px'>
+                      <span
+                        className='inline-block w-8px h-8px rd-50%'
+                        style={{ background: builtinStatusDotColor }}
+                        aria-hidden='true'
+                      />
+                      <span className='text-12px text-t-secondary'>
+                        {builtinActiveCount > 0 ? `${builtinActiveCount}/${builtinSkillItems.length}` : builtinSkillItems.length}
+                      </span>
+                    </div>
                   }
                 >
-                  {availableSkills.filter((skill) => !skill.isCustom).length > 0 ? (
+                  {builtinSkillItems.length > 0 ? (
                     <div className='space-y-4px'>
-                      {availableSkills
-                        .filter((skill) => !skill.isCustom)
-                        .map((skill) => (
+                      {builtinSkillItems.map((skill) => (
                           <div key={skill.name} className='flex items-start gap-8px p-8px hover:bg-fill-1 rounded-4px'>
                             <Checkbox
                               checked={selectedSkills.includes(skill.name)}
