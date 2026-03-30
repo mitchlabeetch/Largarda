@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { AionCliConfig, AgentConfig } from './types';
+import { SUPPORTED_CLIS } from './cliRegistry';
 
 export const CONFIG_DIR = join(homedir(), '.aion');
 export const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -31,14 +32,11 @@ function findBin(name: string): string | null {
 function detectCliAgents(): Record<string, AgentConfig> {
   const agents: Record<string, AgentConfig> = {};
 
-  const claudeBin = findBin('claude');
-  if (claudeBin) {
-    agents['claude'] = { provider: 'claude-cli', bin: claudeBin };
-  }
-
-  const codexBin = findBin('codex');
-  if (codexBin) {
-    agents['codex'] = { provider: 'codex-cli', bin: codexBin };
+  for (const entry of SUPPORTED_CLIS) {
+    const bin = findBin(entry.bin);
+    if (bin) {
+      agents[entry.key] = { provider: entry.provider, bin };
+    }
   }
 
   return agents;

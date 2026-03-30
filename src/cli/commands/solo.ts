@@ -134,7 +134,7 @@ function printHeader(config: AionCliConfig, activeKey: string): void {
     .join('  ');
 
   process.stdout.write(fmt.dim(`  ${hr()}`) + '\n');
-  process.stdout.write(`   ${agentList}   ${fmt.dim('/help')}\n\n`);
+  process.stdout.write(`   ${agentList}   ${fmt.dim('/model to switch')}   ${fmt.dim('/help')}\n\n`);
 }
 
 function printTips(): void {

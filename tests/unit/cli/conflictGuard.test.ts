@@ -113,7 +113,7 @@ describe('ConflictGuard', () => {
     guard.claim('task-4', 'src/beta.ts');
     const conflicts = guard.getConflicts();
     expect(conflicts).toHaveLength(2);
-    const paths = conflicts.map((c) => c.path).sort();
+    const paths = conflicts.map((c) => c.path).toSorted();
     expect(paths).toEqual(['src/alpha.ts', 'src/beta.ts']);
   });
 

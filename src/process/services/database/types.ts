@@ -240,6 +240,66 @@ export function rowToMessage(row: IMessageRow): TMessage {
  * ======================
  */
 
+/**
+ * ======================
+ * 群聊室类型 (Group Chat Room)
+ * ======================
+ */
+
+export type GroupRoomStatus = 'idle' | 'running' | 'paused' | 'finished' | 'error';
+export type GroupAgentRole = 'host' | 'sub';
+export type GroupAgentStatus = 'idle' | 'running' | 'finished' | 'error' | 'terminated';
+export type GroupMessageKind =
+  | 'user_input'
+  | 'host_response'
+  | 'host_dispatch'
+  | 'sub_thinking'
+  | 'sub_output'
+  | 'sub_status'
+  | 'result_injection'
+  | 'host_thought'
+  | 'system';
+export type GroupMessageStatus = 'finish' | 'pending' | 'error' | 'work';
+
+export interface IGroupRoomRow {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  host_conversation_id: string;
+  status: GroupRoomStatus;
+  config: string; // JSON
+  created_at: number;
+  updated_at: number;
+}
+
+export interface IGroupAgentRow {
+  id: string;
+  room_id: string;
+  role: GroupAgentRole;
+  agent_type: string;
+  conversation_id: string | null;
+  display_name: string;
+  status: GroupAgentStatus;
+  capabilities: string; // JSON
+  current_task: string | null;
+  created_at: number;
+  terminated_at: number | null;
+}
+
+export interface IGroupMessageRow {
+  id: string;
+  room_id: string;
+  sender_type: 'user' | 'agent';
+  sender_id: string | null;
+  msg_kind: GroupMessageKind;
+  content: string; // JSON
+  ref_message_id: string | null;
+  status: GroupMessageStatus | null;
+  seq: number;
+  created_at: number;
+}
+
 export type {
   // 复用的业务类型
   TChatConversation,

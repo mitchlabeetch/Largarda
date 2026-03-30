@@ -247,6 +247,8 @@ export type TChatConversation =
           currentModelId?: string;
           /** Explicit marker for temporary health-check conversations */
           isHealthCheck?: boolean;
+          /** Group Room ID — marks this conversation as the host conversation of a group room */
+          groupRoomId?: string;
         }
       >,
       'model'

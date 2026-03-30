@@ -1,0 +1,3 @@
+.groupTabs :global(.arco-tabs-content) {
+  display: none;
+}

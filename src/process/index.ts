@@ -17,7 +17,7 @@ if (app.isPackaged) {
   process.env.PREBUILDS_ONLY = '1';
 }
 import initStorage from './utils/initStorage';
-import './utils/initBridge';
+import { groupRoomBridgeReady } from './utils/initBridge';
 import './services/i18n'; // Initialize i18n for main process
 import { getChannelManager } from '@process/channels';
 import { ExtensionRegistry } from '@process/extensions';
@@ -28,6 +28,12 @@ export const initializeProcess = async () => {
 
   await initStorage();
   mark('initStorage');
+
+  // Wait for GroupRoom bridge to be fully registered before the window is created.
+  // This prevents the race condition where the renderer calls group-room.create
+  // before the provider has been registered (which causes an infinite hang).
+  await groupRoomBridgeReady;
+  mark('groupRoomBridgeReady');
 
   // Initialize Extension Registry (scan and resolve all extensions)
   try {

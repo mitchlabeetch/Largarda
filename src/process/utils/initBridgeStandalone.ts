@@ -16,7 +16,7 @@ import { acpDetector } from '@process/agent/acp/AcpDetector';
 import { SqliteChannelRepository } from '@process/services/database/SqliteChannelRepository';
 import { SqliteConversationRepository } from '@process/services/database/SqliteConversationRepository';
 import { ConversationServiceImpl } from '@process/services/ConversationServiceImpl';
-import { workerTaskManager } from '@process/task/workerTaskManagerSingleton';
+import { workerTaskManager, agentFactory } from '@process/task/workerTaskManagerSingleton';
 import { initAcpConversationBridge } from '@process/bridge/acpConversationBridge';
 import { initAuthBridge } from '@process/bridge/authBridge';
 import { initBedrockBridge } from '@process/bridge/bedrockBridge';
@@ -42,6 +42,8 @@ import { initNotificationBridge } from '@process/bridge/notificationBridge';
 import { initSystemSettingsBridge } from '@process/bridge/systemSettingsBridge';
 import { initTaskBridge } from '@process/bridge/taskBridge';
 import { initSpeechToTextBridge } from '@process/bridge/speechToTextBridge';
+import { getDatabase } from '@process/services/database';
+import { initGroupRoomBridge } from '@process/bridge/groupRoomBridge';
 
 logger.config({ print: true });
 
@@ -78,6 +80,15 @@ export async function initBridgeStandalone(): Promise<void> {
   initTaskBridge(workerTaskManager);
   initStarOfficeBridge();
   initSpeechToTextBridge();
+
+  // Initialize GroupRoom bridge — requires ISqliteDriver, resolved from the async db singleton.
+  // IMPORTANT: must await so the provider is registered before the renderer can call it.
+  await getDatabase()
+    .then((db) => initGroupRoomBridge(db.getDriver(), conversationService, agentFactory))
+    .then(() => console.log('[initBridgeStandalone] GroupRoomBridge initialized'))
+    .catch((error) => {
+      console.error('[initBridgeStandalone] Failed to initialize GroupRoomBridge:', error);
+    });
 
   // Initialize ACP detector to scan for installed CLI agents (claude, codex, etc.)
   // Must mirror Electron's initializeAcpDetector() call in src/index.ts

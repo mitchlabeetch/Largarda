@@ -262,5 +262,29 @@
     "request_sent": "生成请求已发送",
     "failed": "生成失败",
     "preset_registered": "已保存为全局预设"
+  },
+  "groupRoom": {
+    "createTitle": "创建群聊室",
+    "nameLabel": "群聊室名称",
+    "namePlaceholder": "请输入群聊室名称",
+    "nameRequired": "群聊室名称不能为空",
+    "descriptionLabel": "描述（选填）",
+    "descriptionPlaceholder": "简单描述这个群聊室的用途",
+    "mainAgentLabel": "主 Agent",
+    "mainAgentRequired": "请选择主 Agent",
+    "noAgents": "暂无可用 Agent",
+    "underConstruction": "群聊室页面建设中",
+    "msg": {
+      "thinking": "思考中",
+      "thinkingDone": "思考 {{seconds}}s"
+    },
+    "roleHost": "群主",
+    "roleSub": "成员",
+    "membersTitle": "成员",
+    "noMembers": "暂无成员",
+    "loading": "群聊室",
+    "running": "运行中…",
+    "messagesPlaceholder": "消息列表（开发中）",
+    "inputPlaceholder": "发送消息…"
   }
 }

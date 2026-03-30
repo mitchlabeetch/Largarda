@@ -109,7 +109,7 @@ describe('CoordinatorSession.plan()', () => {
       ],
     });
     const session = new CoordinatorSession(simpleFactory(json));
-    const plan = await session.plan('Build a REST API', 3);
+    const plan = await session.plan('Build a REST API', undefined, undefined, 3);
     expect(plan).not.toBeNull();
     expect(plan!.execution_mode).toBe('parallel');
     expect(plan!.specialists).toHaveLength(3);
@@ -126,7 +126,7 @@ describe('CoordinatorSession.plan()', () => {
       ],
     });
     const session = new CoordinatorSession(simpleFactory(json));
-    const plan = await session.plan('Write a report', 2);
+    const plan = await session.plan('Write a report', undefined, undefined, 2);
     expect(plan!.execution_mode).toBe('sequential');
     expect(plan!.specialists[1]!.dependsOn).toEqual(['Researcher']);
   });
@@ -138,7 +138,7 @@ describe('CoordinatorSession.plan()', () => {
       specialists: [{ role: 'Analyst', focus: 'Analyze', phase: 1 }],
     });
     const session = new CoordinatorSession(simpleFactory(json));
-    const plan = await session.plan('Analyze something', 3);
+    const plan = await session.plan('Analyze something', undefined, undefined, 3);
     expect(plan!.specialists).toHaveLength(3);
   });
 
@@ -154,13 +154,13 @@ describe('CoordinatorSession.plan()', () => {
       ],
     });
     const session = new CoordinatorSession(simpleFactory(json));
-    const plan = await session.plan('Do something', 2);
+    const plan = await session.plan('Do something', undefined, undefined, 2);
     expect(plan!.specialists).toHaveLength(2);
   });
 
   it('returns null when response is not valid JSON', async () => {
     const session = new CoordinatorSession(simpleFactory('Sorry, I cannot help with that.'));
-    const plan = await session.plan('Do something', 2);
+    const plan = await session.plan('Do something');
     expect(plan).toBeNull();
   });
 
@@ -174,7 +174,7 @@ describe('CoordinatorSession.plan()', () => {
       ],
     });
     const session = new CoordinatorSession(simpleFactory(json));
-    const plan = await session.plan('test', 2);
+    const plan = await session.plan('test');
     expect(plan!.execution_mode).toBe('parallel');
   });
 
@@ -182,7 +182,7 @@ describe('CoordinatorSession.plan()', () => {
     const controller = new AbortController();
     controller.abort();
     const session = new CoordinatorSession(simpleFactory('{}'));
-    const plan = await session.plan('test', 2, controller.signal);
+    const plan = await session.plan('test', controller.signal);
     expect(plan).toBeNull();
   });
 });

@@ -112,6 +112,8 @@ export interface AcpAgentConfig {
     currentModelId?: string;
     /** Initial session mode to apply at session start (e.g., acceptEdits, auto, dontAsk, plan) */
     sessionMode?: string;
+    /** Additional MCP server to inject into the session (e.g., GroupDispatch for group rooms) */
+    groupDispatchMcpServer?: { command: string; args: string[]; env: Array<{ name: string; value: string }> };
   };
   onStreamEvent: (data: IResponseMessage) => void;
   onSignalEvent?: (data: IResponseMessage) => void; // 新增：仅发送信号，不更新UI
@@ -144,6 +146,8 @@ export class AcpAgent {
     currentModelId?: string;
     /** Initial session mode to apply at session start (e.g., acceptEdits, auto, dontAsk, plan) */
     sessionMode?: string;
+    /** Additional MCP server to inject into the session (e.g., GroupDispatch for group rooms) */
+    groupDispatchMcpServer?: { command: string; args: string[]; env: Array<{ name: string; value: string }> };
   };
   private connection: AcpConnection;
   private adapter: AcpAdapter;
@@ -1496,18 +1500,30 @@ export class AcpAgent {
   private async loadBuiltinSessionMcpServers(): Promise<AcpSessionMcpServer[]> {
     try {
       const mcpConfig = await ProcessConfig.get('mcp.config');
-      if (!Array.isArray(mcpConfig) || mcpConfig.length === 0) {
-        return [];
-      }
+      const sessionMcpServers: AcpSessionMcpServer[] =
+        Array.isArray(mcpConfig) && mcpConfig.length > 0
+          ? buildBuiltinAcpSessionMcpServers(
+              mcpConfig as IMcpServer[],
+              parseAcpMcpCapabilities(this.connection.getInitializeResponse()),
+            )
+          : [];
 
-      const capabilities = parseAcpMcpCapabilities(this.connection.getInitializeResponse());
-      const sessionMcpServers = buildBuiltinAcpSessionMcpServers(mcpConfig as IMcpServer[], capabilities);
+      // Inject GroupDispatch MCP server if configured (for group room sessions)
+      if (this.extra.groupDispatchMcpServer) {
+        const gd = this.extra.groupDispatchMcpServer;
+        sessionMcpServers.push({
+          name: 'aion-group-dispatch',
+          command: gd.command,
+          args: gd.args,
+          env: gd.env,
+        });
+      }
 
       if (sessionMcpServers.length > 0) {
         mainLog(
           `[ACP ${this.extra.backend}]`,
-          `Injecting ${sessionMcpServers.length} built-in MCP server(s) into session/new`,
-          sessionMcpServers.map((server) => `${server.name}:${server.type}`)
+          `Injecting ${sessionMcpServers.length} MCP server(s) into session/new`,
+          sessionMcpServers.map((server) => `${server.name}:${'type' in server ? server.type : 'stdio'}`),
         );
       }
 
@@ -1515,7 +1531,7 @@ export class AcpAgent {
     } catch (error) {
       console.warn(
         `[ACP ${this.extra.backend}] Failed to load built-in MCP config for session/new:`,
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? error.message : String(error),
       );
       return [];
     }

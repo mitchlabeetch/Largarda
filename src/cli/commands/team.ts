@@ -194,6 +194,18 @@ const DEFAULT_ROLES: RoleTemplate[] = [
   { label: 'Coordinator', focus: 'Integrate and reconcile findings from all perspectives on' },
 ];
 
+/**
+ * Sanitize coordinator narration text for safe terminal display.
+ * Strips control characters, truncates to maxChars with ellipsis.
+ */
+function sanitizeNarration(text: string, maxChars: number): string {
+  // eslint-disable-next-line no-control-regex
+  const safe = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  const chars = [...safe];
+  if (chars.length <= maxChars) return safe;
+  return chars.slice(0, maxChars).join('') + '…';
+}
+
 /** Parse explicit team size from natural language goal text.
  *  Handles: "5到7人" → 7, "5人团队" → 5, "a team of 5" → 5 */
 export function parseTeamSizeFromGoal(goal: string): number | null {
@@ -288,10 +300,6 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
   const goalRaw = options.goal?.trim();
   const goal = goalRaw || (await Promise.race([promptGoal(rl), abortPromise]));
 
-  // Parse team size from goal text if --concurrency not explicitly set
-  const goalSize = options.agents ? null : (rawConcurrency == null ? parseTeamSizeFromGoal(goal) : null);
-  const concurrency = goalSize ?? baseConcurrency;
-
   // Resolve per-task agent keys
   let agentKeys: string[];
   if (options.agents) {
@@ -312,7 +320,8 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
     // Solo mode: use the currently selected agent for all tasks — don't auto-distribute
     agentKeys = [];
   } else {
-    agentKeys = autoDistributeAgents(config, concurrency);
+    // Defer auto-distribution until after coordinator plan (need to know roles.length)
+    agentKeys = [];
   }
 
   // The effective default agent key: activeAgent override > config default
@@ -320,9 +329,12 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
     ? options.activeAgent
     : config.defaultAgent;
 
-  // When --with is explicitly provided, use exactly that many roles (don't inflate with concurrency).
-  // When auto-distributed, use the configured concurrency (possibly from goal text).
-  const roleCount = options.agents ? agentKeys.length : concurrency;
+  // When --with is explicitly given, constrain the LLM to that exact count.
+  // Otherwise, let the coordinator LLM decide the team size from the goal text.
+  const planTeamSize = options.agents ? agentKeys.length : undefined;
+
+  // roleCount fallback for inferRoles (used only when coordinator LLM fails)
+  const roleCount = options.agents ? agentKeys.length : baseConcurrency;
 
   // ── Phase 1: Coordinator plans the team ─────────────────────────────────────
   // One persistent CoordinatorSession spans Phase 1 + Phase 3 so the coordinator
@@ -345,18 +357,41 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
   let roles: RoleTemplate[];
 
   try {
+    // Stream coordinator's pre-JSON narration (Brief: line) to the terminal in real-time.
+    // Spinner is stopped on first chunk so narration replaces it cleanly.
+    let planNarrationStarted = false;
+    const onPlanText = (chunk: string): void => {
+      if (!planNarrationStarted) {
+        planSpinner.stop();
+        process.stdout.write(`${fmt.dim('⏺')} ${fmt.dim('Coordinator')}  `);
+        planNarrationStarted = true;
+      }
+      process.stdout.write(fmt.dim(chunk));
+    };
+
     // 30s hard timeout on plan — prevents hanging if coordinator LLM never responds
     const planTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000));
     const plan = await Promise.race([
-      coordinatorSession.plan(goal, roleCount, signal),
+      coordinatorSession.plan(goal, signal, onPlanText, planTeamSize),
       planTimeout,
       abortPromise.catch(() => null as null),
     ]).catch(() => null as null);
+
+    if (planNarrationStarted) {
+      // Ensure narration line ends with a newline before plan display
+      process.stdout.write('\n\n');
+    }
 
     planSpinner.stop();
 
     if (plan) {
       roles = plan.specialists.map((s) => ({ label: s.role, focus: s.focus }));
+
+      // Now that we know how many roles the LLM decided, auto-distribute agent keys.
+      // (When --with is explicit, agentKeys was already populated above.)
+      if (agentKeys.length === 0 && !options.activeAgent) {
+        agentKeys = autoDistributeAgents(config, roles.length);
+      }
 
       // Cache phase + dependsOn metadata for SubTask wiring
       for (const s of plan.specialists) {
@@ -382,7 +417,7 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
         if (!phaseGroups.has(ph)) phaseGroups.set(ph, []);
         phaseGroups.get(ph)!.push(s);
       }
-      const sortedPhaseGroups = [...phaseGroups.entries()].sort(([a], [b]) => a - b);
+      const sortedPhaseGroups = [...phaseGroups.entries()].toSorted(([a], [b]) => a - b);
       for (const [phaseNum, specs] of sortedPhaseGroups) {
         if (sortedPhaseGroups.length > 1) {
           process.stdout.write(`  ${fmt.dim(`Phase ${phaseNum}`)}\n`);
@@ -400,11 +435,20 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
         return;
       }
     } else {
+      planSpinner.stop();
+      process.stderr.write(fmt.yellow('⚠ Coordinator planning failed — using inferred roles') + '\n');
       roles = inferRoles(goal, roleCount);
+      if (agentKeys.length === 0 && !options.activeAgent) {
+        agentKeys = autoDistributeAgents(config, roles.length);
+      }
     }
   } catch {
     planSpinner.stop();
+    process.stderr.write(fmt.yellow('⚠ Coordinator planning error — using inferred roles') + '\n');
     roles = inferRoles(goal, roleCount);
+    if (agentKeys.length === 0 && !options.activeAgent) {
+      agentKeys = autoDistributeAgents(config, roles.length);
+    }
   }
 
   // Assign IDs upfront so we can resolve dependsOn role names → task IDs
@@ -468,7 +512,7 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
   process.stdout.write(fmt.dim(hr()) + '\n');
 
   const factory = createCliAgentFactory(config, agentPerTask, options.activeAgent);
-  const orch = new Orchestrator(factory, { concurrency, subTaskTimeoutMs: timeoutMs });
+  const orch = new Orchestrator(factory, { concurrency: baseConcurrency, subTaskTimeoutMs: timeoutMs });
   const panel = new TeamPanel();
 
   orch.on('*', (event) => panel.update(event));
@@ -526,9 +570,19 @@ export async function runTeam(options: TeamOptions = {}, rl?: Interface, signal?
             break;
           }
 
-          case 'coordinator_decision':
-            // Coordinator accept/refine decision — available for future display
+          case 'coordinator_decision': {
+            // Clear panel (may still be rendering done-state spinners) before narration
+            panel.clear();
+            const safeReason = sanitizeNarration(event.reason, 200);
+            if (event.action === 'accept') {
+              process.stdout.write(`\n${fmt.green('✓ Coordinator')}  ${fmt.dim(safeReason)}\n\n`);
+            } else {
+              process.stdout.write(
+                `\n${fmt.yellow(`↻ Coordinator  Round ${event.round}`)}  ${fmt.dim(safeReason)}\n\n`,
+              );
+            }
             break;
+          }
 
           case 'verification_started':
             // New panel API — coordinator is verifying (#13)

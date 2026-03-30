@@ -644,7 +644,7 @@ describe('parseTeamSizeFromGoal', () => {
     expect(parseTeamSizeFromGoal('need 21 people')).toBeNull();
   });
 
-  it('runTeam uses goal size when --concurrency not set', async () => {
+  it('runTeam falls back to baseConcurrency when coordinator returns null', async () => {
     vi.mocked(loadConfig).mockReturnValue(makeConfig());
     const restore = suppressStdout();
     let capturedTasks: SubTask[] = [];
@@ -653,11 +653,12 @@ describe('parseTeamSizeFromGoal', () => {
       return Promise.resolve(makeResults(tasks));
     });
 
+    // Coordinator mock returns null → inferRoles fallback uses baseConcurrency (3)
     await runTeam({ goal: '帮我创建一个5到7人团队分析这个bug' });
     restore();
 
-    // Should create 7 agents (upper bound of "5到7")
-    expect(capturedTasks).toHaveLength(7);
+    // Coordinator returns null, falls back to inferRoles with baseConcurrency=3
+    expect(capturedTasks).toHaveLength(3);
   });
 
   it('runTeam uses --concurrency flag over goal size when both present', async () => {

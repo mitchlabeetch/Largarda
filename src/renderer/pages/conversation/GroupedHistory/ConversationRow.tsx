@@ -11,7 +11,7 @@ import { CronJobIndicator } from '@/renderer/pages/cron';
 import { cleanupSiderTooltips, getSiderTooltipProps } from '@/renderer/utils/ui/siderTooltip';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { Checkbox, Dropdown, Menu, Spin, Tooltip } from '@arco-design/web-react';
-import { DeleteOne, EditOne, Export, MessageOne, Pushpin } from '@icon-park/react';
+import { DeleteOne, EditOne, Export, MessageOne, People, Pushpin } from '@icon-park/react';
 import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -57,6 +57,12 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
       return <CronJobIndicator status={cronStatus} size={20} className='flex-shrink-0' />;
     }
 
+    const extraRecord = conversation.extra as Record<string, unknown> | undefined;
+    const isGroupRoom = typeof extraRecord?.['groupRoomId'] === 'string';
+    if (isGroupRoom) {
+      return <People theme='outline' size={20} className='line-height-0 flex-shrink-0' fill='rgb(var(--primary-6))' />;
+    }
+
     if (assistantInfo) {
       if (assistantInfo.isEmoji) {
         return <span className='text-18px leading-none flex-shrink-0'>{assistantInfo.logo}</span>;
@@ -85,6 +91,9 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
     }
     onConversationClick(conversation);
   };
+
+  const extraRecord = conversation.extra as Record<string, unknown> | undefined;
+  const isGroupRoom = typeof extraRecord?.['groupRoomId'] === 'string';
 
   const handleRowContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -117,6 +126,9 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
     >
       <div
         id={'c-' + conversation.id}
+        data-conversation-row='true'
+        data-conversation-id={conversation.id}
+        data-conversation-type={isGroupRoom ? 'group-room' : 'conversation'}
         className={classNames(
           'chat-history__item px-12px py-8px rd-8px flex justify-start items-center group cursor-pointer relative overflow-hidden shrink-0 conversation-item [&.conversation-item+&.conversation-item]:mt-2px min-w-0 transition-colors',
           {
@@ -202,7 +214,9 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
                       return;
                     }
                     if (key === 'delete') {
-                      onDelete(conversation.id);
+                      const extra = conversation.extra as Record<string, unknown> | undefined;
+                      const grId = typeof extra?.['groupRoomId'] === 'string' ? extra['groupRoomId'] : undefined;
+                      onDelete(conversation.id, grId);
                     }
                   }}
                 >

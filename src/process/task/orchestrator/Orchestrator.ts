@@ -246,7 +246,7 @@ export class Orchestrator extends EventEmitter {
    */
   private checkWriteConflict(subTaskId: string, text: string): void {
     const patterns = [
-      /(?:Writing|Editing|Creating|Saving|Updated?)\s+([\w./\-]+\.\w{1,6})/i,
+      /(?:Writing|Editing|Creating|Saving|Updated?)\s+([\w./-]+\.\w{1,6})/i,
       /Edit\(([^)]+)\)/,
       /Write\(([^)]+)\)/,
     ];

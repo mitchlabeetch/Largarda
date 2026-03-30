@@ -1590,6 +1590,14 @@ export class AionUIDatabase {
   }
 
   /**
+   * Expose the underlying SQLite driver for low-level consumers (e.g. GroupRoomService).
+   * Prefer higher-level repository abstractions where possible.
+   */
+  getDriver(): ISqliteDriver {
+    return this.db;
+  }
+
+  /**
    * Vacuum database to reclaim space
    */
   vacuum(): void {

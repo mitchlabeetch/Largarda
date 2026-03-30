@@ -262,5 +262,21 @@
     "request_sent": "Request sent to agent",
     "failed": "Failed to generate",
     "preset_registered": "Agent preset registered successfully!"
+  },
+  "groupRoom": {
+    "createTitle": "グループルームを作成",
+    "nameLabel": "ルーム名",
+    "namePlaceholder": "グループルームの名前を入力してください",
+    "nameRequired": "ルーム名は必須です",
+    "descriptionLabel": "説明（任意）",
+    "descriptionPlaceholder": "このグループルームの目的を入力してください",
+    "mainAgentLabel": "メインエージェント",
+    "mainAgentRequired": "メインエージェントを選択してください",
+    "noAgents": "利用可能なエージェントがありません",
+    "underConstruction": "グループルームページは準備中です",
+    "msg": {
+      "thinking": "思考中",
+      "thinkingDone": "{{seconds}}秒考えました"
+    }
   }
 }

@@ -104,17 +104,27 @@ Key principles:
     );
   }
 
-  /** Phase 1: ask coordinator to produce a structured JSON team plan. */
+  /**
+   * Phase 1: ask coordinator to produce a structured JSON team plan.
+   *
+   * @param goal        The user's goal text (passed verbatim — LLM infers roles/count).
+   * @param signal      Optional abort signal.
+   * @param onText      Optional callback for pre-JSON narration text (streaming).
+   * @param teamSize    Optional hard constraint on specialist count (only set when
+   *                    user explicitly passes --with N models).
+   */
   async plan(
     goal: string,
-    teamSize: number,
     signal?: AbortSignal,
+    onText?: (chunk: string) => void,
+    teamSize?: number,
   ): Promise<CoordinatorPlan | null> {
     if (signal?.aborted) return null;
 
     return new Promise<CoordinatorPlan | null>((resolve) => {
       let accumulated = '';
       let settled = false;
+      let jsonStarted = false;
 
       const settle = (ok: boolean) => {
         if (settled) return;
@@ -126,23 +136,55 @@ Key principles:
           const raw = JSON.parse(match[0]) as Partial<CoordinatorPlan>;
           const rawSpecs = Array.isArray(raw.specialists) ? raw.specialists : [];
 
-          // Pad to exactly teamSize
+          // Ensure at least 2 specialists
           const specs: SpecialistPlan[] = [...rawSpecs];
-          while (specs.length < teamSize) {
+          while (specs.length < 2) {
             specs.push({ role: `Specialist ${specs.length + 1}`, focus: `Provide additional perspective on: ${goal}`, phase: 1 });
           }
 
-          resolve({
-            goal_analysis: String(raw.goal_analysis ?? goal),
-            execution_mode: raw.execution_mode === 'sequential' ? 'sequential' : 'parallel',
-            specialists: specs.slice(0, teamSize),
-          });
+          // If explicit teamSize given (--with N), pad/trim to exact count
+          if (teamSize != null) {
+            while (specs.length < teamSize) {
+              specs.push({ role: `Specialist ${specs.length + 1}`, focus: `Provide additional perspective on: ${goal}`, phase: 1 });
+            }
+            resolve({
+              goal_analysis: String(raw.goal_analysis ?? goal),
+              execution_mode: raw.execution_mode === 'sequential' ? 'sequential' : 'parallel',
+              specialists: specs.slice(0, teamSize),
+            });
+          } else {
+            // LLM decided the count — respect it
+            resolve({
+              goal_analysis: String(raw.goal_analysis ?? goal),
+              execution_mode: raw.execution_mode === 'sequential' ? 'sequential' : 'parallel',
+              specialists: specs,
+            });
+          }
         } catch {
           resolve(null);
         }
       };
 
-      this.onTextChunk = (chunk) => { accumulated += chunk; };
+      this.onTextChunk = (chunk) => {
+        accumulated += chunk;
+        // Stream pre-JSON narration text to caller (Brief: line before the JSON)
+        if (onText && !jsonStarted) {
+          const prevLen = accumulated.length - chunk.length;
+          const jsonPos = accumulated.indexOf('{');
+          if (jsonPos === -1) {
+            // No JSON yet — stream entire chunk
+            onText(chunk);
+          } else {
+            jsonStarted = true;
+            // Stream the portion of this chunk before the JSON starts
+            if (jsonPos > prevLen) {
+              onText(chunk.slice(0, jsonPos - prevLen));
+            }
+          }
+        } else if (!jsonStarted && accumulated.includes('{')) {
+          jsonStarted = true;
+        }
+      };
       this.onStatusDone = settle;
       this.callNonce++;
       signal?.addEventListener('abort', () => settle(false), { once: true });
@@ -362,12 +404,16 @@ Key principles:
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
-function buildPlanPrompt(goal: string, teamSize: number): string {
-  return `You are a team coordinator. Analyze the goal and assign roles to exactly ${teamSize} specialists.
+function buildPlanPrompt(goal: string, teamSize?: number): string {
+  const sizeRule = teamSize != null
+    ? `- Exactly ${teamSize} items in the specialists array`
+    : `- Decide how many specialists best serve this goal (minimum 2, maximum 6)
+- If the goal explicitly names specific roles or a number of people, use EXACTLY those roles and that count
+- Role name mappings: 产品/产品经理/PM → "Product Manager", 研发/开发/工程师 → "Developer", 设计师 → "Designer", 测试/QA → "QA Engineer", 架构师 → "Architect"`;
+
+  return `You are a team coordinator. Analyze the goal and assemble the right specialist team.
 
 Goal: "${goal}"
-
-**DEFAULT: Use PARALLEL mode.** Specialists work simultaneously unless one literally cannot start without another's output.
 
 Output ONLY valid JSON (no markdown, no explanation):
 {
@@ -378,21 +424,13 @@ Output ONLY valid JSON (no markdown, no explanation):
   ]
 }
 
-Only use sequential mode when there is a hard data dependency (e.g. a compiler needs source code written first). In that case add "dependsOn": ["RoleName"] ONLY to specialists that literally cannot proceed without the output:
-{
-  "goal_analysis": "...",
-  "execution_mode": "sequential",
-  "specialists": [
-    { "role": "Researcher", "focus": "...", "phase": 1 },
-    { "role": "Implementer", "focus": "...", "phase": 2, "dependsOn": ["Researcher"] }
-  ]
-}
+Only use sequential mode when there is a hard data dependency. In that case add "dependsOn": ["RoleName"] ONLY to specialists that literally cannot proceed without the output.
 
 Rules:
-- Exactly ${teamSize} items in the specialists array
+${sizeRule}
 - Roles must be distinct and complementary
 - Focus must be specific to THIS goal
-- STRONGLY prefer parallel — most tasks (review, analysis, design, planning) can run independently
+- STRONGLY prefer parallel — most tasks can run independently
 - Use sequential ONLY when one specialist's output is the literal input for another
 - Output ONLY the JSON object, nothing else`;
 }

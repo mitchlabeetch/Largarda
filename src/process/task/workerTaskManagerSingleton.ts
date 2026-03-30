@@ -19,7 +19,7 @@ import OpenClawAgentManager from './OpenClawAgentManager';
 import NanoBotAgentManager from './NanoBotAgentManager';
 import RemoteAgentManager from './RemoteAgentManager';
 
-const agentFactory = new AgentFactory();
+export const agentFactory = new AgentFactory();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 agentFactory.register('gemini', (conv, opts) => {

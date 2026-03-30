@@ -264,5 +264,21 @@
   },
   "noAgentsAvailable": "No agents available",
   "noModelConfigured": "No model configured. Please configure in settings.",
-  "createFailed": "Failed to create conversation"
+  "createFailed": "Failed to create conversation",
+  "groupRoom": {
+    "createTitle": "Grup Odası Oluştur",
+    "nameLabel": "Oda Adı",
+    "namePlaceholder": "Grup odası için bir ad girin",
+    "nameRequired": "Oda adı zorunludur",
+    "descriptionLabel": "Açıklama (isteğe bağlı)",
+    "descriptionPlaceholder": "Bu grup odasının amacını kısaca açıklayın",
+    "mainAgentLabel": "Ana Ajan",
+    "mainAgentRequired": "Lütfen bir ana ajan seçin",
+    "noAgents": "Kullanılabilir ajan yok",
+    "underConstruction": "Grup odası sayfası yapım aşamasındadır",
+    "msg": {
+      "thinking": "Düşünüyor",
+      "thinkingDone": "{{seconds}}s düşündü"
+    }
+  }
 }

@@ -223,6 +223,21 @@ export function initConversationBridge(
         }
       }
 
+      // Cascade-delete associated group room when this conversation is the host
+      const extraRecord = conversation?.extra as Record<string, unknown> | undefined;
+      const groupRoomId = typeof extraRecord?.['groupRoomId'] === 'string' ? extraRecord['groupRoomId'] : undefined;
+      if (groupRoomId) {
+        try {
+          const { getDatabase } = await import('@process/services/database');
+          const database = await getDatabase();
+          const { GroupRoomService } = await import('@process/services/groupRoom');
+          const grService = new GroupRoomService(database.getDriver());
+          grService.deleteRoom(groupRoomId);
+        } catch (grErr) {
+          console.warn('[conversationBridge] Failed to cascade-delete group room:', grErr);
+        }
+      }
+
       await conversationService.deleteConversation(id);
       if (conversation) {
         emitConversationListChanged(conversation, 'deleted');

@@ -66,7 +66,8 @@
     "server:resetpass": "NODE_ENV=development bun dist-server/server.mjs --resetpass",
     "server:resetpass:prod": "NODE_ENV=production bun dist-server/server.mjs --resetpass",
     "build:renderer:web": "bunx vite build --config vite.renderer.config.ts",
-    "build:server": "node scripts/build-server.mjs"
+    "build:server": "node scripts/build-server.mjs",
+    "sync:registry": "node scripts/sync-cli-registry.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

@@ -262,5 +262,29 @@
     "request_sent": "Request sent to agent",
     "failed": "Failed to generate",
     "preset_registered": "Agent preset registered successfully!"
+  },
+  "groupRoom": {
+    "createTitle": "Create Group Room",
+    "nameLabel": "Room Name",
+    "namePlaceholder": "Enter a name for this group room",
+    "nameRequired": "Room name is required",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "What is this group room about?",
+    "mainAgentLabel": "Main Agent",
+    "mainAgentRequired": "Please select a main agent",
+    "noAgents": "No agents available",
+    "underConstruction": "Group room page is under construction",
+    "msg": {
+      "thinking": "Thinking",
+      "thinkingDone": "Thought for {{seconds}}s"
+    },
+    "roleHost": "Host",
+    "roleSub": "Member",
+    "membersTitle": "Members",
+    "noMembers": "No members yet",
+    "loading": "Group Room",
+    "running": "Running…",
+    "messagesPlaceholder": "Message list (in development)",
+    "inputPlaceholder": "Send a message…"
   }
 }

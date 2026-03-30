@@ -262,5 +262,21 @@
     "request_sent": "Request sent to agent",
     "failed": "Failed to generate",
     "preset_registered": "Agent preset registered successfully!"
+  },
+  "groupRoom": {
+    "createTitle": "建立群聊室",
+    "nameLabel": "群聊室名稱",
+    "namePlaceholder": "請輸入群聊室名稱",
+    "nameRequired": "群聊室名稱為必填",
+    "descriptionLabel": "描述（選填）",
+    "descriptionPlaceholder": "簡短描述此群聊室的用途",
+    "mainAgentLabel": "主 Agent",
+    "mainAgentRequired": "請選擇主 Agent",
+    "noAgents": "目前無可用 Agent",
+    "underConstruction": "群聊室頁面建設中",
+    "msg": {
+      "thinking": "思考中",
+      "thinkingDone": "思考 {{seconds}}s"
+    }
   }
 }

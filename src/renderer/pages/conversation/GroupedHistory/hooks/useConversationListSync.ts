@@ -77,9 +77,12 @@ const refreshConversations = () => {
     .invoke({ page: 0, pageSize: 10000 })
     .then((data) => {
       if (data && Array.isArray(data)) {
-        const filteredData = data.filter(
-          (conv) => (conv.extra as { isHealthCheck?: boolean } | undefined)?.isHealthCheck !== true
-        );
+        const filteredData = data.filter((conv) => {
+          const extra = conv.extra as { isHealthCheck?: boolean; groupRoomSubAgent?: boolean } | undefined;
+          if (extra?.isHealthCheck) return false;
+          if (extra?.groupRoomSubAgent) return false;
+          return true;
+        });
         conversationsState = filteredData;
         conversationIdsState = new Set(filteredData.map((conversation) => conversation.id));
         emitStoreChange();

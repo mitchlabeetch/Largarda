@@ -62,10 +62,23 @@ export const useConversationActions = ({
       blockMobileInputFocus();
       blurActiveElement();
 
+      const extraRecord = conversation.extra as Record<string, unknown> | undefined;
+      const groupRoomId =
+        typeof extraRecord?.['groupRoomId'] === 'string' ? extraRecord['groupRoomId'] : undefined;
       const customWorkspace = conversation.extra?.customWorkspace;
       const newWorkspace = conversation.extra?.workspace;
 
       markAsRead(conversation.id);
+
+      // If this conversation is the host of a group room, go to the group room page.
+      if (groupRoomId) {
+        closeAllTabs();
+        void navigate(`/group-room/${groupRoomId}`);
+        if (onSessionClick) {
+          onSessionClick();
+        }
+        return;
+      }
 
       if (!customWorkspace) {
         closeAllTabs();
@@ -91,14 +104,22 @@ export const useConversationActions = ({
   );
 
   const removeConversation = useCallback(
-    async (conversationId: string) => {
+    async (conversationId: string, groupRoomId?: string) => {
+      // If the conversation hosts a group room, stop its orchestrator first
+      if (groupRoomId) {
+        await ipcBridge.groupRoom.stop.invoke({ roomId: groupRoomId }).catch(() => {});
+      }
+
       const success = await ipcBridge.conversation.remove.invoke({ id: conversationId });
       if (!success) {
         return false;
       }
 
       emitter.emit('conversation.deleted', conversationId);
-      if (id === conversationId) {
+
+      // Navigate away if viewing this conversation or its group room
+      const currentPath = window.location.hash || window.location.pathname;
+      if (id === conversationId || (groupRoomId && currentPath.includes(groupRoomId))) {
         void navigate('/');
       }
       return true;
@@ -107,7 +128,7 @@ export const useConversationActions = ({
   );
 
   const handleDeleteClick = useCallback(
-    (conversationId: string) => {
+    (conversationId: string, groupRoomId?: string) => {
       Modal.confirm({
         title: t('conversation.history.deleteTitle'),
         content: t('conversation.history.deleteConfirm'),
@@ -116,7 +137,7 @@ export const useConversationActions = ({
         okButtonProps: { status: 'warning' },
         onOk: async () => {
           try {
-            const success = await removeConversation(conversationId);
+            const success = await removeConversation(conversationId, groupRoomId);
             if (success) {
               emitter.emit('chat.history.refresh');
               Message.success(t('conversation.history.deleteSuccess'));

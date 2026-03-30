@@ -875,13 +875,142 @@ const migration_v18: IMigration = {
 };
 
 /**
+ * Migration v18 -> v19: Add group chat room tables
+ * group_rooms, group_agents, group_messages
+ */
+const migration_v19: IMigration = {
+  version: 19,
+  name: 'Add group chat room tables',
+  up: (db) => {
+    // Group rooms table
+    db.exec(`CREATE TABLE IF NOT EXISTS group_rooms (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        host_conversation_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'idle' CHECK(status IN ('idle', 'running', 'paused', 'finished', 'error')),
+        config TEXT NOT NULL DEFAULT '{}',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (host_conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_rooms_user_id ON group_rooms(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_rooms_user_updated ON group_rooms(user_id, updated_at DESC)');
+
+    // Group agents table
+    db.exec(`CREATE TABLE IF NOT EXISTS group_agents (
+        id TEXT PRIMARY KEY,
+        room_id TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('host', 'sub')),
+        agent_type TEXT NOT NULL,
+        conversation_id TEXT,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'idle' CHECK(status IN ('idle', 'running', 'finished', 'error', 'terminated')),
+        capabilities TEXT NOT NULL DEFAULT '{}',
+        current_task TEXT,
+        created_at INTEGER NOT NULL,
+        terminated_at INTEGER,
+        FOREIGN KEY (room_id) REFERENCES group_rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_agents_room_id ON group_agents(room_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_agents_conversation ON group_agents(conversation_id)');
+
+    // Group messages table
+    db.exec(`CREATE TABLE IF NOT EXISTS group_messages (
+        id TEXT PRIMARY KEY,
+        room_id TEXT NOT NULL,
+        sender_type TEXT NOT NULL CHECK(sender_type IN ('user', 'agent')),
+        sender_id TEXT,
+        msg_kind TEXT NOT NULL CHECK(msg_kind IN ('user_input','host_response','host_dispatch','sub_thinking','sub_output','sub_status','system')),
+        content TEXT NOT NULL,
+        ref_message_id TEXT,
+        status TEXT CHECK(status IN ('finish','pending','error','work')),
+        seq INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (room_id) REFERENCES group_rooms(id) ON DELETE CASCADE
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_seq ON group_messages(room_id, seq)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_created ON group_messages(room_id, created_at)');
+
+    console.log('[Migration v19] Added group chat room tables');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_group_messages_room_created');
+    db.exec('DROP INDEX IF EXISTS idx_group_messages_room_seq');
+    db.exec('DROP TABLE IF EXISTS group_messages');
+    db.exec('DROP INDEX IF EXISTS idx_group_agents_conversation');
+    db.exec('DROP INDEX IF EXISTS idx_group_agents_room_id');
+    db.exec('DROP TABLE IF EXISTS group_agents');
+    db.exec('DROP INDEX IF EXISTS idx_group_rooms_user_updated');
+    db.exec('DROP INDEX IF EXISTS idx_group_rooms_user_id');
+    db.exec('DROP TABLE IF EXISTS group_rooms');
+    console.log('[Migration v19] Rolled back: Removed group chat room tables');
+  },
+};
+
+/**
+ * Migration v19 -> v20: Extend group_messages msg_kind CHECK constraint
+ * to support 'result_injection' and 'host_thought'.
+ */
+const migration_v20: IMigration = {
+  version: 20,
+  name: 'Extend group_messages msg_kind to support result_injection and host_thought',
+  up: (db) => {
+    // SQLite cannot ALTER CHECK constraints — rebuild the table
+    db.exec(`CREATE TABLE group_messages_new (
+        id TEXT PRIMARY KEY,
+        room_id TEXT NOT NULL,
+        sender_type TEXT NOT NULL CHECK(sender_type IN ('user', 'agent')),
+        sender_id TEXT,
+        msg_kind TEXT NOT NULL CHECK(msg_kind IN ('user_input','host_response','host_dispatch','sub_thinking','sub_output','sub_status','result_injection','host_thought','system')),
+        content TEXT NOT NULL,
+        ref_message_id TEXT,
+        status TEXT CHECK(status IN ('finish','pending','error','work')),
+        seq INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (room_id) REFERENCES group_rooms(id) ON DELETE CASCADE
+      )`);
+    db.exec('INSERT INTO group_messages_new SELECT * FROM group_messages');
+    db.exec('DROP TABLE group_messages');
+    db.exec('ALTER TABLE group_messages_new RENAME TO group_messages');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_seq ON group_messages(room_id, seq)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_created ON group_messages(room_id, created_at)');
+    console.log('[Migration v20] Extended group_messages msg_kind');
+  },
+  down: (db) => {
+    db.exec(`CREATE TABLE group_messages_old (
+        id TEXT PRIMARY KEY,
+        room_id TEXT NOT NULL,
+        sender_type TEXT NOT NULL CHECK(sender_type IN ('user', 'agent')),
+        sender_id TEXT,
+        msg_kind TEXT NOT NULL CHECK(msg_kind IN ('user_input','host_response','host_dispatch','sub_thinking','sub_output','sub_status','system')),
+        content TEXT NOT NULL,
+        ref_message_id TEXT,
+        status TEXT CHECK(status IN ('finish','pending','error','work')),
+        seq INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (room_id) REFERENCES group_rooms(id) ON DELETE CASCADE
+      )`);
+    db.exec("INSERT INTO group_messages_old SELECT * FROM group_messages WHERE msg_kind NOT IN ('result_injection','host_thought')");
+    db.exec('DROP TABLE group_messages');
+    db.exec('ALTER TABLE group_messages_old RENAME TO group_messages');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_seq ON group_messages(room_id, seq)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_group_messages_room_created ON group_messages(room_id, created_at)');
+    console.log('[Migration v20] Rolled back: Reverted group_messages msg_kind');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
 export const ALL_MIGRATIONS: IMigration[] = [
   migration_v1, migration_v2, migration_v3, migration_v4, migration_v5, migration_v6,
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
-  migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
+  migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18, migration_v19, migration_v20,
 ];
 
 /**

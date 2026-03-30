@@ -95,7 +95,6 @@ describe('ACP built-in MCP session config', () => {
 
     expect(result).toEqual([
       {
-        type: 'stdio',
         name: 'aionui-image-generation',
         command: 'node',
         args: ['/abs/builtin-mcp-image-gen.js'],

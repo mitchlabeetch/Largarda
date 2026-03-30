@@ -197,7 +197,7 @@ export class PersistentCoordinatorLoop implements ICoordinatorLoop {
       // Convergence detection: same targets two rounds in a row → stop
       const currentTargetSet = decision.targets
         .map((t) => t.role)
-        .sort()
+        .toSorted()
         .join(',');
       if (prevTargetSet !== null && currentTargetSet === prevTargetSet) break;
       prevTargetSet = currentTargetSet;

@@ -29,7 +29,7 @@ export function loadHistory(): string[] {
       .map((l) => l.split('\t')[1] ?? '')
       .filter(Boolean);
     // readline history is newest-first; reverse and truncate to MAX_HISTORY
-    return commands.slice(-MAX_HISTORY).reverse();
+    return commands.slice(-MAX_HISTORY).toReversed();
   } catch {
     return [];
   }

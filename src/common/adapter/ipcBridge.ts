@@ -1162,3 +1162,66 @@ export const channel = {
   ),
   userAuthorized: bridge.buildEmitter<IChannelUser>('channel.user-authorized'),
 };
+
+// ==================== Group Room API ====================
+
+export const groupRoom = {
+  // Create a new group room session
+  create: bridge.buildProvider<
+    IBridgeResponse<{ id: string; name: string; hostConversationId: string }>,
+    { name: string; desc?: string; hostBackend: string; hostConversationId?: string }
+  >('group-room.create'),
+
+  // Get group room state, member list, and message history
+  get: bridge.buildProvider<
+    IBridgeResponse<{ id: string; name: string; status: string; members: unknown[]; messages: unknown[] }>,
+    { roomId: string }
+  >('group-room.get'),
+
+  // Send a user message to the group room
+  sendMessage: bridge.buildProvider<IBridgeResponse<{ msg_id: string }>, { roomId: string; input: string; msg_id: string }>(
+    'group-room.send-message'
+  ),
+
+  // Delete a group room and all associated data (agents, messages)
+  delete: bridge.buildProvider<IBridgeResponse, { roomId: string }>('group-room.delete'),
+
+  // Stop all agents in the group room
+  stop: bridge.buildProvider<IBridgeResponse, { roomId: string }>('group-room.stop'),
+
+  // Streaming response events from agents (host or sub)
+  responseStream: bridge.buildEmitter<{
+    roomId: string;
+    agentId: string;
+    agentRole: 'host' | 'sub';
+    msg_kind: string;
+    content: string;
+    msg_id: string;
+    status?: string;
+    streaming: boolean;
+    senderName?: string | null;
+    targetId?: string | null;
+    targetName?: string | null;
+  }>('group-room.response.stream'),
+
+  // Member join / leave / status_update events
+  memberChanged: bridge.buildEmitter<{
+    roomId: string;
+    action: 'join' | 'leave' | 'status_update';
+    member: {
+      id: string;
+      displayName: string;
+      role: 'host' | 'sub';
+      agentType: string;
+      status: string;
+      currentTask: string | null;
+    };
+  }>('group-room.member.changed'),
+
+  // Emitted when one full round-trip completes (all agents finished or error)
+  turnCompleted: bridge.buildEmitter<{
+    roomId: string;
+    status: 'finished' | 'error';
+    canSendMessage: boolean;
+  }>('group-room.turn.completed'),
+};

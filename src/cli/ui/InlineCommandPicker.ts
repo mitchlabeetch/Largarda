@@ -122,6 +122,9 @@ export class AgentSelector {
   /** Display the selector and start listening for keypresses. */
   show(): void {
     if (!process.stdout.isTTY) return;
+    // stdin may be paused by readline (rl.pause() in repl.ts before handler runs).
+    // Resume it so keypress events can fire while the selector is active.
+    process.stdin.resume();
     this.redraw();
     this.keypressListener = this.onKeypress.bind(this);
     process.stdin.on('keypress', this.keypressListener);
@@ -272,7 +275,7 @@ export class InlineCommandPicker {
    * @param onSelect - called with the chosen key, or null if cancelled
    */
   showAgentSelector(agents: AgentEntry[], onSelect: (key: string | null) => Promise<void> | void): void {
-    if (!this.rl) return;
+    if (!this.rl) { onSelect(null); return; }
 
     // Pause picker's own listener while selector is active
     if (this.keypressListener) {
