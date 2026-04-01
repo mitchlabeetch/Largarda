@@ -401,6 +401,64 @@ bun run test
 - [ ] Standalone server (`bun run server`) works
 - [ ] Build passes, tests pass
 
+## Data Directory Unification
+
+### Problem
+
+Currently Electron and standalone server use **different** data directories:
+
+| Mode | Data dir | Config dir | Source |
+|---|---|---|---|
+| Electron release | `~/.aionui` | `~/.aionui-config` | `getEnvAwareName('.aionui')` in `appEnv.ts` |
+| Electron dev | `~/.aionui-dev` | `~/.aionui-config-dev` | same, with `-dev` suffix |
+| Standalone server | `~/.aionui-server` | `~/.aionui-server` | hardcoded in `NodePlatformServices.ts` |
+
+This causes data isolation — Electron users who switch to standalone server mode lose their data.
+
+### Solution
+
+**Server uses the same default directory as Electron** (`~/.aionui`), since all released versions use Electron and existing user data lives there.
+
+The `NodePlatformServices.ts` default changes from `~/.aionui-server` to `~/.aionui`:
+
+```typescript
+// Before
+getDataDir: () => process.env.DATA_DIR ?? path.join(os.homedir(), '.aionui-server'),
+
+// After
+getDataDir: () => process.env.DATA_DIR ?? path.join(os.homedir(), '.aionui'),
+```
+
+Development mode detected by `NODE_ENV` instead of `isPackaged()`:
+
+```typescript
+const isDev = process.env.NODE_ENV === 'development'
+const suffix = isDev ? '-dev' : ''
+const dataDir = process.env.DATA_DIR ?? path.join(os.homedir(), `.aionui${suffix}`)
+const configDir = process.env.CONFIG_DIR ?? path.join(os.homedir(), `.aionui-config${suffix}`)
+```
+
+**Final directory strategy:**
+
+| Mode | Data dir | Config dir |
+|---|---|---|
+| Electron release | `~/.aionui` | `~/.aionui-config` |
+| Electron dev | `~/.aionui-dev` | `~/.aionui-config-dev` |
+| Server release | `~/.aionui` (same as Electron) | `~/.aionui-config` |
+| Server dev | `~/.aionui-dev` | `~/.aionui-config-dev` |
+| Custom override | `DATA_DIR=...` | `CONFIG_DIR=...` |
+
+Users who need isolation between Electron and server can set `DATA_DIR` / `CONFIG_DIR` environment variables. But by default, they share data — which is the expected behavior when both modes serve the same user.
+
+### Migration for existing server users
+
+Users who already have data in `~/.aionui-server` can either:
+
+- Set `DATA_DIR=~/.aionui-server` to keep using the old location
+- Move data: `mv ~/.aionui-server/* ~/.aionui/`
+
+Document this in release notes when the change ships.
+
 ## Notes
 
 - **Handler logic is unchanged** — this phase is about restructuring, not rewriting business logic
