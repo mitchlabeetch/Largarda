@@ -6,6 +6,7 @@
 
 import type { WsRouter } from '../router/WsRouter';
 import type { IConversationRepository } from '@process/services/database/IConversationRepository';
+import type { IConversationService } from '@process/services/IConversationService';
 import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
 import { registerCronHandlers } from './cron';
 import { registerDatabaseHandlers } from './database';
@@ -16,6 +17,8 @@ import { registerStarOfficeHandlers } from './starOffice';
 import { registerSpeechHandlers } from './speech';
 import { registerPreviewHistoryHandlers } from './previewHistory';
 import { registerPptPreviewHandlers } from './pptPreview';
+import { registerConversationHandlers } from './conversation';
+import { registerAcpConversationHandlers } from './acpConversation';
 
 /**
  * Dependencies required by handler registration.
@@ -23,6 +26,7 @@ import { registerPptPreviewHandlers } from './pptPreview';
  */
 export type HandlerDependencies = {
   conversationRepo: IConversationRepository;
+  conversationService: IConversationService;
   workerTaskManager: IWorkerTaskManager;
 };
 
@@ -42,4 +46,6 @@ export function registerAllHandlers(router: WsRouter, deps: HandlerDependencies)
   registerSpeechHandlers(router);
   registerPreviewHistoryHandlers(router);
   registerPptPreviewHandlers(router);
+  registerConversationHandlers(router, deps.conversationService, deps.workerTaskManager);
+  registerAcpConversationHandlers(router, deps.workerTaskManager);
 }
