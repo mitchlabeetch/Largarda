@@ -5,7 +5,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { PreviewHistoryTarget, PreviewSnapshotInfo } from '@/common/types/preview';
+import type { PreviewHistoryTarget, PreviewSnapshotInfo } from '@aionui/protocol/types';
 import { Message } from '@arco-design/web-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';

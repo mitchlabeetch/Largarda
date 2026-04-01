@@ -19,7 +19,7 @@ export type {
   PreviewHistoryTarget,
   PreviewSnapshotInfo,
   RemoteImageFetchRequest,
-} from '@/common/types/preview';
+} from '@aionui/protocol/types';
 
 /**
  * 视图模式

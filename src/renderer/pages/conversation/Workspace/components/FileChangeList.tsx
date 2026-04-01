@@ -5,7 +5,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { FileChangeInfo, SnapshotInfo } from '@/common/types/fileSnapshot';
+import type { FileChangeInfo, SnapshotInfo } from '@aionui/protocol/types';
 import { isTextFile } from '@/renderer/services/FileService';
 import { Button, Empty, Spin, Tooltip } from '@arco-design/web-react';
 import { Minus, Plus, Redo, Refresh } from '@icon-park/react';

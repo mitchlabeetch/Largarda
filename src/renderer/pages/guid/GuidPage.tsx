@@ -26,7 +26,7 @@ import { useGuidModelSelection } from './hooks/useGuidModelSelection';
 import { useGuidSend } from './hooks/useGuidSend';
 import { useTypewriterPlaceholder } from './hooks/useTypewriterPlaceholder';
 import { ConfigStorage } from '@/common/config/storage';
-import { ACP_BACKENDS_ALL, type PresetAgentType } from '@/common/types/acpTypes';
+import { ACP_BACKENDS_ALL, type PresetAgentType } from '@aionui/protocol/types';
 import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 import type { AcpBackendConfig } from './types';
 import { Button, ConfigProvider, Dropdown, Menu, Message } from '@arco-design/web-react';

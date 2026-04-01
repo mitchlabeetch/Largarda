@@ -19,7 +19,7 @@ import { ConfigStorage } from '@/common/config/storage';
 import { uuid } from '@/common/utils';
 import type { TMessage } from '@/common/chat/chatLib';
 import type { IDirOrFile } from '@aionui/protocol';
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import type { AcpBackendConfig } from '@aionui/protocol/types';
 
 interface SkillRuleGeneratorProps {
   conversationId: string;

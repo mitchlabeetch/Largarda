@@ -6,7 +6,7 @@
 
 import { useApi } from '@renderer/api';
 import type { IResponseMessage } from '@aionui/protocol';
-import type { AcpBackend, AcpSessionConfigOption } from '@/common/types/acpTypes';
+import type { AcpBackend, AcpSessionConfigOption } from '@aionui/protocol/types';
 import { Button, Dropdown, Menu } from '@arco-design/web-react';
 import { Down } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';

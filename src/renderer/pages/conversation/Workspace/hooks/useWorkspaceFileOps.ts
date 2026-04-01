@@ -7,7 +7,7 @@
 import { useApi } from '@renderer/api';
 import { downloadFileFromPath } from '@/renderer/utils/file/download';
 import type { IDirOrFile } from '@aionui/protocol';
-import type { PreviewContentType } from '@/common/types/preview';
+import type { PreviewContentType } from '@aionui/protocol/types';
 import { emitter } from '@/renderer/utils/emitter';
 import {
   LARGE_TEXT_PREVIEW_MAX_LENGTH,

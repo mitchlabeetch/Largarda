@@ -10,7 +10,7 @@ import type { TChatConversation } from '@aionui/protocol/config';
 import { emitter } from '@/renderer/utils/emitter';
 import { buildDisplayMessage } from '@/renderer/utils/file/messageFiles';
 import { updateWorkspaceTime } from '@/renderer/utils/workspace/workspaceHistory';
-import { isAcpRoutedPresetType, type PresetAgentType } from '@/common/types/acpTypes';
+import { isAcpRoutedPresetType, type PresetAgentType } from '@aionui/protocol/types';
 import { Message } from '@arco-design/web-react';
 import { useCallback, useRef } from 'react';
 import { type TFunction } from 'i18next';

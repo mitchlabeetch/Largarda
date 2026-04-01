@@ -1,7 +1,7 @@
 import { useApi } from '@renderer/api';
 import { ConfigStorage } from '@/common/config/storage';
 import type { Message } from '@arco-design/web-react';
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import type { AcpBackendConfig } from '@aionui/protocol/types';
 import {
   hasBuiltinSkills,
   isExtensionAssistant as isExtensionAssistantUtil,

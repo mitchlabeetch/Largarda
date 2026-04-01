@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { CompareResult, FileChangeInfo, SnapshotInfo } from '@/common/types/fileSnapshot';
+import type { CompareResult, FileChangeInfo, SnapshotInfo } from '@aionui/protocol/types';
 import { useApi } from '@renderer/api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

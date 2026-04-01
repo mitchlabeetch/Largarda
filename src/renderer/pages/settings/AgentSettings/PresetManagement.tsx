@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mutate } from 'swr';
 import { ConfigStorage } from '@/common/config/storage';
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import type { AcpBackendConfig } from '@aionui/protocol/types';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';

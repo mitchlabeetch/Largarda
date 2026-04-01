@@ -6,7 +6,7 @@
 
 import type { IConfigStorageRefer, IMcpServer } from '@aionui/protocol/config';
 import { ConfigStorage, BUILTIN_IMAGE_GEN_ID } from '@/common/config/storage';
-import type { SpeechToTextConfig, SpeechToTextProvider } from '@/common/types/speech';
+import type { SpeechToTextConfig, SpeechToTextProvider } from '@aionui/protocol/types';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import { Divider, Form, Tooltip, Message, Button, Dropdown, Menu, Modal, Switch, Input } from '@arco-design/web-react';
 import { Help, Down, Plus } from '@icon-park/react';

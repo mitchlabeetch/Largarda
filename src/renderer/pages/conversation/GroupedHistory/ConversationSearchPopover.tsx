@@ -6,7 +6,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { IMessageSearchItem } from '@/common/types/database';
+import type { IMessageSearchItem } from '@aionui/protocol/types';
 import { isElectronDesktop } from '@renderer/utils/platform';
 import AionModal from '@/renderer/components/base/AionModal';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';

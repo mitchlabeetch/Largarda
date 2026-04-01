@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { AcpBackend, AcpBackendConfig, AcpModelInfo, PresetAgentType } from '@/common/types/acpTypes';
+import type { AcpBackend, AcpBackendConfig, AcpModelInfo, PresetAgentType } from '@aionui/protocol/types';
 
 /**
  * Available agent entry returned by the backend.

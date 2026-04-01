@@ -1,6 +1,6 @@
 import { ipcBridge } from '@/common';
 import { useApi } from '@renderer/api';
-import type { AcpBackend } from '@/common/types/acpTypes';
+import type { AcpBackend } from '@aionui/protocol/types';
 import { isSideQuestionSupported } from '@/common/chat/sideQuestion';
 import { uuid } from '@/common/utils';
 import SendBox from '@/renderer/components/chat/sendbox';

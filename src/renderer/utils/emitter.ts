@@ -8,7 +8,7 @@ import EventEmitter from 'eventemitter3';
 import type { DependencyList } from 'react';
 import { useEffect } from 'react';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
-import type { PreviewContentType } from '@/common/types/preview';
+import type { PreviewContentType } from '@aionui/protocol/types';
 
 interface EventTypes {
   'gemini.selected.file': [Array<string | FileOrFolderItem>];

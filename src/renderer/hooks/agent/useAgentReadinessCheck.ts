@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useApi } from '@renderer/api';
-import type { AcpBackendAll } from '@/common/types/acpTypes';
+import type { AcpBackendAll } from '@aionui/protocol/types';
 
 export type AgentCheckResult = {
   backend: AcpBackendAll;

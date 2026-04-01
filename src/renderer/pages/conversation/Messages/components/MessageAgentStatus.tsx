@@ -5,7 +5,7 @@
  */
 
 import type { IMessageAgentStatus } from '@/common/chat/chatLib';
-import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
+import { ACP_BACKENDS_ALL } from '@aionui/protocol/types';
 import { Badge, Typography } from '@arco-design/web-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';

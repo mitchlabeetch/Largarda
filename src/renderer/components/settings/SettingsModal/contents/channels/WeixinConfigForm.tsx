@@ -11,7 +11,7 @@ import { isElectronDesktop } from '@renderer/utils/platform';
 import { ConfigStorage } from '@/common/config/storage';
 import GeminiModelSelector from '@/renderer/pages/conversation/platforms/gemini/GeminiModelSelector';
 import type { GeminiModelSelection } from '@/renderer/pages/conversation/platforms/gemini/useGeminiModelSelection';
-import type { AcpBackendAll } from '@/common/types/acpTypes';
+import type { AcpBackendAll } from '@aionui/protocol/types';
 import { Button, Dropdown, Empty, Menu, Message, Spin, Tooltip } from '@arco-design/web-react';
 import { CheckOne, CloseOne, Copy, Delete, Down, Refresh } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

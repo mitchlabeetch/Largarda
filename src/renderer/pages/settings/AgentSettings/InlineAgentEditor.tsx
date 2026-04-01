@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import type { AcpBackendConfig } from '@aionui/protocol/types';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import { Alert, Button, Collapse, Input, Space } from '@arco-design/web-react';
 import { Plus, Delete, CheckOne, CloseOne } from '@icon-park/react';

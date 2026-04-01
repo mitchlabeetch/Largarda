@@ -6,7 +6,7 @@
 
 import { useApi } from '@renderer/api';
 import { joinPath } from '@/common/chat/chatLib';
-import type { PreviewContentType } from '@/common/types/preview';
+import type { PreviewContentType } from '@aionui/protocol/types';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import {

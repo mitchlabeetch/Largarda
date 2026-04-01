@@ -9,7 +9,7 @@ import { Avatar, Button, Switch, Tooltip, Typography } from '@arco-design/web-re
 import { Setting, EditTwo, Delete, Robot } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
-import type { AcpBackendConfig } from '@/common/types/acpTypes';
+import type { AcpBackendConfig } from '@aionui/protocol/types';
 
 type DetectedAgent = {
   backend: string;
