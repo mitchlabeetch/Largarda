@@ -23,6 +23,9 @@ import type { PropsWithChildren } from 'react';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
+// API client
+import { ApiClient, ApiClientProvider } from './api';
+
 // Context providers
 import { AuthProvider } from './hooks/context/AuthContext';
 import { ThemeProvider } from './hooks/context/ThemeContext';
@@ -86,14 +89,24 @@ const arcoLocales: Record<string, typeof enUS> = {
   'en-US': enUS,
 };
 
+// Initialize ApiClient alongside the existing bridge (not replacing it yet)
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const apiServerUrl = `${wsProtocol}//${window.location.host}`;
+const apiClient = new ApiClient(apiServerUrl);
+apiClient.connect();
+
 const AppProviders: React.FC<PropsWithChildren> = ({ children }) =>
   React.createElement(
-    AuthProvider,
-    null,
+    ApiClientProvider,
+    { value: apiClient },
     React.createElement(
-      ThemeProvider,
+      AuthProvider,
       null,
-      React.createElement(PreviewProvider, null, React.createElement(ConversationTabsProvider, null, children))
+      React.createElement(
+        ThemeProvider,
+        null,
+        React.createElement(PreviewProvider, null, React.createElement(ConversationTabsProvider, null, children))
+      )
     )
   );
 
