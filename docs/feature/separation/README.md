@@ -49,20 +49,20 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
 +----------------------------+  +----------------------------+
 | src/renderer (Frontend)    |  | src/server (Backend)       |
 |                            |  |                            |
-| +--------+ +-----------+  |  | +--------+ +------------+  |
-| | pages/ | | api/      |  |  | |router/ | | handlers/  |  |
-| | guid   | | ApiClient |  |  | |WsRouter| | conversat. |  |
+| +--------+ +-----------+   |  | +--------+ +------------+  |
+| | pages/ | | api/      |   |  | |router/ | | handlers/  |  |
+| | guid   | | ApiClient |   |  | |WsRouter| | conversat. |  |
 | | conver.| | .request()|--+--+>|.handle()| | fs, model  |  |
-| | settin.| | .on()     |  |  | |.emit() | | agent, ext |  |
-| | cron   | +-----------+  |  | +--------+ | channel    |  |
-| +--------+                |  |             | cron, mcp  |  |
-|                            |  |             +------------+  |
-| +----------+ +----------+ |  | +----------+ +----------+  |
-| |components| | hooks/   | |  | | http/    | | services/|  |
-| | chat     | | useApi() | |  | | Express  | | database |  |
-| | settings | | agent    | |  | | REST API | | cron     |  |
-| | markdown | | file     | |  | | middlew. | | convers. |  |
-| +----------+ +----------+ |  | | WebSocket| | mcp      |  |
+| | settin.| | .on()     |   |  | |.emit() | | agent, ext |  |
+| | cron   | +-----------+   |  | +--------+ | channel    |  |
+| +--------+                 |  |            | cron, mcp  |  |
+|                            |  |            +------------+  |
+| +----------+ +----------+  |  | +----------+ +----------+  |
+| |components| | hooks/   |  |  | | http/    | | services/|  |
+| | chat     | | useApi() |  |  | | Express  | | database |  |
+| | settings | | agent    |  |  | | REST API | | cron     |  |
+| | markdown | | file     |  |  | | middlew. | | convers. |  |
+| +----------+ +----------+  |  | | WebSocket| | mcp      |  |
 |              +----------+  |  | +----------+ +----------+  |
 |              | utils/   |  |  | +----------+ +----------+  |
 |              | platform |  |  | | agent/   | | worker/  |  |
@@ -84,21 +84,21 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
 | src/electron (Thin Shell)  |
 |                            |
 | main.ts                    |
-| +- spawn server (port=N)  |
-| +- create BrowserWindow   |
+| +- spawn server (port=N)   |
+| +- create BrowserWindow    |
 | +- manage lifecycle        |
 |                            |
 | preload.ts                 |
-| +- expose { serverUrl }   |
+| +- expose { serverUrl }    |
 |                            |
 | handlers/                  |
-| +- dialog (file picker)   |
-| +- shell (open external)  |
-| +- windowControls         |
-| +- update (auto-update)   |
+| +- dialog (file picker)    |
+| +- shell (open external)   |
+| +- windowControls          |
+| +- update (auto-update)    |
 |                            |
 | lifecycle/                 |
-| +- tray, menu, deepLink   |
+| +- tray, menu, deepLink    |
 | +- singleInstance          |
 |                            |
 | Only pkg imports electron  |
@@ -124,7 +124,7 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
   |  +--create-> BrowserWindow                                   |
   |              (renderer)  |                                   |
   |              |           |                                   |
-  |              +- ApiClient + ws://localhost:51234              |
+  |              +- ApiClient + ws://localhost:51234             |
   |                                                              |
   |  Electron-only IPC (5-6 calls):                              |
   |  renderer --ipc--> main.ts                                   |
@@ -161,7 +161,7 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
   +----------------------+  +--------------+  +------------------+
   | Browser              |  | Vite Dev     |  | Server           |
   |                      |  | :5173        |  | :3000            |
-  | React SPA (HMR)     |<-| hot reload   |  |                  |
+  | React SPA (HMR)      |<-| hot reload   |  |                  |
   |                      |  +--------------+  | WsRouter         |
   | ApiClient            |                    | REST routes      |
   | +- ws://localhost:3000 +--------WS------->| handlers         |
@@ -225,7 +225,7 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
                   +---------------+--------------+
                   |        src/server             |
                   |   (only process with          |
-                  |    filesystem access)          |
+                  |    filesystem access)         |
                   +---------------+--------------+
                                   |
                          WS / HTTP API
@@ -244,47 +244,47 @@ Split AionUi into an independent frontend and backend with a language-agnostic c
 
 All three deployment modes use the same protocol:
 
-| Mode | Frontend | Backend | Transport |
-|------|----------|---------|-----------|
-| Electron desktop | BrowserWindow | Local process (spawned by Electron) | ws://localhost:PORT |
-| Web (self-hosted) | Browser | Remote server | wss://host:PORT |
-| Development | Browser (Vite dev) | Local dev server | ws://localhost:PORT |
+| Mode              | Frontend           | Backend                             | Transport           |
+| ----------------- | ------------------ | ----------------------------------- | ------------------- |
+| Electron desktop  | BrowserWindow      | Local process (spawned by Electron) | ws://localhost:PORT |
+| Web (self-hosted) | Browser            | Remote server                       | wss://host:PORT     |
+| Development       | Browser (Vite dev) | Local dev server                    | ws://localhost:PORT |
 
 ## Coupling Analysis (Current)
 
-| Dependency | Count | Files | Impact |
-|---|---|---|---|
-| renderer → `@/common/adapter/ipcBridge` | 46 imports | 46 files | API contract — replace with protocol types |
+| Dependency                                     | Count       | Files     | Impact                                     |
+| ---------------------------------------------- | ----------- | --------- | ------------------------------------------ |
+| renderer → `@/common/adapter/ipcBridge`        | 46 imports  | 46 files  | API contract — replace with protocol types |
 | renderer → `@/common/*` (types, config, utils) | 280 imports | 183 files | Shared types — move to `packages/protocol` |
-| renderer → `@process/*` | 8 imports | 7 files | Channel types only — move to protocol |
-| renderer → `window.electronAPI` | 25 uses | 9 files | Abstract behind `PlatformAdapter` |
-| Bridge endpoints (Provider) | 200 | — | Convert to WS request/response |
-| Bridge endpoints (Emitter) | 33 | — | Convert to WS server-push events |
+| renderer → `@process/*`                        | 8 imports   | 7 files   | Channel types only — move to protocol      |
+| renderer → `window.electronAPI`                | 25 uses     | 9 files   | Abstract behind `PlatformAdapter`          |
+| Bridge endpoints (Provider)                    | 200         | —         | Convert to WS request/response             |
+| Bridge endpoints (Emitter)                     | 33          | —         | Convert to WS server-push events           |
 
 ## Implementation Phases
 
 Each phase is designed to be completed in a single session.
 
-| Phase | Document | Description | Dependency |
-|---|---|---|---|
-| 1 | [phase-1-protocol.md](phase-1-protocol.md) | Create `packages/protocol` — wire protocol + shared types | None |
-| 2 | [phase-2-api-client.md](phase-2-api-client.md) | Frontend ApiClient — replace bridge library calls | Phase 1 |
-| 3 | [phase-3-server.md](phase-3-server.md) | Backend restructure — `src/process` → `src/server` | Phase 1 |
-| 4 | [phase-4-electron.md](phase-4-electron.md) | Electron shell refactor — thin launcher | Phase 2 + 3 |
+| Phase | Document                                       | Description                                               | Dependency  |
+| ----- | ---------------------------------------------- | --------------------------------------------------------- | ----------- |
+| 1     | [phase-1-protocol.md](phase-1-protocol.md)     | Create `packages/protocol` — wire protocol + shared types | None        |
+| 2     | [phase-2-api-client.md](phase-2-api-client.md) | Frontend ApiClient — replace bridge library calls         | Phase 1     |
+| 3     | [phase-3-server.md](phase-3-server.md)         | Backend restructure — `src/process` → `src/server`        | Phase 1     |
+| 4     | [phase-4-electron.md](phase-4-electron.md)     | Electron shell refactor — thin launcher                   | Phase 2 + 3 |
 
 Phase 2 and Phase 3 can be worked on **in parallel** after Phase 1 is complete.
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Repo structure | Monorepo (no split) | Same team, Electron needs both |
-| Backend name | `server` (not app/backend) | Clear, maps to `src/server.ts` |
-| Communication | WebSocket + HTTP (no IPC) | Language-agnostic, Rust-compatible |
-| Electron comm | Also WebSocket (localhost) | Unified with Web mode; Rust backend can't use IPC |
-| Protocol format | JSON `{ type, id, name, data }` | Compatible with current wire format, adds request ID |
-| bridge library | Phase out from frontend first | Backend keeps it during transition, drops when moving to Rust |
-| Shared types | `packages/protocol` npm workspace | Both frontend and backend import from here |
+| Decision        | Choice                            | Rationale                                                     |
+| --------------- | --------------------------------- | ------------------------------------------------------------- |
+| Repo structure  | Monorepo (no split)               | Same team, Electron needs both                                |
+| Backend name    | `server` (not app/backend)        | Clear, maps to `src/server.ts`                                |
+| Communication   | WebSocket + HTTP (no IPC)         | Language-agnostic, Rust-compatible                            |
+| Electron comm   | Also WebSocket (localhost)        | Unified with Web mode; Rust backend can't use IPC             |
+| Protocol format | JSON `{ type, id, name, data }`   | Compatible with current wire format, adds request ID          |
+| bridge library  | Phase out from frontend first     | Backend keeps it during transition, drops when moving to Rust |
+| Shared types    | `packages/protocol` npm workspace | Both frontend and backend import from here                    |
 
 ## Out of Scope
 

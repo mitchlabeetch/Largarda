@@ -19,26 +19,26 @@ Three message types, all JSON-encoded:
 ```typescript
 // Client → Server: request (replaces bridge.buildProvider)
 type WsRequest = {
-  type: 'request'
-  id: string         // UUID, correlates with response
-  name: string       // endpoint name, e.g. "chat.send.message"
-  data: unknown      // request payload
-}
+  type: 'request';
+  id: string; // UUID, correlates with response
+  name: string; // endpoint name, e.g. "chat.send.message"
+  data: unknown; // request payload
+};
 
 // Server → Client: response to a request
 type WsResponse = {
-  type: 'response'
-  id: string         // matches the request id
-  data: unknown      // response payload
-  error?: string     // error message if request failed
-}
+  type: 'response';
+  id: string; // matches the request id
+  data: unknown; // response payload
+  error?: string; // error message if request failed
+};
 
 // Server → Client: push event (replaces bridge.buildEmitter)
 type WsEvent = {
-  type: 'event'
-  name: string       // event name, e.g. "chat.response.stream"
-  data: unknown      // event payload
-}
+  type: 'event';
+  name: string; // event name, e.g. "chat.response.stream"
+  data: unknown; // event payload
+};
 
 // Heartbeat (keep existing behavior)
 // Server sends: { name: 'ping' }
@@ -167,43 +167,43 @@ The current `src/common/adapter/ipcBridge.ts` (1164 lines) mixes:
 
 For each domain namespace in ipcBridge.ts, extract:
 
-| ipcBridge namespace | → protocol file | Types to extract |
-|---|---|---|
-| `conversation` | `endpoints/conversation.ts` | ISendMessageParams, ICreateConversationParams, IResponseMessage, IConversationTurnCompletedEvent, etc. |
-| `application` | `endpoints/application.ts` | ICdpStatus, ICdpConfig |
-| `fs` | `endpoints/fs.ts` | IDirOrFile, IFileMetadata |
-| `dialog` | `endpoints/fs.ts` | (merged with fs) |
-| `mode` | `endpoints/model.ts` | (model/provider types) |
-| `acpConversation` | `endpoints/agent.ts` | AcpBackend, AcpModelInfo related |
-| `channel` | `endpoints/channel.ts` | IChannelPairingRequest, IChannelSession, etc. |
-| `extensions` | `endpoints/extensions.ts` | IExtensionInfo, IExtensionPermissionSummary, etc. |
-| `cron` | `endpoints/cron.ts` | ICronJob, ICronSchedule, ICreateCronJobParams |
-| `webui` | `endpoints/webui.ts` | IWebUIStatus |
-| `mcpService` | `endpoints/mcp.ts` | (MCP types) |
-| `update`, `autoUpdate` | `endpoints/update.ts` | (update types — already in src/common/update/) |
-| `preview`, `document`, `pptPreview`, `wordPreview`, `excelPreview` | `endpoints/preview.ts` | PreviewContentType, etc. |
-| `windowControls` | `endpoints/window.ts` | (simple void types) |
-| `systemSettings` | `endpoints/settings.ts` | (simple types) |
-| `notification` | `endpoints/notification.ts` | INotificationOptions |
-| `database` | `endpoints/database.ts` | (message search types) |
+| ipcBridge namespace                                                | → protocol file             | Types to extract                                                                                       |
+| ------------------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `conversation`                                                     | `endpoints/conversation.ts` | ISendMessageParams, ICreateConversationParams, IResponseMessage, IConversationTurnCompletedEvent, etc. |
+| `application`                                                      | `endpoints/application.ts`  | ICdpStatus, ICdpConfig                                                                                 |
+| `fs`                                                               | `endpoints/fs.ts`           | IDirOrFile, IFileMetadata                                                                              |
+| `dialog`                                                           | `endpoints/fs.ts`           | (merged with fs)                                                                                       |
+| `mode`                                                             | `endpoints/model.ts`        | (model/provider types)                                                                                 |
+| `acpConversation`                                                  | `endpoints/agent.ts`        | AcpBackend, AcpModelInfo related                                                                       |
+| `channel`                                                          | `endpoints/channel.ts`      | IChannelPairingRequest, IChannelSession, etc.                                                          |
+| `extensions`                                                       | `endpoints/extensions.ts`   | IExtensionInfo, IExtensionPermissionSummary, etc.                                                      |
+| `cron`                                                             | `endpoints/cron.ts`         | ICronJob, ICronSchedule, ICreateCronJobParams                                                          |
+| `webui`                                                            | `endpoints/webui.ts`        | IWebUIStatus                                                                                           |
+| `mcpService`                                                       | `endpoints/mcp.ts`          | (MCP types)                                                                                            |
+| `update`, `autoUpdate`                                             | `endpoints/update.ts`       | (update types — already in src/common/update/)                                                         |
+| `preview`, `document`, `pptPreview`, `wordPreview`, `excelPreview` | `endpoints/preview.ts`      | PreviewContentType, etc.                                                                               |
+| `windowControls`                                                   | `endpoints/window.ts`       | (simple void types)                                                                                    |
+| `systemSettings`                                                   | `endpoints/settings.ts`     | (simple types)                                                                                         |
+| `notification`                                                     | `endpoints/notification.ts` | INotificationOptions                                                                                   |
+| `database`                                                         | `endpoints/database.ts`     | (message search types)                                                                                 |
 
 Additionally, define an **endpoint registry** — a type-safe map of endpoint names to request/response types:
 
 ```typescript
 // packages/protocol/src/endpoints/registry.ts
 export type EndpointMap = {
-  'chat.send.message': { request: ISendMessageParams; response: IBridgeResponse }
-  'create-conversation': { request: ICreateConversationParams; response: TChatConversation }
-  'get-conversation': { request: { id: string }; response: TChatConversation }
+  'chat.send.message': { request: ISendMessageParams; response: IBridgeResponse };
+  'create-conversation': { request: ICreateConversationParams; response: TChatConversation };
+  'get-conversation': { request: { id: string }; response: TChatConversation };
   // ... all 200 endpoints
-}
+};
 
 export type EventMap = {
-  'chat.response.stream': IResponseMessage
-  'conversation.turn.completed': IConversationTurnCompletedEvent
-  'conversation.list-changed': IConversationListChangedEvent
+  'chat.response.stream': IResponseMessage;
+  'conversation.turn.completed': IConversationTurnCompletedEvent;
+  'conversation.list-changed': IConversationListChangedEvent;
   // ... all 33 events
-}
+};
 ```
 
 This registry enables type-safe ApiClient on the frontend.
@@ -212,22 +212,22 @@ This registry enables type-safe ApiClient on the frontend.
 
 Move these files from `src/common/` to `packages/protocol/src/`:
 
-| From | To |
-|---|---|
-| `src/common/types/acpTypes.ts` | `packages/protocol/src/types/acpTypes.ts` |
-| `src/common/types/conversion.ts` | `packages/protocol/src/types/conversion.ts` |
-| `src/common/types/database.ts` | `packages/protocol/src/types/database.ts` |
-| `src/common/types/fileSnapshot.ts` | `packages/protocol/src/types/fileSnapshot.ts` |
-| `src/common/types/preview.ts` | `packages/protocol/src/types/preview.ts` |
-| `src/common/types/speech.ts` | `packages/protocol/src/types/speech.ts` |
-| `src/common/chat/chatLib.ts` (types only) | `packages/protocol/src/chat/chatLib.ts` |
-| `src/common/chat/slash/types.ts` | `packages/protocol/src/chat/slash/types.ts` |
-| `src/common/config/storage.ts` (types only) | `packages/protocol/src/config/storage.ts` |
-| `src/common/config/i18n-config.json` | `packages/protocol/src/config/i18n-config.json` |
-| `src/common/update/updateTypes.ts` | `packages/protocol/src/types/update.ts` |
-| `src/common/utils/protocolDetector.ts` (types only) | `packages/protocol/src/types/protocol.ts` |
-| `src/process/channels/types.ts` (7 renderer imports) | `packages/protocol/src/types/channel.ts` |
-| `src/process/agent/remote/types.ts` (renderer imports) | `packages/protocol/src/types/remoteAgent.ts` |
+| From                                                   | To                                              |
+| ------------------------------------------------------ | ----------------------------------------------- |
+| `src/common/types/acpTypes.ts`                         | `packages/protocol/src/types/acpTypes.ts`       |
+| `src/common/types/conversion.ts`                       | `packages/protocol/src/types/conversion.ts`     |
+| `src/common/types/database.ts`                         | `packages/protocol/src/types/database.ts`       |
+| `src/common/types/fileSnapshot.ts`                     | `packages/protocol/src/types/fileSnapshot.ts`   |
+| `src/common/types/preview.ts`                          | `packages/protocol/src/types/preview.ts`        |
+| `src/common/types/speech.ts`                           | `packages/protocol/src/types/speech.ts`         |
+| `src/common/chat/chatLib.ts` (types only)              | `packages/protocol/src/chat/chatLib.ts`         |
+| `src/common/chat/slash/types.ts`                       | `packages/protocol/src/chat/slash/types.ts`     |
+| `src/common/config/storage.ts` (types only)            | `packages/protocol/src/config/storage.ts`       |
+| `src/common/config/i18n-config.json`                   | `packages/protocol/src/config/i18n-config.json` |
+| `src/common/update/updateTypes.ts`                     | `packages/protocol/src/types/update.ts`         |
+| `src/common/utils/protocolDetector.ts` (types only)    | `packages/protocol/src/types/protocol.ts`       |
+| `src/process/channels/types.ts` (7 renderer imports)   | `packages/protocol/src/types/channel.ts`        |
+| `src/process/agent/remote/types.ts` (renderer imports) | `packages/protocol/src/types/remoteAgent.ts`    |
 
 **Important:** Some of these files contain both types and runtime code. Only move the type definitions. Keep runtime code in place and have it import from `@aionui/protocol`.
 
@@ -237,12 +237,12 @@ After moving types, update imports across the codebase:
 
 ```typescript
 // Before
-import type { TChatConversation } from '@/common/config/storage'
-import type { AcpBackend } from '@/common/types/acpTypes'
+import type { TChatConversation } from '@/common/config/storage';
+import type { AcpBackend } from '@/common/types/acpTypes';
 
 // After
-import type { TChatConversation } from '@aionui/protocol/config'
-import type { AcpBackend } from '@aionui/protocol/types'
+import type { TChatConversation } from '@aionui/protocol/config';
+import type { AcpBackend } from '@aionui/protocol/types';
 ```
 
 Configure path alias in `tsconfig.json`:

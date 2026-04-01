@@ -83,67 +83,67 @@ Replace with a `WsRouter`:
 
 ```typescript
 // src/server/router/WsRouter.ts
-import type { EndpointMap, EventMap, WsRequest, WsResponse, WsEvent } from '@aionui/protocol'
+import type { EndpointMap, EventMap, WsRequest, WsResponse, WsEvent } from '@aionui/protocol';
 
-type Handler<K extends keyof EndpointMap> = (
-  data: EndpointMap[K]['request']
-) => Promise<EndpointMap[K]['response']>
+type Handler<K extends keyof EndpointMap> = (data: EndpointMap[K]['request']) => Promise<EndpointMap[K]['response']>;
 
 class WsRouter {
-  private handlers = new Map<string, Handler<any>>()
-  private broadcaster: ((message: string) => void) | null = null
+  private handlers = new Map<string, Handler<any>>();
+  private broadcaster: ((message: string) => void) | null = null;
 
   // Register a handler for an endpoint
   handle<K extends keyof EndpointMap>(name: K, handler: Handler<K>): void {
-    this.handlers.set(name, handler)
+    this.handlers.set(name, handler);
   }
 
   // Dispatch incoming WebSocket message
   async dispatch(raw: string): Promise<string | null> {
-    const msg = JSON.parse(raw)
+    const msg = JSON.parse(raw);
 
     // New protocol: { type: 'request', id, name, data }
     if (msg.type === 'request') {
-      const handler = this.handlers.get(msg.name)
+      const handler = this.handlers.get(msg.name);
       if (!handler) {
         return JSON.stringify({
-          type: 'response', id: msg.id,
-          error: `Unknown endpoint: ${msg.name}`
-        })
+          type: 'response',
+          id: msg.id,
+          error: `Unknown endpoint: ${msg.name}`,
+        });
       }
       try {
-        const result = await handler(msg.data)
-        return JSON.stringify({ type: 'response', id: msg.id, data: result })
+        const result = await handler(msg.data);
+        return JSON.stringify({ type: 'response', id: msg.id, data: result });
       } catch (err) {
         return JSON.stringify({
-          type: 'response', id: msg.id,
-          error: err instanceof Error ? err.message : String(err)
-        })
+          type: 'response',
+          id: msg.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
     // Legacy protocol: { name, data } — backward compat during transition
     if (msg.name && !msg.type) {
-      const handler = this.handlers.get(msg.name)
+      const handler = this.handlers.get(msg.name);
       if (handler) {
-        const result = await handler(msg.data)
+        const result = await handler(msg.data);
         // Legacy doesn't expect a response message (bridge handles internally)
-        return null
+        return null;
       }
     }
 
-    return null
+    return null;
   }
 
   // Push event to all connected clients
   emit<K extends keyof EventMap>(name: K, data: EventMap[K]): void {
     if (this.broadcaster) {
-      this.broadcaster(JSON.stringify({ type: 'event', name, data }))
+      this.broadcaster(JSON.stringify({ type: 'event', name, data }));
     }
   }
 
   setBroadcaster(fn: (message: string) => void): void {
-    this.broadcaster = fn
+    this.broadcaster = fn;
   }
 }
 ```
@@ -154,31 +154,28 @@ Each bridge file registers handlers using the bridge library. Convert to WsRoute
 
 ```typescript
 // Before (src/process/bridge/conversationBridge.ts)
-import { bridge } from '@office-ai/platform'
+import { bridge } from '@office-ai/platform';
 
 export function initConversationBridge(service: IConversationService) {
   bridge.handle('create-conversation', async (data) => {
-    return service.create(data)
-  })
+    return service.create(data);
+  });
   bridge.handle('get-conversation', async (data) => {
-    return service.get(data.id)
-  })
+    return service.get(data.id);
+  });
   // ... 15 more handlers
 }
 
 // After (src/server/handlers/conversation.ts)
-import type { WsRouter } from '../router/WsRouter'
+import type { WsRouter } from '../router/WsRouter';
 
-export function registerConversationHandlers(
-  router: WsRouter,
-  service: IConversationService
-) {
+export function registerConversationHandlers(router: WsRouter, service: IConversationService) {
   router.handle('create-conversation', async (data) => {
-    return service.create(data)
-  })
+    return service.create(data);
+  });
   router.handle('get-conversation', async (data) => {
-    return service.get(data.id)
-  })
+    return service.get(data.id);
+  });
   // ... 15 more handlers (logic unchanged)
 }
 ```
@@ -191,12 +188,12 @@ Currently bridge modules push events to clients via:
 
 ```typescript
 // Before
-import { bridge } from '@office-ai/platform'
-bridge.emit('chat.response.stream', responseData)
+import { bridge } from '@office-ai/platform';
+bridge.emit('chat.response.stream', responseData);
 
 // After
-import { router } from '../router'
-router.emit('chat.response.stream', responseData)
+import { router } from '../router';
+router.emit('chat.response.stream', responseData);
 ```
 
 The `router` instance is passed as a dependency or accessed via a singleton.
@@ -205,13 +202,13 @@ The `router` instance is passed as a dependency or accessed via a singleton.
 
 Move all Electron-specific code out of `src/server/`:
 
-| File | Contains | Action |
-|---|---|---|
-| `utils/configureChromium.ts` | Electron app flags | → `src/electron/` |
-| `bridge/dialogBridge.ts` | `electron.dialog` | → `src/electron/` or skip in standalone |
-| `bridge/windowControlsBridge.ts` | `BrowserWindow` ops | → `src/electron/` |
-| `bridge/updateBridge.ts` | `electron-updater` | → `src/electron/` |
-| `bridge/shellBridge.ts` | `electron.shell` (partial) | Keep standalone variant, move Electron part |
+| File                             | Contains                   | Action                                      |
+| -------------------------------- | -------------------------- | ------------------------------------------- |
+| `utils/configureChromium.ts`     | Electron app flags         | → `src/electron/`                           |
+| `bridge/dialogBridge.ts`         | `electron.dialog`          | → `src/electron/` or skip in standalone     |
+| `bridge/windowControlsBridge.ts` | `BrowserWindow` ops        | → `src/electron/`                           |
+| `bridge/updateBridge.ts`         | `electron-updater`         | → `src/electron/`                           |
+| `bridge/shellBridge.ts`          | `electron.shell` (partial) | Keep standalone variant, move Electron part |
 
 **Rule:** `src/server/` must have zero `electron` imports. Verify with:
 
@@ -226,35 +223,32 @@ Simplify `src/server.ts` (current standalone entry):
 
 ```typescript
 // src/server/index.ts
-import { WsRouter } from './router/WsRouter'
-import { createHttpServer } from './http'
-import { registerAllHandlers } from './handlers'
-import { initServices } from './services'
+import { WsRouter } from './router/WsRouter';
+import { createHttpServer } from './http';
+import { registerAllHandlers } from './handlers';
+import { initServices } from './services';
 
-export async function startServer(options: {
-  port: number
-  allowRemote?: boolean
-}): Promise<void> {
+export async function startServer(options: { port: number; allowRemote?: boolean }): Promise<void> {
   // 1. Initialize services (database, extensions, channels)
-  const services = await initServices()
+  const services = await initServices();
 
   // 2. Create router and register all handlers
-  const router = new WsRouter()
-  registerAllHandlers(router, services)
+  const router = new WsRouter();
+  registerAllHandlers(router, services);
 
   // 3. Start HTTP + WebSocket server
   const { server, wss } = await createHttpServer({
     port: options.port,
     allowRemote: options.allowRemote,
     router,
-  })
+  });
 
   // 4. Wire WebSocket to router
   router.setBroadcaster((msg) => {
     wss.clients.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(msg)
-    })
-  })
+      if (ws.readyState === WebSocket.OPEN) ws.send(msg);
+    });
+  });
 }
 ```
 
@@ -274,19 +268,19 @@ Create `src/server/router/WsRouter.ts` and `src/server/router/types.ts`.
 
 For each of the 43 bridge files, create a corresponding handler file:
 
-| Bridge file | → Handler file | Endpoints |
-|---|---|---|
-| `conversationBridge.ts` | `handlers/conversation.ts` | 15 providers + 4 emitters |
-| `acpConversationBridge.ts` | `handlers/acpConversation.ts` | 12 providers |
-| `fsBridge.ts` (54KB!) | `handlers/fs.ts` (split if needed) | 20+ providers |
-| `modelBridge.ts` (46KB!) | `handlers/model.ts` (split if needed) | 4 providers |
-| `channelBridge.ts` | `handlers/channel.ts` | 8 providers + 3 emitters |
-| `extensionsBridge.ts` | `handlers/extensions.ts` | 12 providers + 1 emitter |
-| `webuiBridge.ts` | `handlers/webui.ts` | 6 providers + 2 emitters |
-| `cronBridge.ts` | `handlers/cron.ts` | 5 providers + 4 emitters |
-| `databaseBridge.ts` | `handlers/database.ts` | 3 providers |
-| `authBridge.ts` | `handlers/auth.ts` | 3 providers |
-| Other bridges (~20) | `handlers/*.ts` | Various |
+| Bridge file                | → Handler file                        | Endpoints                 |
+| -------------------------- | ------------------------------------- | ------------------------- |
+| `conversationBridge.ts`    | `handlers/conversation.ts`            | 15 providers + 4 emitters |
+| `acpConversationBridge.ts` | `handlers/acpConversation.ts`         | 12 providers              |
+| `fsBridge.ts` (54KB!)      | `handlers/fs.ts` (split if needed)    | 20+ providers             |
+| `modelBridge.ts` (46KB!)   | `handlers/model.ts` (split if needed) | 4 providers               |
+| `channelBridge.ts`         | `handlers/channel.ts`                 | 8 providers + 3 emitters  |
+| `extensionsBridge.ts`      | `handlers/extensions.ts`              | 12 providers + 1 emitter  |
+| `webuiBridge.ts`           | `handlers/webui.ts`                   | 6 providers + 2 emitters  |
+| `cronBridge.ts`            | `handlers/cron.ts`                    | 5 providers + 4 emitters  |
+| `databaseBridge.ts`        | `handlers/database.ts`                | 3 providers               |
+| `authBridge.ts`            | `handlers/auth.ts`                    | 3 providers               |
+| Other bridges (~20)        | `handlers/*.ts`                       | Various                   |
 
 **Migration order:** Start with small, simple bridges (cronBridge, databaseBridge) to establish the pattern, then tackle large ones (fsBridge, modelBridge).
 
@@ -407,11 +401,11 @@ bun run test
 
 Currently Electron and standalone server use **different** data directories:
 
-| Mode | Data dir | Config dir | Source |
-|---|---|---|---|
-| Electron release | `~/.aionui` | `~/.aionui-config` | `getEnvAwareName('.aionui')` in `appEnv.ts` |
-| Electron dev | `~/.aionui-dev` | `~/.aionui-config-dev` | same, with `-dev` suffix |
-| Standalone server | `~/.aionui-server` | `~/.aionui-server` | hardcoded in `NodePlatformServices.ts` |
+| Mode              | Data dir           | Config dir             | Source                                      |
+| ----------------- | ------------------ | ---------------------- | ------------------------------------------- |
+| Electron release  | `~/.aionui`        | `~/.aionui-config`     | `getEnvAwareName('.aionui')` in `appEnv.ts` |
+| Electron dev      | `~/.aionui-dev`    | `~/.aionui-config-dev` | same, with `-dev` suffix                    |
+| Standalone server | `~/.aionui-server` | `~/.aionui-server`     | hardcoded in `NodePlatformServices.ts`      |
 
 This causes data isolation — Electron users who switch to standalone server mode lose their data.
 
@@ -432,21 +426,21 @@ getDataDir: () => process.env.DATA_DIR ?? path.join(os.homedir(), '.aionui'),
 Development mode detected by `NODE_ENV` instead of `isPackaged()`:
 
 ```typescript
-const isDev = process.env.NODE_ENV === 'development'
-const suffix = isDev ? '-dev' : ''
-const dataDir = process.env.DATA_DIR ?? path.join(os.homedir(), `.aionui${suffix}`)
-const configDir = process.env.CONFIG_DIR ?? path.join(os.homedir(), `.aionui-config${suffix}`)
+const isDev = process.env.NODE_ENV === 'development';
+const suffix = isDev ? '-dev' : '';
+const dataDir = process.env.DATA_DIR ?? path.join(os.homedir(), `.aionui${suffix}`);
+const configDir = process.env.CONFIG_DIR ?? path.join(os.homedir(), `.aionui-config${suffix}`);
 ```
 
 **Final directory strategy:**
 
-| Mode | Data dir | Config dir |
-|---|---|---|
-| Electron release | `~/.aionui` | `~/.aionui-config` |
-| Electron dev | `~/.aionui-dev` | `~/.aionui-config-dev` |
-| Server release | `~/.aionui` (same as Electron) | `~/.aionui-config` |
-| Server dev | `~/.aionui-dev` | `~/.aionui-config-dev` |
-| Custom override | `DATA_DIR=...` | `CONFIG_DIR=...` |
+| Mode             | Data dir                       | Config dir             |
+| ---------------- | ------------------------------ | ---------------------- |
+| Electron release | `~/.aionui`                    | `~/.aionui-config`     |
+| Electron dev     | `~/.aionui-dev`                | `~/.aionui-config-dev` |
+| Server release   | `~/.aionui` (same as Electron) | `~/.aionui-config`     |
+| Server dev       | `~/.aionui-dev`                | `~/.aionui-config-dev` |
+| Custom override  | `DATA_DIR=...`                 | `CONFIG_DIR=...`       |
 
 Users who need isolation between Electron and server can set `DATA_DIR` / `CONFIG_DIR` environment variables. But by default, they share data — which is the expected behavior when both modes serve the same user.
 
