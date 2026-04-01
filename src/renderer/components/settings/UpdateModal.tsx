@@ -10,7 +10,7 @@ import { CheckOne, Download, FolderOpen, Refresh, CloseOne, Install } from '@ico
 import { useApi } from '@renderer/api';
 import AionModal from '@/renderer/components/base/AionModal';
 import MarkdownView from '@/renderer/components/Markdown';
-import type { UpdateDownloadProgressEvent, UpdateReleaseInfo, AutoUpdateStatus } from '@/common/update/updateTypes';
+import type { UpdateDownloadProgressEvent, UpdateReleaseInfo, AutoUpdateStatus } from '@aionui/protocol/types';
 import { useTranslation } from 'react-i18next';
 
 type UpdateStatus = 'checking' | 'upToDate' | 'available' | 'downloading' | 'downloaded' | 'success' | 'error';

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { IChannelPairingRequest, IChannelPluginStatus, IChannelUser } from '@process/channels/types';
+import type { IChannelPairingRequest, IChannelPluginStatus, IChannelUser } from '@aionui/protocol/types';
 import { acpConversation, channel } from '@/common/adapter/ipcBridge';
 import { useApi } from '@renderer/api';
 import { isElectronDesktop } from '@renderer/utils/platform';

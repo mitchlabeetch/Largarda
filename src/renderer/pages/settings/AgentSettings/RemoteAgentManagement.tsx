@@ -5,7 +5,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { RemoteAgentConfig, RemoteAgentInput } from '@process/agent/remote/types';
+import type { RemoteAgentConfig, RemoteAgentInput } from '@aionui/protocol/types';
 import EmojiPicker from '@/renderer/components/chat/EmojiPicker';
 import {
   Avatar,
