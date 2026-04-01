@@ -5,8 +5,8 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { TProviderWithModel } from '@/common/config/storage';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TProviderWithModel } from '@aionui/protocol/config';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { emitter } from '@/renderer/utils/emitter';
 import { buildDisplayMessage } from '@/renderer/utils/file/messageFiles';
 import { updateWorkspaceTime } from '@/renderer/utils/workspace/workspaceHistory';

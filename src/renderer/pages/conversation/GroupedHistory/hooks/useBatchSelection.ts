@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export const useBatchSelection = (batchMode: boolean, conversations: TChatConversation[]) => {

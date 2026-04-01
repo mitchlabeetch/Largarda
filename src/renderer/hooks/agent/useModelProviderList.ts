@@ -1,6 +1,6 @@
 import { useApi } from '@renderer/api';
 import { GOOGLE_AUTH_PROVIDER_ID } from '@/common/config/constants';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { useGeminiGoogleAuthModels } from './useGeminiGoogleAuthModels';

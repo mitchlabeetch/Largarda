@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ConfigStorage } from '@/common/config/storage';
-import type { IMcpServer } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
 import { useApi } from '@renderer/api';
 
 /**

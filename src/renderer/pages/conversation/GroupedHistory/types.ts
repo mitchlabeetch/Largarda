@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 
 export type WorkspaceGroup = {
   workspace: string;

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { mcpService } from '@/common/adapter/ipcBridge';
-import type { IMcpServer } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
 
 export interface McpOAuthStatus {
   isAuthenticated: boolean;

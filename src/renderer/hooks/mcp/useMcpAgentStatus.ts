@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ConfigStorage } from '@/common/config/storage';
 import { acpConversation, mcpService } from '@/common/adapter/ipcBridge';
-import type { IMcpServer } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
 
 /**
  * MCP Agent安装状态管理Hook

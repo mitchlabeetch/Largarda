@@ -7,7 +7,7 @@
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { useApi } from '@renderer/api';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { emitter } from '@/renderer/utils/emitter';

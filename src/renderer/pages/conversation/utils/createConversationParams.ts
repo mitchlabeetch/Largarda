@@ -6,7 +6,7 @@
 
 import { ConfigStorage } from '@/common/config/storage';
 import type { ICreateConversationParams } from '@aionui/protocol';
-import type { TProviderWithModel } from '@/common/config/storage';
+import type { TProviderWithModel } from '@aionui/protocol/config';
 import { resolveLocaleKey } from '@/common/utils';
 import { loadPresetAssistantResources } from '@/renderer/utils/model/presetAssistantResources';
 import type { AvailableAgent } from '@/renderer/utils/model/agentTypes';

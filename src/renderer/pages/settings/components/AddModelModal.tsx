@@ -1,4 +1,4 @@
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import ModalHOC from '@/renderer/utils/ui/ModalHOC';
 import AionModal from '@/renderer/components/base/AionModal';
 import { Button, Select, Tag } from '@arco-design/web-react';

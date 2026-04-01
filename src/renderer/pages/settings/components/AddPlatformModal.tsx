@@ -1,5 +1,5 @@
 import { useApi } from '@renderer/api';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import type { ProtocolDetectionResponse, ProtocolType } from '@/common/utils/protocolDetector';
 import { uuid } from '@/common/utils';
 import { isGoogleApisHost } from '@/common/utils/urlValidation';

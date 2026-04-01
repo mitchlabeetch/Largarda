@@ -1,4 +1,4 @@
-import type { IProvider, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TProviderWithModel } from '@aionui/protocol/config';
 import type { GeminiModeOption } from '@/renderer/hooks/agent/useModeModeList';
 import { useModelProviderList } from '@/renderer/hooks/agent/useModelProviderList';
 import { useCallback, useEffect, useState } from 'react';

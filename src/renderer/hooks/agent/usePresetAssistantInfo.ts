@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ASSISTANT_PRESETS } from '@/common/config/presets/assistantPresets';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { ConfigStorage } from '@/common/config/storage';
 import { useApi } from '@renderer/api';
 import CoworkLogo from '@/renderer/assets/icons/cowork.svg';

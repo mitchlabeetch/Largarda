@@ -6,7 +6,7 @@
 
 import { useApi } from '@renderer/api';
 import type { IResponseMessage } from '@aionui/protocol';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import { uuid } from '@/common/utils';
 import { Button, Divider, Message, Popconfirm, Collapse, Tag, Switch, Tooltip } from '@arco-design/web-react';
 import { DeleteFour, Info, Minus, Plus, Write, Heartbeat } from '@icon-park/react';

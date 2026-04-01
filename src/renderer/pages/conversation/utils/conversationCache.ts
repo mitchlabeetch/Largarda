@@ -5,7 +5,7 @@
  */
 
 import type { ApiClient } from '@renderer/api/client';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { mutate } from 'swr';
 
 export async function refreshConversationCache(api: ApiClient, conversationId: string): Promise<void> {

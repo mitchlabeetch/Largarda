@@ -5,7 +5,7 @@
  */
 
 import type { IChannelPluginStatus } from '@process/channels/types';
-import type { IProvider, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TProviderWithModel } from '@aionui/protocol/config';
 import { channel, webui } from '@/common/adapter/ipcBridge';
 import type { IWebUIStatus } from '@aionui/protocol';
 import { ConfigStorage } from '@/common/config/storage';

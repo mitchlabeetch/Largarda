@@ -2,7 +2,8 @@ import { Button, Collapse, Modal, Dropdown, Menu } from '@arco-design/web-react'
 import { Plus, Down } from '@icon-park/react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { type IMcpServer, BUILTIN_IMAGE_GEN_ID } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
+import { BUILTIN_IMAGE_GEN_ID } from '@/common/config/storage';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import AddMcpServerModal from '../components/AddMcpServerModal';
 import McpServerItem from './McpServerItem';

@@ -6,7 +6,8 @@
  */
 
 import { useApi } from '@renderer/api';
-import { ConfigStorage, type ICssTheme } from '@/common/config/storage';
+import type { ICssTheme } from '@aionui/protocol/config';
+import { ConfigStorage } from '@/common/config/storage';
 import PwaPullToRefresh from '@/renderer/components/layout/PwaPullToRefresh';
 import Titlebar from '@/renderer/components/layout/Titlebar';
 import { Layout as ArcoLayout } from '@arco-design/web-react';

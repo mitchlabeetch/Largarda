@@ -6,7 +6,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { IProvider, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TProviderWithModel } from '@aionui/protocol/config';
 import { ConfigStorage } from '@/common/config/storage';
 import { uuid } from '@/common/utils';
 import { useGeminiGoogleAuthModels } from '@/renderer/hooks/agent/useGeminiGoogleAuthModels';

@@ -1,5 +1,5 @@
 import { useApi } from '@renderer/api';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import ModalHOC from '@/renderer/utils/ui/ModalHOC';
 import { Form, Input, Message, Select } from '@arco-design/web-react';
 import React, { useEffect, useMemo } from 'react';

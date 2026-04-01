@@ -1,6 +1,6 @@
 import type { TMessage } from '@/common/chat/chatLib';
 import { useApi } from '@renderer/api';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { Button } from '@arco-design/web-react';
 import type { SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import {

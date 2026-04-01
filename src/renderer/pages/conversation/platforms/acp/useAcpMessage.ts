@@ -7,7 +7,7 @@
 import { useApi } from '@renderer/api';
 import { transformMessage } from '@/common/chat/chatLib';
 import type { IResponseMessage } from '@aionui/protocol';
-import type { TokenUsageData } from '@/common/config/storage';
+import type { TokenUsageData } from '@aionui/protocol/config';
 import { useAddOrUpdateMessage } from '@/renderer/pages/conversation/Messages/hooks';
 import type { ThoughtData } from '@/renderer/components/chat/ThoughtDisplay';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

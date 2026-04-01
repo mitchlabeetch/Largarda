@@ -5,7 +5,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TChatConversation, TProviderWithModel } from '@aionui/protocol/config';
 import { uuid } from '@/common/utils';
 import addChatIcon from '@/renderer/assets/icons/add-chat.svg';
 import { CronJobManager } from '@/renderer/pages/cron';

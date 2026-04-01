@@ -1,4 +1,4 @@
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import type { GeminiModeOption } from '@/renderer/hooks/agent/useModeModeList';
 
 /**

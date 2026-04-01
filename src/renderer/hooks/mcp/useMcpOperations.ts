@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { acpConversation, mcpService } from '@/common/adapter/ipcBridge';
 import { ConfigStorage } from '@/common/config/storage';
-import type { IMcpServer } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
 import { globalMessageQueue } from './messageQueue';
 
 /**

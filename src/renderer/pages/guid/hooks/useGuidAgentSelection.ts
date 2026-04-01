@@ -6,7 +6,7 @@
 
 import { useApi } from '@renderer/api';
 import { DEFAULT_CODEX_MODELS } from '@/common/types/codex/codexModels';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import { ConfigStorage } from '@/common/config/storage';
 import type { AcpBackend, AcpBackendConfig, AcpModelInfo, AvailableAgent, EffectiveAgentInfo } from '../types';
 import { getAgentModes } from '@/renderer/utils/model/agentModes';

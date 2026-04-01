@@ -7,7 +7,7 @@
 import { useApi } from '@renderer/api';
 import type { IResponseMessage } from '@aionui/protocol';
 import { ConfigStorage } from '@/common/config/storage';
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import type { AcpModelInfo } from '@/common/types/acpTypes';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';

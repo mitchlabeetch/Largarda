@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { STORAGE_KEYS } from '@/common/config/storageKeys';
 import { addEventListener } from '@/renderer/utils/emitter';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';

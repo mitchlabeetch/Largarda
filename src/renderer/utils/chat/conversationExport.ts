@@ -1,5 +1,5 @@
 import type { TMessage } from '@/common/chat/chatLib';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 
 const INVALID_FILENAME_CHARS_RE = /[<>:"/\\|?*]/g;
 const padTimestampPart = (value: number): string => String(value).padStart(2, '0');

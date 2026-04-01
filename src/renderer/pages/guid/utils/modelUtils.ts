@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { IProvider } from '@/common/config/storage';
+import type { IProvider } from '@aionui/protocol/config';
 import { hasSpecificModelCapability } from '@/renderer/utils/model/modelCapabilities';
 
 /**

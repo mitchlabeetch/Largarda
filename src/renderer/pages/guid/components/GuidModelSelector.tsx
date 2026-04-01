@@ -6,7 +6,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { IProvider, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TProviderWithModel } from '@aionui/protocol/config';
 import { iconColors } from '@/renderer/styles/colors';
 import { getModelDisplayLabel } from '@/renderer/utils/model/agentLogo';
 import type { AcpModelInfo } from '../types';

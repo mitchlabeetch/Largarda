@@ -1,4 +1,4 @@
-import { type ICssTheme } from '@/common/config/storage';
+import type { ICssTheme } from '@aionui/protocol/config';
 import {
   BACKGROUND_BLOCK_START,
   injectBackgroundCssBlock,

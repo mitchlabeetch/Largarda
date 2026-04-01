@@ -1,4 +1,4 @@
-import type { IMcpServer } from '@/common/config/storage';
+import type { IMcpServer } from '@aionui/protocol/config';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import React, { useEffect, useState } from 'react';
 import JsonImportModal from './JsonImportModal';

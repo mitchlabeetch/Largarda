@@ -6,7 +6,7 @@
 
 import type { TMessage } from '@/common/chat/chatLib';
 import type { IDirOrFile } from '@aionui/protocol';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { getMessageRoleKey, readMessageContent, sanitizeFileName } from '@/renderer/utils/chat/conversationExport';
 
 import type { ExportZipFile } from '../types';

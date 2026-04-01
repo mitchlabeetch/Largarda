@@ -4,12 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  ConfigStorage,
-  type IConfigStorageRefer,
-  type IMcpServer,
-  BUILTIN_IMAGE_GEN_ID,
-} from '@/common/config/storage';
+import type { IConfigStorageRefer, IMcpServer } from '@aionui/protocol/config';
+import { ConfigStorage, BUILTIN_IMAGE_GEN_ID } from '@/common/config/storage';
 import type { SpeechToTextConfig, SpeechToTextProvider } from '@/common/types/speech';
 import { acpConversation } from '@/common/adapter/ipcBridge';
 import { Divider, Form, Tooltip, Message, Button, Dropdown, Menu, Modal, Switch, Input } from '@arco-design/web-react';

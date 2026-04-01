@@ -1,5 +1,5 @@
 import type { IResponseMessage } from '@aionui/protocol';
-import type { IProvider, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TProviderWithModel } from '@aionui/protocol/config';
 import type { GeminiModeOption } from '@/renderer/hooks/agent/useModeModeList';
 import { isApiErrorMessage, isQuotaErrorMessage } from '@/renderer/utils/model/errorDetection';
 import { resolveFallbackTarget } from '@/renderer/utils/model/modelFallback';

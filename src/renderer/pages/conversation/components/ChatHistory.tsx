@@ -5,7 +5,7 @@
  */
 
 import { useApi } from '@renderer/api';
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
 import { CronJobIndicator, useCronJobsMap } from '@/renderer/pages/cron';
 import { refreshConversationCache } from '@/renderer/pages/conversation/utils/conversationCache';

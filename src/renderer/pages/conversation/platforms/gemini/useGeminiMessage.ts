@@ -2,7 +2,7 @@ import { ipcBridge } from '@/common';
 import { useApi } from '@renderer/api';
 import { transformMessage } from '@/common/chat/chatLib';
 import type { IResponseMessage } from '@aionui/protocol';
-import type { TChatConversation, TokenUsageData } from '@/common/config/storage';
+import type { TChatConversation, TokenUsageData } from '@aionui/protocol/config';
 import type { ThoughtData } from '@/renderer/components/chat/ThoughtDisplay';
 import { useAddOrUpdateMessage } from '@/renderer/pages/conversation/Messages/hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

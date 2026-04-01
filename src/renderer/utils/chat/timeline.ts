@@ -9,7 +9,7 @@
  * 会话历史分组的时间线工具函数
  */
 
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 
 /**
  * Calculate the difference in days between two timestamps

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TChatConversation } from '@/common/config/storage';
+import type { TChatConversation } from '@aionui/protocol/config';
 import { useApi, getApiClient } from '@renderer/api';
 import type { ApiClient } from '@renderer/api/client';
 import { addEventListener } from '@/renderer/utils/emitter';
