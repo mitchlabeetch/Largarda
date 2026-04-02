@@ -17,7 +17,7 @@ import { initChannelBridge } from './channelBridge';
 import { initConversationBridge } from './conversationBridge';
 import { initCronBridge } from './cronBridge';
 import { initDatabaseBridge } from './databaseBridge';
-import { initDialogBridge } from '@electron/handlers/dialog';
+import { registerElectronHandlers } from '@electron/handlers';
 import { initDocumentBridge } from './documentBridge';
 import { initFileWatchBridge } from './fileWatchBridge';
 import { initFsBridge } from './fsBridge';
@@ -26,14 +26,11 @@ import { initGeminiConversationBridge } from './geminiConversationBridge';
 import { initMcpBridge } from './mcpBridge';
 import { initModelBridge } from './modelBridge';
 import { initPreviewHistoryBridge } from './previewHistoryBridge';
-import { initShellBridge } from '@electron/handlers/shell';
 import { initStarOfficeBridge } from './starOfficeBridge';
 import { initSpeechToTextBridge } from './speechToTextBridge';
 import { initTaskBridge } from './taskBridge';
-import { initUpdateBridge } from '@electron/handlers/update';
 import { initWebuiBridge } from './webuiBridge';
 import { initSystemSettingsBridge } from './systemSettingsBridge';
-import { initWindowControlsBridge } from '@electron/handlers/windowControls';
 import { initNotificationBridge } from './notificationBridge';
 import { initPptPreviewBridge } from './pptPreviewBridge';
 import { initOfficeWatchBridge } from './officeWatchBridge';
@@ -53,8 +50,9 @@ export interface BridgeDependencies {
  * 初始化所有IPC桥接模块
  */
 export function initAllBridges(deps: BridgeDependencies): void {
-  initDialogBridge();
-  initShellBridge();
+  // Electron-only handlers (dialog, shell, windowControls, update)
+  registerElectronHandlers();
+
   initFsBridge();
   initFileWatchBridge();
   initConversationBridge(deps.conversationService, deps.workerTaskManager);
@@ -71,8 +69,6 @@ export function initAllBridges(deps: BridgeDependencies): void {
   initDocumentBridge();
   initPptPreviewBridge();
   initOfficeWatchBridge();
-  initWindowControlsBridge();
-  initUpdateBridge();
   initWebuiBridge();
   initChannelBridge(deps.channelRepo);
   initDatabaseBridge(deps.conversationRepo);
@@ -99,8 +95,7 @@ export async function initializeAcpDetector(): Promise<void> {
   }
 }
 
-// 导出初始化函数供单独使用
-
+// Re-export individual bridge init functions for standalone mode (initBridgeStandalone.ts)
 export {
   initAcpConversationBridge,
   initApplicationBridge,
@@ -110,7 +105,6 @@ export {
   initConversationBridge,
   initCronBridge,
   initDatabaseBridge,
-  initDialogBridge,
   initDocumentBridge,
   initExtensionsBridge,
   initFsBridge,
@@ -122,18 +116,16 @@ export {
   initOfficeWatchBridge,
   initPptPreviewBridge,
   initPreviewHistoryBridge,
-  initShellBridge,
   initSpeechToTextBridge,
   initStarOfficeBridge,
   initSystemSettingsBridge,
   initTaskBridge,
-  initUpdateBridge,
   initWebuiBridge,
   initRemoteAgentBridge,
-  initWindowControlsBridge,
   initWeixinLoginBridge,
   initWorkspaceSnapshotBridge,
 };
 export { disposeAllSnapshots } from './workspaceSnapshotBridge';
-// 导出窗口控制相关工具函数
+// Re-export Electron handler utilities
+export { registerElectronHandlers } from '@electron/handlers';
 export { registerWindowMaximizeListeners } from '@electron/handlers/windowControls';
