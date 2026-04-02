@@ -273,7 +273,7 @@ const createWindow = (): void => {
   const disableAutoUpdater =
     process.env.AIONUI_DISABLE_AUTO_UPDATE === '1' || process.env.AIONUI_E2E_TEST === '1' || isCiRuntime;
   if (!disableAutoUpdater) {
-    Promise.all([import('./server/services/autoUpdaterService'), import('./process/bridge/updateBridge')])
+    Promise.all([import('./server/services/autoUpdaterService'), import('./electron/handlers/update')])
       .then(([{ autoUpdaterService }, { createAutoUpdateStatusBroadcast }]) => {
         // Create status broadcast callback that emits via ipcBridge (pure emitter, no window binding)
         const statusBroadcast = createAutoUpdateStatusBroadcast();

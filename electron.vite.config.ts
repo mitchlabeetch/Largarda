@@ -39,6 +39,7 @@ const mainAliases = {
   '@common': resolve('src/common'),
   '@renderer': resolve('src/renderer'),
   '@process': resolve('src/process'),
+  '@electron': resolve('src/electron'),
   '@server': resolve('src/server'),
   '@worker': resolve('src/server/worker'),
   '@xterm/headless': resolve('src/common/utils/shims/xterm-headless.ts'),
@@ -153,6 +154,7 @@ export default defineConfig(({ mode }) => {
           '@common': resolve('src/common'),
           '@renderer': resolve('src/renderer'),
           '@process': resolve('src/process'),
+          '@electron': resolve('src/electron'),
           '@server': resolve('src/server'),
           '@worker': resolve('src/server/worker'),
           // Force ESM version of streamdown
