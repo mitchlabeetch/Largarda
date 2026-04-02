@@ -23,7 +23,7 @@ import type AcpAgentManager from '@server/task/AcpAgentManager';
 import type { GeminiAgentManager } from '@server/task/GeminiAgentManager';
 import type OpenClawAgentManager from '@server/task/OpenClawAgentManager';
 import { prepareFirstMessage } from '@server/task/agentUtils';
-import { refreshTrayMenu } from '@process/utils/tray';
+import { refreshTrayMenu } from '@electron/lifecycle/tray';
 import { copyFilesToDirectory, readDirectoryRecursive } from '@process/utils';
 import { computeOpenClawIdentityHash } from '@process/utils/openclawUtils';
 import { migrateConversationToDatabase } from '@process/bridge/migrationUtils';
@@ -49,13 +49,13 @@ const VALID_CONVERSATION_TYPES = new Set<TChatConversation['type']>([
 export function registerConversationHandlers(
   router: WsRouter,
   conversationService: IConversationService,
-  workerTaskManager: IWorkerTaskManager,
+  workerTaskManager: IWorkerTaskManager
 ): void {
   const sideQuestionService = new ConversationSideQuestionService(conversationService);
 
   const emitConversationListChanged = (
     conversation: Pick<TChatConversation, 'id' | 'source'>,
-    action: 'created' | 'updated' | 'deleted',
+    action: 'created' | 'updated' | 'deleted'
   ) => {
     router.emit('conversation.list-changed', {
       conversationId: conversation.id,
@@ -211,7 +211,7 @@ export function registerConversationHandlers(
         console.error('[ConversationHandler] Failed to create conversation with conversation:', error);
         return Promise.resolve(conversation);
       }
-    },
+    }
   );
 
   router.handle('remove-conversation', async ({ id }) => {
@@ -348,7 +348,7 @@ export function registerConversationHandlers(
             // In the WsRouter context we broadcast it as an event.
             (router as unknown as { emit(name: string, data: unknown): void }).emit(
               'conversation.response.search.workspace',
-              result,
+              result
             );
           },
         },
@@ -453,7 +453,7 @@ export function registerConversationHandlers(
       const builtinSkillsCopyDir = getBuiltinSkillsCopyDir();
       agentContent = agentContent.replace(
         '[User Request]',
-        `[Skills Directory]\nBuiltin skills: ${builtinSkillsCopyDir}\nUser skills: ${skillsDir}\nWhen skill instructions reference relative paths like "skills/{name}/scripts/...", resolve them under the appropriate directory.\n\n[User Request]`,
+        `[Skills Directory]\nBuiltin skills: ${builtinSkillsCopyDir}\nUser skills: ${skillsDir}\nWhen skill instructions reference relative paths like "skills/{name}/scripts/...", resolve them under the appropriate directory.\n\n[User Request]`
       );
     }
 

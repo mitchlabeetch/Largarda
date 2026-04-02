@@ -6,8 +6,8 @@
 
 import type { BrowserWindow } from 'electron';
 import { setApplicationMainWindow } from '../bridge/applicationBridge';
-import { setDeepLinkMainWindow } from './deepLink';
-import { setTrayMainWindow } from './tray';
+import { setDeepLinkMainWindow } from '@electron/lifecycle/deepLink';
+import { setTrayMainWindow } from '@electron/lifecycle/tray';
 
 export const bindMainWindowReferences = (window: BrowserWindow): void => {
   setTrayMainWindow(window);

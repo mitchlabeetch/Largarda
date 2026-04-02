@@ -29,7 +29,7 @@ import { initializeAcpDetector, registerWindowMaximizeListeners } from '@process
 import { onCloseToTrayChanged, onLanguageChanged } from './process/bridge/systemSettingsBridge';
 import { setInitialLanguage } from '@server/services/i18n';
 import { workerTaskManager } from './server/task/workerTaskManagerSingleton';
-import { setupApplicationMenu } from './process/utils/appMenu';
+import { setupApplicationMenu } from './electron/lifecycle/appMenu';
 import { startWebServer } from './server/http';
 import { applyZoomToWindow, initializeZoomFactor } from './process/utils/zoom';
 import {
@@ -37,7 +37,7 @@ import {
   getPendingDeepLinkUrl,
   handleDeepLinkUrl,
   PROTOCOL_SCHEME,
-} from './process/utils/deepLink';
+} from './electron/lifecycle/deepLink';
 import {
   bindMainWindowReferences,
   showAndFocusMainWindow,
@@ -57,7 +57,7 @@ import {
   refreshTrayMenu,
   setCloseToTrayEnabled,
   setIsQuitting,
-} from './process/utils/tray';
+} from './electron/lifecycle/tray';
 // @ts-expect-error - electron-squirrel-startup doesn't have types
 import electronSquirrelStartup from 'electron-squirrel-startup';
 

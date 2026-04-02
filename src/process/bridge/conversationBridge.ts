@@ -16,7 +16,7 @@ import type AcpAgentManager from '@server/task/AcpAgentManager';
 import type { GeminiAgentManager } from '@server/task/GeminiAgentManager';
 import type OpenClawAgentManager from '@server/task/OpenClawAgentManager';
 import { prepareFirstMessage } from '@server/task/agentUtils';
-import { refreshTrayMenu } from '@process/utils/tray';
+import { refreshTrayMenu } from '@electron/lifecycle/tray';
 import { copyFilesToDirectory, readDirectoryRecursive } from '@process/utils';
 import { computeOpenClawIdentityHash } from '@process/utils/openclawUtils';
 import { migrateConversationToDatabase } from './migrationUtils';
