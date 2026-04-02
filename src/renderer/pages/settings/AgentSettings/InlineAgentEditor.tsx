@@ -6,7 +6,7 @@
 
 import type { AcpBackendConfig } from '@/common/types/acpTypes';
 import { acpConversation } from '@/common/adapter/ipcBridge';
-import { Alert, Avatar, Button, Collapse, Input, Space, Typography } from '@arco-design/web-react';
+import { Alert, Avatar, Button, Collapse, Input, Typography } from '@arco-design/web-react';
 import { Plus, Delete, CheckOne, CloseOne } from '@icon-park/react';
 import EmojiPicker from '@/renderer/components/chat/EmojiPicker';
 import CodeMirror from '@uiw/react-codemirror';
@@ -224,11 +224,29 @@ const InlineAgentEditor: React.FC<InlineAgentEditorProps> = ({ agent, onSave, on
   const fieldHelpClassName = 'mt-4px block text-12px leading-18px text-t-tertiary';
 
   return (
-    <div className='px-16px py-12px mx-16px rd-8px bg-fill-2 space-y-12px'>
-      {/* Display Name */}
-      <div>
-        <div className='mb-4px text-sm font-medium text-t-primary'>{t('settings.agentDisplayName')}</div>
-        <Input value={name} onChange={handleNameChange} placeholder={t('settings.agentNamePlaceholder')} />
+    <div className='flex flex-col gap-16px pt-8px pb-20px'>
+      {/* Avatar + Name row */}
+      <div className='flex items-center gap-12px'>
+        <EmojiPicker onChange={(emoji) => setAvatar(emoji)}>
+          <div className='cursor-pointer shrink-0'>
+            <Avatar
+              size={48}
+              shape='square'
+              style={{ backgroundColor: 'var(--color-fill-3)', fontSize: 24, borderRadius: 12 }}
+            >
+              {avatar}
+            </Avatar>
+          </div>
+        </EmojiPicker>
+        <div className='min-w-0 flex-1'>
+          <Typography.Text className={fieldLabelClassName}>{t('settings.agentDisplayName')}</Typography.Text>
+          <Input
+            size='large'
+            value={name}
+            onChange={handleNameChange}
+            placeholder={t('settings.agentNamePlaceholder')}
+          />
+        </div>
       </div>
 
       {/* Command */}
