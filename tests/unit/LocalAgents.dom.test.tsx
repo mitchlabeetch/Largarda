@@ -60,27 +60,11 @@ vi.mock('@arco-design/web-react', () => ({
   Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
-  Dropdown: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Menu: Object.assign(({ children }: { children: React.ReactNode }) => <div>{children}</div>, {
-    Item: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  }),
   Switch: ({ checked, onChange }: { checked?: boolean; onChange?: (v: boolean) => void }) => (
     <button role='switch' aria-checked={checked} onClick={() => onChange?.(!checked)}>
       switch
     </button>
   ),
-  Modal: ({ children, visible }: { children: React.ReactNode; visible?: boolean }) =>
-    visible ? <div>{children}</div> : null,
-  List: Object.assign(({ children }: { children: React.ReactNode }) => <div>{children}</div>, {
-    Item: Object.assign(({ children }: { children: React.ReactNode }) => <div>{children}</div>, {
-      Meta: () => null,
-    }),
-  }),
-}));
-
-vi.mock('@arco-design/web-react/icon', () => ({
-  IconDownload: () => null,
-  IconRefresh: () => null,
 }));
 
 vi.mock('@/renderer/components/base/AionModal', () => ({
@@ -130,7 +114,7 @@ vi.mock('../../src/renderer/pages/settings/AgentSettings/InlineAgentEditor', () 
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import LocalAgents from '../../src/renderer/pages/settings/AgentSettings/LocalAgents';
 
@@ -145,13 +129,13 @@ describe('LocalAgents', () => {
     mockSwrMutate.mockResolvedValue(undefined);
   });
 
-  it('renders description and custom agent trigger', async () => {
+  it('renders description and setup link', async () => {
     await act(async () => {
       render(<LocalAgents />);
     });
 
     expect(screen.getByText('settings.agentManagement.localAgentsDescription')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'settings.agentManagement.detectCustomAgent' })).toBeTruthy();
+    expect(screen.getByText('settings.agentManagement.localAgentsSetupLink')).toBeTruthy();
   });
 
   it('renders detected section heading', async () => {
@@ -162,30 +146,11 @@ describe('LocalAgents', () => {
     expect(screen.getByText('settings.agentManagement.detected')).toBeTruthy();
   });
 
-  it('renders market entry card content', async () => {
-    await act(async () => {
-      render(<LocalAgents />);
-    });
-
-    expect(screen.getAllByText('settings.agentManagement.installFromMarket')).toHaveLength(2);
-    expect(screen.getByText('settings.agentManagement.discoverMoreAgents')).toBeTruthy();
-  });
-
   it('renders empty state when no agents detected', async () => {
     await act(async () => {
       render(<LocalAgents />);
     });
 
     expect(screen.getByText('settings.agentManagement.localAgentsEmpty')).toBeTruthy();
-  });
-
-  it('opens custom agent editor when clicking detect custom agent', async () => {
-    await act(async () => {
-      render(<LocalAgents />);
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'settings.agentManagement.detectCustomAgent' }));
-
-    expect(screen.getByTestId('inline-agent-editor')).toBeTruthy();
   });
 });

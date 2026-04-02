@@ -42,12 +42,15 @@ import { initWeixinLoginBridge } from './weixinLoginBridge';
 import { initWorkspaceSnapshotBridge } from './workspaceSnapshotBridge';
 import { initRemoteAgentBridge } from './remoteAgentBridge';
 import { initHubBridge } from './hubBridge';
+import { initTeamBridge } from './teamBridge';
+import type { TeamSessionService } from '@process/team/TeamSessionService';
 
 export interface BridgeDependencies {
   conversationService: IConversationService;
   conversationRepo: IConversationRepository;
   workerTaskManager: IWorkerTaskManager;
   channelRepo: IChannelRepository;
+  teamSessionService: TeamSessionService;
 }
 
 /**
@@ -88,6 +91,7 @@ export function initAllBridges(deps: BridgeDependencies): void {
   initWorkspaceSnapshotBridge();
   initRemoteAgentBridge();
   initHubBridge();
+  initTeamBridge(deps.teamSessionService);
 }
 
 /**
@@ -133,10 +137,12 @@ export {
   initWebuiBridge,
   initRemoteAgentBridge,
   initHubBridge,
+  initTeamBridge,
   initWindowControlsBridge,
   initWeixinLoginBridge,
   initWorkspaceSnapshotBridge,
 };
 export { disposeAllSnapshots } from './workspaceSnapshotBridge';
+export { disposeAllTeamSessions } from './teamBridge';
 // 导出窗口控制相关工具函数
 export { registerWindowMaximizeListeners } from './windowControlsBridge';
