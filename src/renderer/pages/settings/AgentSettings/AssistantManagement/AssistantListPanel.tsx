@@ -165,7 +165,7 @@ const AssistantListPanel: React.FC<AssistantListPanelProps> = ({
               <Button
                 type='primary'
                 size='small'
-                className={`!rounded-[100px] ${isMobile ? '!w-full !h-40px' : '!px-18px !h-42px'}`}
+                className={`!rounded-[100px] ${isMobile ? '!w-full !h-36px' : '!px-16px !h-32px'}`}
                 icon={<Plus size={14} fill='currentColor' />}
                 onClick={onCreate}
               >
