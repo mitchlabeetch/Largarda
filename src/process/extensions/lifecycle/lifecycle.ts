@@ -7,6 +7,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { fork, type ChildProcess } from 'child_process';
+import { getEnhancedEnv } from '@process/utils/shellEnv';
 import type { LoadedExtension } from '../types';
 import { isPathWithinDirectory } from '../sandbox/pathSafety';
 import { extensionEventBus, ExtensionSystemEvents, type ExtensionLifecyclePayload } from './ExtensionEventBus';
@@ -142,7 +143,7 @@ async function runLifecycleHook(
     try {
       child = fork(runnerScript, [], {
         cwd: extension.directory,
-        env: process.env,
+        env: getEnhancedEnv(),
         silent: false, // inherit stdio so hook console.log is visible
       });
     } catch (error) {

@@ -10,6 +10,10 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('electron', () => ({
+  app: { isPackaged: false },
+}));
+
 // Mock child_process.fork before importing lifecycle
 const mockChildProcess = {
   send: vi.fn(),
