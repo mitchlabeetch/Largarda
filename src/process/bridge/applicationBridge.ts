@@ -9,8 +9,8 @@ import { app } from 'electron';
 import { ipcBridge } from '@/common';
 import type { IWorkerTaskManager } from '@server/task/IWorkerTaskManager';
 import { ProcessConfig } from '@process/utils/initStorage';
-import { getZoomFactor, setZoomFactor } from '@process/utils/zoom';
-import { getCdpStatus, updateCdpConfig } from '@process/utils/configureChromium';
+import { getZoomFactor, setZoomFactor } from '@electron/utils/zoom';
+import { getCdpStatus, updateCdpConfig } from '@electron/utils/chromiumConfig';
 import { initApplicationBridgeCore } from './applicationBridgeCore';
 
 let mainWindowRef: BrowserWindow | null = null;

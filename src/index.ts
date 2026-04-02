@@ -6,7 +6,7 @@
 
 // configureChromium sets app name (dev isolation) and Chromium flags — must run before
 // ANY module that calls app.getPath('userData'), because Electron caches the path on first call.
-import './process/utils/configureChromium';
+import './electron/utils/chromiumConfig';
 import * as Sentry from '@sentry/electron/main';
 
 Sentry.init({
@@ -31,7 +31,7 @@ import { setInitialLanguage } from '@server/services/i18n';
 import { workerTaskManager } from './server/task/workerTaskManagerSingleton';
 import { setupApplicationMenu } from './electron/lifecycle/appMenu';
 import { startWebServer } from './server/http';
-import { applyZoomToWindow, initializeZoomFactor } from './process/utils/zoom';
+import { applyZoomToWindow, initializeZoomFactor } from './electron/utils/zoom';
 import {
   clearPendingDeepLinkUrl,
   getPendingDeepLinkUrl,
@@ -556,7 +556,7 @@ const handleAppReady = async (): Promise<void> => {
   }
 
   // Verify CDP is ready and log status
-  const { cdpPort, verifyCdpReady } = await import('./process/utils/configureChromium');
+  const { cdpPort, verifyCdpReady } = await import('./electron/utils/chromiumConfig');
   if (cdpPort) {
     const cdpReady = await verifyCdpReady(cdpPort);
     if (cdpReady) {
