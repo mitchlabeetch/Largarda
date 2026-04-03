@@ -155,8 +155,14 @@ export default defineConfig(({ mode }) => {
           '@electron': resolve('src/electron'),
           '@server': resolve('src/server'),
           '@worker': resolve('src/server/worker'),
+          // Workspace package — bun resolves it at runtime but Vite needs an explicit alias
+          '@aionui/protocol': resolve('packages/protocol/src'),
           // Force ESM version of streamdown
           streamdown: resolve('node_modules/streamdown/dist/index.js'),
+          // Pin React to a single resolved path — prevents duplicate instances when
+          // CJS deps (e.g. @office-ai/platform) require('react') through Bun symlinks
+          react: resolve('node_modules/react'),
+          'react-dom': resolve('node_modules/react-dom'),
         },
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.css'],
         dedupe: ['react', 'react-dom', 'react-router-dom'],
@@ -231,6 +237,9 @@ export default defineConfig(({ mode }) => {
           'i18next',
           '@arco-design/web-react',
           '@icon-park/react',
+          // Pre-bundle sub-path discovered at runtime to avoid mid-load dep re-optimization
+          '@icon-park/react/es/runtime',
+          '@office-ai/platform',
           'react-markdown',
           'react-syntax-highlighter',
           'react-virtuoso',

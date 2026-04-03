@@ -9,17 +9,18 @@ export const platformAdapter = {
    */
   getPathForFile(file: File): string | null {
     try {
-      if (window.electronAPI?.getPathForFile) {
-        return window.electronAPI.getPathForFile(file)
+      const config = (window as any).electronConfig;
+      if (config?.getPathForFile) {
+        return config.getPathForFile(file);
       }
     } catch {
       // Ignore errors from Electron API
     }
-    return null
+    return null;
   },
 
   /** Check if running in Electron desktop environment. */
   isElectron(): boolean {
-    return typeof window !== 'undefined' && Boolean((window as { electronAPI?: unknown }).electronAPI)
+    return typeof window !== 'undefined' && Boolean((window as any).electronConfig);
   },
-}
+};

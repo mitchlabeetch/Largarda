@@ -19,13 +19,15 @@ import './utils/ui/runtimePatches';
 // Browser adapter setup
 import '@/common/adapter/browser';
 
+// API client bootstrap — MUST run before i18n (which calls getApiClient() at module level)
+import { apiClient } from './api/bootstrap';
+
 // React and core dependencies
 import type { PropsWithChildren } from 'react';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-// API client
-import { ApiClient, ApiClientProvider } from './api';
+import { ApiClientProvider } from './api';
 
 // Context providers
 import { AuthProvider } from './hooks/context/AuthContext';
@@ -89,12 +91,6 @@ const arcoLocales: Record<string, typeof enUS> = {
   'ko-KR': koKRComplete,
   'en-US': enUS,
 };
-
-// Initialize ApiClient alongside the existing bridge (not replacing it yet)
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const apiServerUrl = `${wsProtocol}//${window.location.host}`;
-const apiClient = new ApiClient(apiServerUrl);
-apiClient.connect();
 
 const AppProviders: React.FC<PropsWithChildren> = ({ children }) =>
   React.createElement(

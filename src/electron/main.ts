@@ -231,6 +231,10 @@ const createWindow = (): void => {
     console.log('[AionUi] Renderer did-finish-load');
     showWindow();
   });
+  // TODO: remove after debugging white screen
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools({ mode: 'right' });
+  }
   // Fallback: show window after 5s even if events don't fire
   setTimeout(showWindow, 5000);
 
