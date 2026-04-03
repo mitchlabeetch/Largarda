@@ -36,14 +36,11 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('@process/utils/shellEnv', () => ({
-  findSuitableNodeBin: vi.fn(() => null),
-  getEnhancedEnv: vi.fn(() => ({ PATH: '/usr/bin' })),
-  getNpxCacheDir: vi.fn(() => '/mock-npm-cache/_npx'),
+  getEnhancedEnv: vi.fn(() => ({ PATH: '/bundled-bun/bin:/usr/bin' })),
   getWindowsShellExecutionOptions: vi.fn(() =>
     process.platform === 'win32' ? { shell: true, windowsHide: true } : {}
   ),
   loadFullShellEnvironment: vi.fn(async () => ({ PATH: '/usr/bin' })),
-  resolveNpxPath: vi.fn(() => 'npx'),
 }));
 
 vi.mock('@process/utils/mainLogger', () => ({
@@ -58,7 +55,7 @@ import {
   connectCodex,
   createGenericSpawnConfig,
   spawnGenericBackend,
-  spawnNpxBackend,
+  spawnBunBackend,
 } from '../../src/process/agent/acp/acpConnectors';
 
 const mockExecFile = vi.mocked(execFileCb);
@@ -66,7 +63,7 @@ const mockExecFileSync = vi.mocked(execFileSync);
 const mockFsPromises = vi.mocked(fsPromisesMock);
 const mockSpawn = vi.mocked(spawn);
 
-describe('spawnNpxBackend - Windows UTF-8 fix', () => {
+describe('spawnBunBackend - Windows UTF-8 fix', () => {
   const mockChild = { unref: vi.fn() };
 
   beforeEach(() => {
@@ -77,62 +74,49 @@ describe('spawnNpxBackend - Windows UTF-8 fix', () => {
     vi.clearAllMocks();
   });
 
-  it('uses npxCommand directly on non-Windows (no chcp prefix)', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', '/usr/local/bin/npx', {}, '/cwd', false, false);
+  it('uses bunCommand directly on non-Windows (no chcp prefix)', () => {
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', false);
 
     expect(mockSpawn).toHaveBeenCalledWith(
-      '/usr/local/bin/npx',
+      'bun',
       expect.any(Array),
       expect.objectContaining({ shell: false })
     );
   });
 
   it('prefixes command with chcp 65001 on Windows to enable UTF-8', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx.cmd', {}, '/cwd', true, false);
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', true);
 
     const [command, , options] = mockSpawn.mock.calls[0];
     expect(command).toMatch(/^chcp 65001 >nul && /);
     expect(options).toMatchObject({ shell: true });
   });
 
-  it('quotes npxCommand on Windows to handle paths with spaces', () => {
-    const npxWithSpaces = 'C:\\Program Files\\nodejs\\npx.cmd';
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', npxWithSpaces, {}, '/cwd', true, false);
-
-    const [command] = mockSpawn.mock.calls[0];
-    expect(command).toBe(`chcp 65001 >nul && "${npxWithSpaces}"`);
-  });
-
-  it('passes --yes and package name as spawn args', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx', {}, '/cwd', false, false);
+  it('passes x and package name as spawn args', () => {
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', false);
 
     const [, args] = mockSpawn.mock.calls[0];
-    expect(args).toContain('--yes');
+    expect(args).toContain('x');
     expect(args).toContain('@pkg/cli@1.0.0');
+    expect(args).not.toContain('--yes');
+    expect(args).not.toContain('--prefer-offline');
   });
 
-  it('includes --prefer-offline when preferOffline is true', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx', {}, '/cwd', false, true);
-
-    const [, args] = mockSpawn.mock.calls[0];
-    expect(args).toContain('--prefer-offline');
-  });
-
-  it('omits --prefer-offline when preferOffline is false', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx', {}, '/cwd', false, false);
+  it('no longer uses --prefer-offline (bun x has stable cache)', () => {
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', false);
 
     const [, args] = mockSpawn.mock.calls[0];
     expect(args).not.toContain('--prefer-offline');
   });
 
   it('calls child.unref() when detached is true', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx', {}, '/cwd', false, false, { detached: true });
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', false, { detached: true });
 
     expect(mockChild.unref).toHaveBeenCalled();
   });
 
   it('does not call child.unref() when detached is false', () => {
-    spawnNpxBackend('claude', '@pkg/cli@1.0.0', 'npx', {}, '/cwd', false, false, { detached: false });
+    spawnBunBackend('claude', '@pkg/cli@1.0.0', 'bun', {}, '/cwd', false, { detached: false });
 
     expect(mockChild.unref).not.toHaveBeenCalled();
   });
@@ -185,10 +169,11 @@ describe('createGenericSpawnConfig - Windows path handling', () => {
     expect(config.command).toBe('chcp 65001 >nul && "C:\\Program Files\\agent\\agent.exe"');
   });
 
-  it('splits npx package into command and args (no chcp prefix for npx path)', () => {
-    const config = createGenericSpawnConfig('npx @pkg/cli', '/cwd', ['--acp'], undefined, { PATH: '/usr/bin' });
+  it('splits npx package into bun command and args', () => {
+    const config = createGenericSpawnConfig('npx @pkg/cli', '/cwd', ['--acp'], undefined, { PATH: '/bundled-bun/bin:/usr/bin' });
 
-    expect(config.command).toBe('npx');
+    expect(config.command).toBe('bun');
+    expect(config.args).toContain('x');
     expect(config.args).toContain('@pkg/cli');
     expect(config.args).toContain('--acp');
   });
@@ -241,7 +226,7 @@ describe('connectCodex - Windows diagnostics', () => {
       'codex.cmd',
       ['--version'],
       expect.objectContaining({
-        env: { PATH: '/usr/bin' },
+        env: { PATH: '/bundled-bun/bin:/usr/bin' },
         shell: true,
         timeout: 5000,
         windowsHide: true,
@@ -253,7 +238,7 @@ describe('connectCodex - Windows diagnostics', () => {
       'codex.cmd',
       ['login', 'status'],
       expect.objectContaining({
-        env: { PATH: '/usr/bin' },
+        env: { PATH: '/bundled-bun/bin:/usr/bin' },
         shell: true,
         timeout: 5000,
         windowsHide: true,
@@ -290,8 +275,8 @@ describe('connectClaude - detached process group', () => {
     await connectClaude('/cwd', { setup, cleanup });
 
     expect(mockSpawn).toHaveBeenCalledWith(
-      'npx',
-      expect.arrayContaining(['--yes']),
+      'bun',
+      expect.arrayContaining(['x']),
       expect.objectContaining({
         cwd: '/cwd',
         detached: true,
@@ -311,7 +296,7 @@ describe('connectClaude - detached process group', () => {
 
     expect(mockSpawn).toHaveBeenCalledWith(
       expect.stringContaining('chcp 65001 >nul &&'),
-      expect.arrayContaining(['--yes']),
+      expect.arrayContaining(['x']),
       expect.objectContaining({
         cwd: 'C:\\cwd',
         detached: false,
@@ -401,23 +386,7 @@ describe('connectCodex - Windows package selection', () => {
     vi.clearAllMocks();
   });
 
-  it('uses a cached direct Windows platform binary before falling back to package resolution', async () => {
-    mockFsPromises.readdir.mockResolvedValue(['cache-hash']);
-    mockFsPromises.stat.mockResolvedValue({ isFile: () => true, mtimeMs: 123 } as Awaited<
-      ReturnType<typeof fsPromisesMock.stat>
-    >);
-
-    const hooks = {
-      setup: vi.fn(async () => {}),
-      cleanup: vi.fn(async () => {}),
-    };
-
-    await connectCodex('C:\\cwd', hooks);
-
-    const [command, args] = mockSpawn.mock.calls[0];
-    expect(command).toMatch(/codex-acp-win32-x64[\\/]+bin[\\/]+codex-acp\.exe"/);
-    expect(args).toEqual([]);
-  });
+  // Cached binary resolution removed — bun x uses its own stable cache
 
   it('uses the direct Windows platform package first when startup succeeds', async () => {
     const hooks = {
@@ -447,10 +416,12 @@ describe('connectCodex - Windows package selection', () => {
     await connectCodex('C:\\cwd', hooks);
 
     const firstCallArgs = mockSpawn.mock.calls[0]?.[1];
-    const thirdCallArgs = mockSpawn.mock.calls[2]?.[1];
+    // With 2-phase retry, calls[1] is the retry of the platform package;
+    // the meta package fallback is the third spawn call.
+    const fallbackCallArgs = mockSpawn.mock.calls[2]?.[1];
 
     expect(firstCallArgs).toContain('@zed-industries/codex-acp-win32-x64@0.9.5');
-    expect(thirdCallArgs).toContain('@zed-industries/codex-acp@0.9.5');
+    expect(fallbackCallArgs).toContain('@zed-industries/codex-acp@0.9.5');
   });
 });
 
@@ -480,25 +451,7 @@ describe('connectCodex - Linux package selection', () => {
     vi.clearAllMocks();
   });
 
-  it('uses a cached direct Linux platform binary before falling back to package resolution', async () => {
-    mockFsPromises.readdir.mockResolvedValue(['cache-hash']);
-    mockFsPromises.stat.mockResolvedValue({ isFile: () => true, mtimeMs: 123 } as Awaited<
-      ReturnType<typeof fsPromisesMock.stat>
-    >);
-
-    const hooks = {
-      setup: vi.fn(async () => {}),
-      cleanup: vi.fn(async () => {}),
-    };
-
-    await connectCodex('/cwd', hooks);
-
-    const [command, args] = mockSpawn.mock.calls[0];
-    expect(command).toMatch(
-      /mock-npm-cache[\\/]+_npx[\\/]+cache-hash[\\/]+node_modules[\\/]+@zed-industries[\\/]+codex-acp-linux-x64[\\/]+bin[\\/]+codex-acp$/
-    );
-    expect(args).toEqual([]);
-  });
+  // Cached binary resolution removed — bun x uses its own stable cache
 
   it('uses the direct Linux platform package first when startup succeeds', async () => {
     const hooks = {
@@ -528,10 +481,12 @@ describe('connectCodex - Linux package selection', () => {
     await connectCodex('/cwd', hooks);
 
     const firstCallArgs = mockSpawn.mock.calls[0]?.[1];
-    const thirdCallArgs = mockSpawn.mock.calls[2]?.[1];
+    // With 2-phase retry, calls[1] is the retry of the platform package;
+    // the meta package fallback is the third spawn call.
+    const fallbackCallArgs = mockSpawn.mock.calls[2]?.[1];
 
     expect(firstCallArgs).toContain('@zed-industries/codex-acp-linux-x64');
-    expect(thirdCallArgs).toContain('@zed-industries/codex-acp@0.9.5');
+    expect(fallbackCallArgs).toContain('@zed-industries/codex-acp@0.9.5');
   });
 });
 
@@ -577,9 +532,11 @@ describe('connectCodex - Darwin optional dependency fallback', () => {
     await connectCodex('/cwd', hooks);
 
     const firstCallArgs = mockSpawn.mock.calls[0]?.[1];
-    const thirdCallArgs = mockSpawn.mock.calls[2]?.[1];
+    // With 2-phase retry, calls[1] is the retry of the meta package;
+    // the darwin platform package fallback is the third spawn call.
+    const fallbackCallArgs = mockSpawn.mock.calls[2]?.[1];
 
     expect(firstCallArgs).toContain('@zed-industries/codex-acp@0.9.5');
-    expect(thirdCallArgs).toContain('@zed-industries/codex-acp-darwin-x64');
+    expect(fallbackCallArgs).toContain('@zed-industries/codex-acp-darwin-x64');
   });
 });
