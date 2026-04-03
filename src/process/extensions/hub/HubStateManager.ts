@@ -1,12 +1,8 @@
 import type { HubExtensionStatus, IHubAgentItem, IHubExtension } from '@/common/types/hub';
 import { acpDetector } from '@process/agent/acp/AcpDetector';
 import { ipcBridge } from '@/common';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ExtensionRegistry } from '@process/extensions/ExtensionRegistry';
-import { EXTENSION_MANIFEST_FILE } from '@process/extensions/constants';
 import { loadPersistedStates, savePersistedStates } from '@process/extensions/lifecycle/statePersistence';
-import { extensionEventBus } from '@process/extensions/lifecycle/ExtensionEventBus';
 
 /**
  * HubStateManager
@@ -58,8 +54,7 @@ class HubStateManagerImpl {
     const states = loadPersistedStates();
     const extState = states.get(name) || { enabled: true };
 
-    extState.installError = error;
-    states.set(name, extState);
+    states.set(name, { ...extState, installError: error });
 
     savePersistedStates(states);
   }
@@ -68,9 +63,8 @@ class HubStateManagerImpl {
     const states = loadPersistedStates();
     const extState = states.get(name);
 
-    if (extState && extState.installError) {
-      extState.installError = undefined;
-      states.set(name, extState);
+    if (extState?.installError) {
+      states.set(name, { ...extState, installError: undefined });
       savePersistedStates(states);
     }
   }

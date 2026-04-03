@@ -238,6 +238,11 @@ export class HubInstallerImpl {
       console.warn(`[HubInstaller] Bundled zip not found at ${localPath}, falling back to remote download`);
     }
 
+    // Reject absolute URLs to prevent bypassing trusted base URLs
+    if (/^https?:\/\//i.test(distTarball)) {
+      throw new Error(`Untrusted absolute tarball URL in hub index: ${distTarball}`);
+    }
+
     // Download from remote mirrors (try each in order)
     const cachePath = path.join(this.getCacheDir(), `${name}.zip`);
     for (const baseUrl of HUB_REMOTE_URLS) {
