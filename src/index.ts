@@ -502,13 +502,15 @@ const handleAppReady = async (): Promise<void> => {
     createWindow({ showOnReady: showMainWindowOnReady });
     mark('createWindow');
 
-    // Desktop pet window — isolated in try-catch, never affects main app
-    try {
-      createPetWindow();
-      mark('createPetWindow');
-    } catch (e) {
-      console.error('[Pet] Failed:', e);
-    }
+    // Desktop pet window — delay creation to not slow down main window startup
+    setTimeout(() => {
+      try {
+        createPetWindow();
+        mark('createPetWindow');
+      } catch (e) {
+        console.error('[Pet] Failed:', e);
+      }
+    }, 3000);
 
     // Run ACP detection in parallel with renderer loading.
     // By the time React mounts and calls getAvailableAgents (~300ms+),

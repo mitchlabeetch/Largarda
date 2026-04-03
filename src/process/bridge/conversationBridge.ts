@@ -455,6 +455,9 @@ export function initConversationBridge(
     if (!params) {
       return { success: false, msg: 'Missing request parameters' };
     }
+    // Notify pet immediately — don't wait for AI response
+    try { const { setPetState } = require('@process/pet/PetWindowManager'); setPetState('thinking'); } catch { /* pet not loaded */ }
+
     const { conversation_id, files, ...other } = params;
     let task: IAgentManager | undefined;
     try {

@@ -276,17 +276,19 @@ function handleBridgeMessage(name: string, data: unknown): void {
   let autoMs = 0;
 
   switch (msg.type) {
-    case 'thought':
+    case 'thinking':  // ACP, Gemini
+    case 'thought':   // legacy/alias
       targetState = 'thinking';
       break;
-    case 'content':
+    case 'text':      // ACP, Gemini, OpenClaw, Nanobot (actual content)
+    case 'content':   // legacy/alias
       targetState = 'working';
       break;
-    case 'finish':
+    case 'finish':    // ACP
       targetState = 'happy';
       autoMs = 3000;
       break;
-    case 'error':
+    case 'error':     // all platforms
       targetState = 'error';
       autoMs = 5000;
       break;
