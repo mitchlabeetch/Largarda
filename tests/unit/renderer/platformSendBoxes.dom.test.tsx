@@ -25,7 +25,6 @@ const queueSpies = {
 const mockShouldEnqueueConversationCommand = vi.fn(() => false);
 const mockUseCommandQueueEnabled = vi.fn(() => true);
 let mockConversationStatus: 'idle' | 'running' = 'idle';
-let mockAcpRunning = false;
 let mockGeminiRunning = false;
 let mockAionrsRunning = false;
 const mockUseConversationCommandQueue = vi.fn(() => ({
@@ -38,8 +37,10 @@ const mockUseConversationCommandQueue = vi.fn(() => ({
 
 const mockConversationGetInvoke = vi.fn();
 const mockConversationStopInvoke = vi.fn();
+const mockConversationWarmupInvoke = vi.fn();
 const mockConversationSendInvoke = vi.fn();
 const mockAcpSendInvoke = vi.fn();
+const mockAcpAuthenticateInvoke = vi.fn();
 const mockGeminiSendInvoke = vi.fn();
 const mockOpenClawSendInvoke = vi.fn();
 const mockOpenClawRuntimeInvoke = vi.fn();
@@ -53,8 +54,30 @@ const mockArcoError = vi.fn();
 const mockArcoWarning = vi.fn();
 const mockArcoSuccess = vi.fn();
 const mockAssertBridgeSuccess = vi.fn();
+const mockSharedSendBoxRender = vi.fn();
 const mockSetSendBoxHandler = vi.fn();
 const mockClearFiles = vi.fn();
+const mockAcpResetState = vi.fn();
+const mockAppendAcpUiLog = vi.fn();
+const mockPrimeRequestTraceFallback = vi.fn();
+const mockClearPendingRequestTraceFallback = vi.fn(() => false);
+const mockUseAcpMessage = vi.fn(() => ({
+  thought: { subject: '', description: '' },
+  running: false,
+  hasHydratedRunningState: true,
+  acpStatus: null,
+  acpStatusRevision: 0,
+  acpLogs: [],
+  appendAcpUiLog: mockAppendAcpUiLog,
+  primeRequestTraceFallback: mockPrimeRequestTraceFallback,
+  clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
+  aiProcessing: false,
+  setAiProcessing: vi.fn(),
+  resetState: mockAcpResetState,
+  tokenUsage: null,
+  contextLimit: 0,
+  hasThinkingMessage: false,
+}));
 
 let uuidCounter = 0;
 
@@ -63,11 +86,13 @@ vi.mock('@/common', () => ({
     conversation: {
       get: { invoke: (...args: unknown[]) => mockConversationGetInvoke(...args) },
       stop: { invoke: (...args: unknown[]) => mockConversationStopInvoke(...args) },
+      warmup: { invoke: (...args: unknown[]) => mockConversationWarmupInvoke(...args) },
       sendMessage: { invoke: (...args: unknown[]) => mockConversationSendInvoke(...args) },
       responseStream: { on: vi.fn(() => vi.fn()) },
     },
     acpConversation: {
       sendMessage: { invoke: (...args: unknown[]) => mockAcpSendInvoke(...args) },
+      authenticate: { invoke: (...args: unknown[]) => mockAcpAuthenticateInvoke(...args) },
     },
     geminiConversation: {
       sendMessage: { invoke: (...args: unknown[]) => mockGeminiSendInvoke(...args) },
@@ -94,20 +119,31 @@ vi.mock('@/common/utils', () => ({
 vi.mock('@/renderer/components/chat/sendbox', () => ({
   __esModule: true,
   default: ({
+    autoFocus,
     disabled,
     loading,
+    placeholder,
     onSend,
     onStop,
   }: {
+    autoFocus?: boolean;
     disabled?: boolean;
     loading?: boolean;
+    placeholder?: string;
     onSend: (message: string) => Promise<void> | void;
     onStop?: () => Promise<void> | void;
-  }) =>
-    React.createElement(
+  }) => {
+    mockSharedSendBoxRender({
+      autoFocus,
+      disabled,
+      loading,
+      placeholder,
+    });
+    return React.createElement(
       'div',
       { 'data-testid': 'sendbox' },
       React.createElement('div', { 'data-testid': 'sendbox-loading' }, String(Boolean(loading))),
+      React.createElement('div', { 'data-testid': 'sendbox-placeholder' }, placeholder ?? ''),
       React.createElement(
         'button',
         {
@@ -129,7 +165,8 @@ vi.mock('@/renderer/components/chat/sendbox', () => ({
         },
         'trigger-stop'
       )
-    ),
+    );
+  },
 }));
 
 vi.mock('@/renderer/components/chat/CommandQueuePanel', () => ({
@@ -259,18 +296,7 @@ vi.mock('@/renderer/pages/conversation/platforms/assertBridgeSuccess', () => ({
 }));
 
 vi.mock('@/renderer/pages/conversation/platforms/acp/useAcpMessage', () => ({
-  useAcpMessage: vi.fn(() => ({
-    thought: { subject: '', description: '' },
-    running: mockAcpRunning,
-    hasHydratedRunningState: true,
-    acpStatus: null,
-    aiProcessing: false,
-    setAiProcessing: vi.fn(),
-    resetState: vi.fn(),
-    tokenUsage: 0,
-    contextLimit: 0,
-    hasThinkingMessage: false,
-  })),
+  useAcpMessage: (...args: unknown[]) => mockUseAcpMessage(...args),
 }));
 
 vi.mock('@/renderer/pages/conversation/platforms/acp/useAcpInitialMessage', () => ({
@@ -354,12 +380,28 @@ vi.mock('@/renderer/utils/model/modelContextLimits', () => ({
 }));
 
 vi.mock('@arco-design/web-react', () => ({
+  Alert: ({
+    title,
+    content,
+    children,
+    ...props
+  }: {
+    title?: React.ReactNode;
+    content?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => React.createElement('div', props, title, content, children),
+  Button: ({ children, onClick, ...props }: { children?: React.ReactNode; onClick?: () => void }) =>
+    React.createElement('button', { ...props, onClick }, children),
   Message: {
     error: (...args: unknown[]) => mockArcoError(...args),
     warning: (...args: unknown[]) => mockArcoWarning(...args),
     success: (...args: unknown[]) => mockArcoSuccess(...args),
   },
+  Space: ({ children, ...props }: { children?: React.ReactNode }) => React.createElement('div', props, children),
   Tag: ({ children }: { children?: React.ReactNode }) => React.createElement('div', {}, children),
+  Typography: {
+    Text: ({ children }: { children?: React.ReactNode }) => React.createElement('span', {}, children),
+  },
 }));
 
 vi.mock('@icon-park/react', () => ({
@@ -368,8 +410,13 @@ vi.mock('@icon-park/react', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string; backend?: string; model?: string }) =>
-      options?.defaultValue ?? options?.backend ?? options?.model ?? key,
+    t: (key: string, options?: { defaultValue?: string; backend?: string; model?: string }) => {
+      if (key === 'conversation.chat.processing') {
+        return 'Processing';
+      }
+
+      return options?.defaultValue ?? options?.backend ?? options?.model ?? key;
+    },
   }),
 }));
 
@@ -391,12 +438,33 @@ describe('platform send box queue integration', () => {
     uuidCounter = 0;
     resetQueueSpies();
     mockConversationStatus = 'idle';
-    mockAcpRunning = false;
     mockGeminiRunning = false;
     mockAionrsRunning = false;
+    mockAcpResetState.mockReset();
+    mockSharedSendBoxRender.mockReset();
+    mockPrimeRequestTraceFallback.mockReset();
+    mockClearPendingRequestTraceFallback.mockReset();
+    mockClearPendingRequestTraceFallback.mockReturnValue(false);
 
     mockShouldEnqueueConversationCommand.mockReturnValue(false);
     mockUseCommandQueueEnabled.mockReturnValue(true);
+    mockUseAcpMessage.mockReturnValue({
+      thought: { subject: '', description: '' },
+      running: false,
+      hasHydratedRunningState: true,
+      acpStatus: null,
+      acpStatusRevision: 0,
+      acpLogs: [],
+      appendAcpUiLog: mockAppendAcpUiLog,
+      primeRequestTraceFallback: mockPrimeRequestTraceFallback,
+      clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
+      aiProcessing: false,
+      setAiProcessing: vi.fn(),
+      resetState: mockAcpResetState,
+      tokenUsage: null,
+      contextLimit: 0,
+      hasThinkingMessage: false,
+    });
     mockUseConversationCommandQueue.mockReturnValue({
       items: [],
       isPaused: false,
@@ -412,8 +480,10 @@ describe('platform send box queue integration', () => {
       },
     }));
     mockConversationStopInvoke.mockResolvedValue(undefined);
+    mockConversationWarmupInvoke.mockResolvedValue(true);
     mockConversationSendInvoke.mockResolvedValue({ success: true });
     mockAcpSendInvoke.mockResolvedValue({ success: true });
+    mockAcpAuthenticateInvoke.mockResolvedValue({ success: true });
     mockGeminiSendInvoke.mockResolvedValue({ success: true });
     mockOpenClawSendInvoke.mockResolvedValue({ success: true });
     mockOpenClawRuntimeInvoke.mockResolvedValue({
@@ -675,7 +745,23 @@ describe('platform send box queue integration', () => {
       <AcpSendBox conversation_id='conv-acp' backend='claude' />,
       mockAcpSendInvoke,
       () => {
-        mockAcpRunning = true;
+        mockUseAcpMessage.mockReturnValue({
+          thought: { subject: '', description: '' },
+          running: true,
+          hasHydratedRunningState: true,
+          acpStatus: 'session_active',
+          acpStatusRevision: 1,
+          acpLogs: [],
+          appendAcpUiLog: mockAppendAcpUiLog,
+          primeRequestTraceFallback: mockPrimeRequestTraceFallback,
+          clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
+          aiProcessing: false,
+          setAiProcessing: vi.fn(),
+          resetState: mockAcpResetState,
+          tokenUsage: null,
+          contextLimit: 0,
+          hasThinkingMessage: false,
+        });
       },
     ],
     [
@@ -777,6 +863,78 @@ describe('platform send box queue integration', () => {
     });
 
     expect(queueSpies.resetActiveExecution).toHaveBeenCalledWith('stop');
+  });
+
+  it('resets ACP hook state after stop resolves', async () => {
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'trigger-stop' }));
+
+    await waitFor(() => {
+      expect(mockConversationStopInvoke).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockAcpResetState).toHaveBeenCalledTimes(1);
+    expect(queueSpies.resetActiveExecution).toHaveBeenCalledWith('stop');
+  });
+
+  it('renders the ACP disconnected banner when the hook reports a disconnected thread state', () => {
+    mockUseAcpMessage.mockReturnValue({
+      thought: { subject: '', description: '' },
+      running: false,
+      hasHydratedRunningState: true,
+      acpStatus: 'disconnected',
+      acpStatusRevision: 1,
+      acpLogs: [],
+      appendAcpUiLog: mockAppendAcpUiLog,
+      primeRequestTraceFallback: mockPrimeRequestTraceFallback,
+      clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
+      aiProcessing: false,
+      setAiProcessing: vi.fn(),
+      resetState: mockAcpResetState,
+      tokenUsage: null,
+      contextLimit: 0,
+      hasThinkingMessage: false,
+    });
+
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' agentName='Claude' />);
+
+    expect(screen.getByTestId('acp-disconnected-banner')).toBeInTheDocument();
+  });
+
+  it('disables mount-time autofocus for ACP send boxes', () => {
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' />);
+
+    expect(mockSharedSendBoxRender).toHaveBeenCalled();
+    const lastCall = mockSharedSendBoxRender.mock.calls.at(-1)?.[0] as { autoFocus?: boolean } | undefined;
+    expect(lastCall?.autoFocus).toBe(false);
+  });
+
+  it('uses the processing placeholder for ACP send boxes while busy', () => {
+    mockUseAcpMessage.mockReturnValue({
+      thought: { subject: '', description: '' },
+      running: true,
+      hasHydratedRunningState: true,
+      acpStatus: 'session_active',
+      acpStatusSource: 'live',
+      acpStatusRevision: 2,
+      acpLogs: [],
+      appendAcpUiLog: mockAppendAcpUiLog,
+      primeRequestTraceFallback: mockPrimeRequestTraceFallback,
+      clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
+      aiProcessing: false,
+      setAiProcessing: vi.fn(),
+      resetState: mockAcpResetState,
+      tokenUsage: null,
+      contextLimit: 0,
+      hasThinkingMessage: false,
+    });
+
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' agentName='Claude' />);
+
+    const lastCall = mockSharedSendBoxRender.mock.calls.at(-1)?.[0] as { placeholder?: string } | undefined;
+    expect(lastCall?.placeholder).toBe('Processing');
+    expect(screen.getByTestId('sendbox-placeholder')).toHaveTextContent('Processing');
   });
 
   it('blocks OpenClaw dispatch when runtime validation fails', async () => {

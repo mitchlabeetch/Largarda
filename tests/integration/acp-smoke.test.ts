@@ -60,6 +60,12 @@ function waitForResponse(
   });
 }
 
+function spawnFakeCli(): ChildProcess {
+  return spawn('node', [FAKE_CLI_PATH], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+}
+
 const IS_WINDOWS = process.platform === 'win32';
 
 function isCliAvailable(cmd: string): boolean {
@@ -97,11 +103,8 @@ describe('L3 ACP Smoke Test', () => {
   });
 
   it('fake-acp-cli: full handshake + prompt + disconnect', async () => {
-    child = spawn('node', [FAKE_CLI_PATH], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    child = spawnFakeCli();
 
-    // Step 1: Initialize
     writeMessage(child, {
       jsonrpc: JSONRPC_VERSION,
       id: 1,
@@ -115,7 +118,6 @@ describe('L3 ACP Smoke Test', () => {
     expect(initResult.protocolVersion).toBe(1);
     expect(initResult.serverInfo).toBeDefined();
 
-    // Step 2: Create session
     writeMessage(child, {
       jsonrpc: JSONRPC_VERSION,
       id: 2,
@@ -131,7 +133,6 @@ describe('L3 ACP Smoke Test', () => {
 
     const sessionId = sessionResult.sessionId as string;
 
-    // Step 3: Send prompt
     writeMessage(child, {
       jsonrpc: JSONRPC_VERSION,
       id: 3,
@@ -142,7 +143,6 @@ describe('L3 ACP Smoke Test', () => {
       },
     });
 
-    // Step 4: Collect streaming chunks + final response
     const streamingChunks: Record<string, unknown>[] = [];
     const promptResponse = await new Promise<Record<string, unknown>>((resolve, reject) => {
       let buffer = '';
@@ -175,15 +175,12 @@ describe('L3 ACP Smoke Test', () => {
       child!.stdout!.on('data', onData);
     });
 
-    // Verify streaming chunks were received
     expect(streamingChunks.length).toBeGreaterThan(0);
 
-    // Verify final response
     expect(promptResponse.result).toBeDefined();
     const promptResult = promptResponse.result as Record<string, unknown>;
     expect(promptResult.stopReason).toBe('end_turn');
 
-    // Step 5: Disconnect — close stdin, verify process exits
     child.stdin!.end();
 
     const exitCode = await new Promise<number | null>((resolve) => {
@@ -201,13 +198,9 @@ describe('L3 ACP Smoke Test', () => {
       });
     });
 
-    // Process should have exited (stdin closed -> readline 'close' -> process exits)
     expect(child.killed || exitCode !== null).toBe(true);
   });
 
-  // Real backend smoke tests — skipped unless ACP_SMOKE_REAL=1 is set.
-  // Real CLIs need auth, network, and npx which makes them slow and flaky
-  // in automated environments. Run manually: ACP_SMOKE_REAL=1 bun run test acp-smoke
   const runRealTests = process.env.ACP_SMOKE_REAL === '1';
 
   const realBackends = Object.values(ACP_BACKENDS_ALL)
@@ -232,7 +225,6 @@ describe('L3 ACP Smoke Test', () => {
           stdio: ['pipe', 'pipe', 'pipe'],
         });
 
-        // Only test initialize — real backends need auth for sessions
         writeMessage(child, {
           jsonrpc: JSONRPC_VERSION,
           id: 1,

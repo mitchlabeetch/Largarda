@@ -171,6 +171,7 @@ const SendBox: React.FC<{
   compactActions?: boolean;
   selectedWorkspaceItems?: FileSelectionItem[];
   onSelectedWorkspaceItemsChange?: (items: FileSelectionItem[]) => void;
+  autoFocus?: boolean;
 }> = ({
   onSend,
   onStop,
@@ -195,6 +196,7 @@ const SendBox: React.FC<{
   compactActions = false,
   selectedWorkspaceItems,
   onSelectedWorkspaceItemsChange,
+  autoFocus,
 }) => {
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
@@ -1140,6 +1142,13 @@ const SendBox: React.FC<{
       inputLength: input.length,
       domSnippetCount: domSnippets.length,
     });
+    if (warmupTimerRef.current) {
+      clearTimeout(warmupTimerRef.current);
+      warmupTimerRef.current = null;
+    }
+    if (conversationContext?.conversationId) {
+      warmedConversationRef.current = conversationContext.conversationId;
+    }
     setIsLoading(true);
     historyDraftRef.current = null;
     setHistoryNavigationIndex(null);
@@ -1463,7 +1472,7 @@ const SendBox: React.FC<{
               {renderHighlightedInputValue()}
             </div>
             <Input.TextArea
-              autoFocus={!isMobile}
+              autoFocus={autoFocus ?? !isMobile}
               disabled={disabled}
               value={input}
               placeholder={placeholder}
