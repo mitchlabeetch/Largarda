@@ -172,6 +172,7 @@ const SendBox: React.FC<{
   selectedWorkspaceItems?: FileSelectionItem[];
   onSelectedWorkspaceItemsChange?: (items: FileSelectionItem[]) => void;
   autoFocus?: boolean;
+  loadingActionMode?: 'dual' | 'single-slot';
 }> = ({
   onSend,
   onStop,
@@ -197,6 +198,7 @@ const SendBox: React.FC<{
   selectedWorkspaceItems,
   onSelectedWorkspaceItemsChange,
   autoFocus,
+  loadingActionMode = 'dual',
 }) => {
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
@@ -1214,6 +1216,7 @@ const SendBox: React.FC<{
       type='primary'
       disabled={isButtonDisabled}
       className='send-button-custom'
+      data-testid='sendbox-send-button'
       icon={<ArrowUp theme='filled' size='14' fill='white' strokeWidth={5} />}
       onClick={() => {
         sendMessageHandler();
@@ -1226,6 +1229,7 @@ const SendBox: React.FC<{
       shape='circle'
       type='secondary'
       className='bg-animate'
+      data-testid='sendbox-stop-button'
       icon={<div className='mx-auto size-12px bg-6'></div>}
       onClick={stopHandler}
     ></Button>
@@ -1233,6 +1237,10 @@ const SendBox: React.FC<{
 
   const renderActionButtons = () => {
     if (allowSendWhileLoading && (isLoading || loading)) {
+      if (loadingActionMode === 'single-slot') {
+        return isButtonDisabled ? stopButton : sendButton;
+      }
+
       if (compactActions) {
         return stopButton;
       }

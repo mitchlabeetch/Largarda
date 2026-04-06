@@ -1205,7 +1205,8 @@ Please check your local CLI tool authentication status`,
         onSend={onSendHandler}
         slashCommands={slashCommands}
         onSlashBuiltinCommand={onSlashBuiltinCommand}
-        allowSendWhileLoading={isCommandQueueEnabled}
+        allowSendWhileLoading
+        loadingActionMode='single-slot'
         compactActions={!!teamId}
         autoFocus={false}
         sendButtonPrefix={
