@@ -61,6 +61,9 @@ const mockAcpResetState = vi.fn();
 const mockAppendAcpUiLog = vi.fn();
 const mockPrimeRequestTraceFallback = vi.fn();
 const mockClearPendingRequestTraceFallback = vi.fn(() => false);
+const mockBeginPendingFirstResponse = vi.fn();
+const mockClearPendingFirstResponse = vi.fn();
+const mockUseAcpInitialMessage = vi.fn();
 const mockUseAcpRuntimeDiagnostics = vi.fn(() => ({
   status: null,
   statusSource: null,
@@ -81,7 +84,8 @@ const mockUseAcpMessage = vi.fn(() => ({
   primeRequestTraceFallback: mockPrimeRequestTraceFallback,
   clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
   aiProcessing: false,
-  setAiProcessing: vi.fn(),
+  beginPendingFirstResponse: mockBeginPendingFirstResponse,
+  clearPendingFirstResponse: mockClearPendingFirstResponse,
   resetState: mockAcpResetState,
   tokenUsage: null,
   contextLimit: 0,
@@ -328,7 +332,7 @@ vi.mock('@/renderer/pages/conversation/platforms/acp/acpRuntimeDiagnostics', () 
 }));
 
 vi.mock('@/renderer/pages/conversation/platforms/acp/useAcpInitialMessage', () => ({
-  useAcpInitialMessage: vi.fn(),
+  useAcpInitialMessage: (...args: unknown[]) => mockUseAcpInitialMessage(...args),
 }));
 
 vi.mock('@/renderer/pages/conversation/platforms/gemini/useGeminiMessage', () => ({
@@ -473,6 +477,9 @@ describe('platform send box queue integration', () => {
     mockPrimeRequestTraceFallback.mockReset();
     mockClearPendingRequestTraceFallback.mockReset();
     mockClearPendingRequestTraceFallback.mockReturnValue(false);
+    mockBeginPendingFirstResponse.mockReset();
+    mockClearPendingFirstResponse.mockReset();
+    mockUseAcpInitialMessage.mockReset();
 
     mockShouldEnqueueConversationCommand.mockReturnValue(false);
     mockUseCommandQueueEnabled.mockReturnValue(true);
@@ -487,7 +494,8 @@ describe('platform send box queue integration', () => {
       primeRequestTraceFallback: mockPrimeRequestTraceFallback,
       clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
       aiProcessing: false,
-      setAiProcessing: vi.fn(),
+      beginPendingFirstResponse: mockBeginPendingFirstResponse,
+      clearPendingFirstResponse: mockClearPendingFirstResponse,
       resetState: mockAcpResetState,
       tokenUsage: null,
       contextLimit: 0,
@@ -915,6 +923,47 @@ describe('platform send box queue integration', () => {
     expect(queueSpies.resetActiveExecution).toHaveBeenCalledWith('stop');
   });
 
+  it('passes semantic pending-first-response helpers into the ACP initial-message hook', () => {
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' />);
+
+    expect(mockUseAcpInitialMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        beginPendingFirstResponse: mockBeginPendingFirstResponse,
+        clearPendingFirstResponse: mockClearPendingFirstResponse,
+      })
+    );
+  });
+
+  it('starts ACP pending first-response state through the semantic helper on fresh sends', async () => {
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'trigger-send' }));
+
+    await waitFor(() => {
+      expect(mockAcpSendInvoke).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockBeginPendingFirstResponse).toHaveBeenCalledTimes(1);
+    expect(mockClearPendingFirstResponse).not.toHaveBeenCalled();
+  });
+
+  it('clears ACP pending first-response state through the semantic helper when dispatch fails', async () => {
+    mockAcpSendInvoke.mockResolvedValueOnce({ success: false, msg: 'send failed' });
+    mockAssertBridgeSuccess.mockImplementationOnce(() => {
+      throw new Error('send failed');
+    });
+
+    render(<AcpSendBox conversation_id='conv-acp' backend='claude' />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'trigger-send' }));
+
+    await waitFor(() => {
+      expect(mockClearPendingFirstResponse).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockBeginPendingFirstResponse).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the ACP disconnected banner when the hook reports a disconnected thread state', () => {
     mockUseAcpMessage.mockReturnValue({
       thought: { subject: '', description: '' },
@@ -927,7 +976,8 @@ describe('platform send box queue integration', () => {
       primeRequestTraceFallback: mockPrimeRequestTraceFallback,
       clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
       aiProcessing: false,
-      setAiProcessing: vi.fn(),
+      beginPendingFirstResponse: mockBeginPendingFirstResponse,
+      clearPendingFirstResponse: mockClearPendingFirstResponse,
       resetState: mockAcpResetState,
       tokenUsage: null,
       contextLimit: 0,
@@ -960,7 +1010,8 @@ describe('platform send box queue integration', () => {
       primeRequestTraceFallback: mockPrimeRequestTraceFallback,
       clearPendingRequestTraceFallback: mockClearPendingRequestTraceFallback,
       aiProcessing: false,
-      setAiProcessing: vi.fn(),
+      beginPendingFirstResponse: mockBeginPendingFirstResponse,
+      clearPendingFirstResponse: mockClearPendingFirstResponse,
       resetState: mockAcpResetState,
       tokenUsage: null,
       contextLimit: 0,

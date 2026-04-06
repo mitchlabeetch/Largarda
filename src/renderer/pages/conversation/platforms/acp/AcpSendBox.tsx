@@ -36,12 +36,7 @@ import { useSlashCommands } from '@/renderer/hooks/chat/useSlashCommands';
 import AcpAuthBanner from './AcpAuthBanner';
 import AcpConnectionBanner from './AcpConnectionBanner';
 import AcpErrorBanner from './AcpErrorBanner';
-import {
-  isAcpRuntimeBusySnapshot,
-  setAcpRuntimeUiWarmupPending,
-  useAcpRuntimeDiagnostics,
-  type AcpLogEntry,
-} from './acpRuntimeDiagnostics';
+import { isAcpRuntimeBusySnapshot, useAcpRuntimeDiagnostics, type AcpLogEntry } from './acpRuntimeDiagnostics';
 import { useAcpMessage } from './useAcpMessage';
 import { useAcpInitialMessage } from './useAcpInitialMessage';
 
@@ -254,7 +249,8 @@ const AcpSendBox: React.FC<{
     primeRequestTraceFallback,
     clearPendingRequestTraceFallback,
     acpLogs,
-    setAiProcessing,
+    beginPendingFirstResponse,
+    clearPendingFirstResponse,
     resetState,
     tokenUsage,
     contextLimit,
@@ -470,7 +466,8 @@ const AcpSendBox: React.FC<{
     backend,
     agentName,
     sessionMode,
-    setAiProcessing,
+    beginPendingFirstResponse,
+    clearPendingFirstResponse,
     appendAcpUiLog,
     primeRequestTraceFallback,
     clearPendingRequestTraceFallback,
@@ -485,8 +482,7 @@ const AcpSendBox: React.FC<{
         files: [...files],
       };
 
-      setAcpRuntimeUiWarmupPending(conversation_id, true);
-      setAiProcessing(true);
+      beginPendingFirstResponse();
       if (!teamId) {
         primeRequestTraceFallback({
           backend,
@@ -569,8 +565,7 @@ Please check your local CLI tool authentication status`,
           ipcBridge.acpConversation.responseStream.emit(errorMessage);
         }
 
-        setAcpRuntimeUiWarmupPending(conversation_id, false);
-        setAiProcessing(false);
+        clearPendingFirstResponse();
         throw error;
       }
 
@@ -585,9 +580,10 @@ Please check your local CLI tool authentication status`,
       checkAndUpdateTitle,
       conversation_id,
       clearPendingRequestTraceFallback,
+      clearPendingFirstResponse,
       primeRequestTraceFallback,
       sessionMode,
-      setAiProcessing,
+      beginPendingFirstResponse,
       t,
       teamId,
     ]
@@ -733,7 +729,6 @@ Please check your local CLI tool authentication status`,
         });
         await ipcBridge.conversation.stop.invoke({ conversation_id });
       } finally {
-        setAcpRuntimeUiWarmupPending(conversation_id, false);
         resetState();
         resetActiveExecution('stop');
       }
