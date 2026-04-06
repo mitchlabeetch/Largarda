@@ -93,19 +93,11 @@ export function buildBuiltinAcpSessionMcpServers(
       switch (server.transport.type) {
         case 'stdio':
           if (!effectiveCapabilities.stdio) return null;
-          // Replace npx with bun
-          let command = server.transport.command;
-          let args = server.transport.args || [];
-          if (command === 'npx') {
-            command = 'bun';
-            // Remove --yes/-y flag and prepend 'x' for bun x
-            args = ['x', '--bun', ...args.filter((arg) => arg !== '--yes' && arg !== '-y')];
-          }
           return {
             type: 'stdio',
             name: server.name,
-            command,
-            args,
+            command: server.transport.command,
+            args: server.transport.args || [],
             env: toNameValueEntries(server.transport.env) ?? [],
           };
         case 'http':
