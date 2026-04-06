@@ -201,6 +201,9 @@ resources/hub
 # Team iterations (dev-tester loop artifacts)
 iterations/
 
+# Team iterations (dev-tester loop artifacts)
+iterations/
+
 # Server build output
 dist-server/
 .omc/
