@@ -31,7 +31,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const [workspace, setWorkspace] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const allAgents = filterTeamSupportedAgents(cliAgents);
+  const allAgents = filterTeamSupportedAgents([...cliAgents]);
   const isDesktop = isElectronDesktop();
 
   const handleClose = () => {
@@ -153,7 +153,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
           </Select>
           <span className='text-12px text-[var(--color-text-4)]'>
             {t('team.create.supportedAgentsHint', {
-              defaultValue: 'Currently supports Claude, Codex, CodeBuddy. More agents coming soon.',
+              defaultValue: 'Currently supports Claude and Codex. More agents coming soon.',
             })}
           </span>
         </div>

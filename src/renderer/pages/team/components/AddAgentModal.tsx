@@ -17,7 +17,7 @@ const AddAgentModal: React.FC<Props> = ({ visible, onClose, onConfirm }) => {
   const [agentName, setAgentName] = useState('');
   const [selectedKey, setSelectedKey] = useState<string | undefined>(undefined);
 
-  const allAgents = filterTeamSupportedAgents(cliAgents);
+  const allAgents = filterTeamSupportedAgents([...cliAgents]);
 
   const handleClose = () => {
     setAgentName('');
@@ -98,7 +98,7 @@ const AddAgentModal: React.FC<Props> = ({ visible, onClose, onConfirm }) => {
           </Select>
           <span className='text-12px text-[var(--color-text-4)]'>
             {t('team.create.supportedAgentsHint', {
-              defaultValue: 'Currently supports Claude, Codex, CodeBuddy. More agents coming soon.',
+              defaultValue: 'Currently supports Claude and Codex. More agents coming soon.',
             })}
           </span>
         </div>
