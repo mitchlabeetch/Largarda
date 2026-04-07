@@ -25,13 +25,13 @@ type Props = {
 const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { cliAgents, presetAssistants } = useConversationAgents();
+  const { cliAgents } = useConversationAgents();
   const [name, setName] = useState('');
   const [dispatchAgentKey, setDispatchAgentKey] = useState<string | undefined>(undefined);
   const [workspace, setWorkspace] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const allAgents = filterTeamSupportedAgents([...cliAgents, ...presetAssistants]);
+  const allAgents = filterTeamSupportedAgents(cliAgents);
   const isDesktop = isElectronDesktop();
 
   const handleClose = () => {

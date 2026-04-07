@@ -13,11 +13,11 @@ type Props = {
 
 const AddAgentModal: React.FC<Props> = ({ visible, onClose, onConfirm }) => {
   const { t } = useTranslation();
-  const { cliAgents, presetAssistants } = useConversationAgents();
+  const { cliAgents } = useConversationAgents();
   const [agentName, setAgentName] = useState('');
   const [selectedKey, setSelectedKey] = useState<string | undefined>(undefined);
 
-  const allAgents = filterTeamSupportedAgents([...cliAgents, ...presetAssistants]);
+  const allAgents = filterTeamSupportedAgents(cliAgents);
 
   const handleClose = () => {
     setAgentName('');
