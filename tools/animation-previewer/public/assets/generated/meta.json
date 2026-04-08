@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-04-02T06:51:58.312Z",
+  "frameSize": {
+    "width": 64,
+    "height": 64
+  },
+  "animations": [
+    {
+      "key": "working",
+      "nFrames": 4,
+      "fps": 8,
+      "frames": [
+        "working/frame-0.png",
+        "working/frame-1.png",
+        "working/frame-2.png",
+        "working/frame-3.png"
+      ]
+    },
+    {
+      "key": "idle_sleeping",
+      "nFrames": 4,
+      "fps": 8,
+      "frames": [
+        "idle_sleeping/frame-0.png",
+        "idle_sleeping/frame-1.png",
+        "idle_sleeping/frame-2.png",
+        "idle_sleeping/frame-3.png"
+      ]
+    },
+    {
+      "key": "noting",
+      "nFrames": 4,
+      "fps": 8,
+      "frames": [
+        "noting/frame-0.png",
+        "noting/frame-1.png",
+        "noting/frame-2.png",
+        "noting/frame-3.png"
+      ]
+    }
+  ]
+}

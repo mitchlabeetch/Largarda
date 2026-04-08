@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-04-02T10:51:04.596Z",
+  "background": "background.png",
+  "characterSize": {
+    "width": 128,
+    "height": 128
+  },
+  "animations": [
+    {
+      "key": "working",
+      "nFrames": 3,
+      "fps": 6,
+      "frames": [
+        "character/working/frame-0.png",
+        "character/working/frame-1.png",
+        "character/working/frame-2.png"
+      ],
+      "position": {
+        "x": 260,
+        "y": 80
+      }
+    },
+    {
+      "key": "idle_sleeping",
+      "nFrames": 3,
+      "fps": 3,
+      "frames": [
+        "character/idle_sleeping/frame-0.png",
+        "character/idle_sleeping/frame-1.png",
+        "character/idle_sleeping/frame-2.png"
+      ],
+      "position": {
+        "x": 40,
+        "y": 100
+      }
+    },
+    {
+      "key": "noting",
+      "nFrames": 3,
+      "fps": 5,
+      "frames": [
+        "character/noting/frame-0.png",
+        "character/noting/frame-1.png",
+        "character/noting/frame-2.png"
+      ],
+      "position": {
+        "x": 150,
+        "y": 70
+      }
+    }
+  ]
+}

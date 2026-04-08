@@ -1,0 +1,67 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(10, 10, 20, 0.85);
+  border: 1px solid rgba(80, 200, 255, 0.2);
+  border-radius: 8px;
+  color: #c0d8f0;
+  min-width: 200px;
+  max-width: 260px;
+  backdrop-filter: blur(8px);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 11px;
+  color: rgba(120, 180, 220, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.animList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.animTag {
+  cursor: pointer;
+  font-size: 11px;
+  background: rgba(30, 50, 80, 0.6);
+  border-color: rgba(80, 140, 200, 0.3);
+  color: #8ac0e0;
+  transition: all 0.15s;
+}
+
+.animTag:hover {
+  border-color: rgba(80, 180, 255, 0.6);
+  color: #aadcff;
+}
+
+.animTagActive {
+  background: rgba(20, 100, 180, 0.5);
+  border-color: rgba(60, 160, 255, 0.7);
+  color: #60c0ff;
+}
+
+.loopTag {
+  cursor: pointer;
+  font-size: 11px;
+  background: rgba(30, 50, 80, 0.6);
+  border-color: rgba(80, 140, 200, 0.3);
+  color: #8ac0e0;
+  transition: all 0.15s;
+}
+
+.loopTagActive {
+  background: rgba(20, 100, 60, 0.5);
+  border-color: rgba(60, 200, 120, 0.7);
+  color: #60e0a0;
+}
