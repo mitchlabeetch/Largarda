@@ -8,6 +8,7 @@
     "discoveryAlert": "Detected skills from your CLI tools. Import them to use in AionUi.",
     "importAll": "Import All",
     "importAllSuccess": "{{count}} skills imported",
+    "importPartialSuccess": "{{success}} skills imported, {{failed}} failed",
     "noSkills": "No skills found. Import some to get started.",
     "custom": "Custom",
     "builtin": "Built-in",

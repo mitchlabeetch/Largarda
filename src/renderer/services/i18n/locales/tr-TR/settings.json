@@ -8,6 +8,7 @@
     "discoveryAlert": "CLI araçlarından beceriler tespit edildi. İçe aktararak AionUi'de kullanabilirsiniz.",
     "importAll": "Tümünü İçe Aktar",
     "importAllSuccess": "{{count}} beceri içe aktarıldı",
+    "importPartialSuccess": "{{success}} beceri içe aktarıldı, {{failed}} başarısız",
     "noSkills": "Beceri bulunamadı. Başlamak için bazılarını içe aktarın.",
     "custom": "Özel",
     "builtin": "Yerleşik",

@@ -8,6 +8,7 @@
     "discoveryAlert": "CLIツールからスキルが検出されました。インポートしてAionUiで使用できます。",
     "importAll": "すべてインポート",
     "importAllSuccess": "{{count}} 件のスキルをインポートしました",
+    "importPartialSuccess": "{{success}} 件のスキルをインポートしました、{{failed}} 件が失敗しました",
     "noSkills": "スキルが見つかりません。インポートして始めましょう。",
     "custom": "カスタム",
     "builtin": "ビルトイン",

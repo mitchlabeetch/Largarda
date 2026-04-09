@@ -8,6 +8,7 @@
     "discoveryAlert": "检测到来自 CLI 工具的技能。导入后即可在 AionUi 中使用。",
     "importAll": "全部导入",
     "importAllSuccess": "成功导入 {{count}} 项技能",
+    "importPartialSuccess": "成功导入 {{success}} 项技能，{{failed}} 项失败",
     "noSkills": "未发现技能。请导入技能以开始使用。",
     "custom": "自定义",
     "builtin": "内置",

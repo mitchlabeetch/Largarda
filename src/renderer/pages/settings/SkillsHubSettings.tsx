@@ -124,7 +124,15 @@ const SkillsHubSettings: React.FC = () => {
         errorCount++;
       }
     }
-    if (successCount > 0) {
+    if (successCount > 0 && errorCount > 0) {
+      Message.warning(
+        t('settings.skillsHub.importPartialSuccess', {
+          success: successCount,
+          failed: errorCount,
+          defaultValue: `${successCount} skills imported, ${errorCount} failed`,
+        })
+      );
+    } else if (successCount > 0) {
       Message.success(
         t('settings.skillsHub.importAllSuccess', {
           count: successCount,
