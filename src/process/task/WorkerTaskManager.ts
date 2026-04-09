@@ -13,9 +13,11 @@ import type { TChatConversation } from '@/common/config/storage';
 import { cronBusyGuard } from '@process/services/cron/CronBusyGuard';
 
 /** CLI-backed agents (acp, codex) idle for longer than this are killed to reclaim memory. */
-const AGENT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const AGENT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 /** How often to scan for idle CLI-backed agents. */
-const AGENT_IDLE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const AGENT_IDLE_CHECK_INTERVAL_MS = 1 * 60 * 1000;
+/** Maximum number of concurrent ACP agent processes allowed. When exceeded, the least-recently-active agents are killed. */
+const MAX_CONCURRENT_ACP_AGENTS = 3;
 
 export class WorkerTaskManager implements IWorkerTaskManager {
   private taskList: Array<{ id: string; task: IAgentManager }> = [];
@@ -30,6 +32,8 @@ export class WorkerTaskManager implements IWorkerTaskManager {
 
   private killIdleCliAgents(): void {
     const now = Date.now();
+
+    // Phase 1: kill agents that have been idle beyond the timeout
     const idleTasks = this.taskList.filter(
       (item) =>
         item.task.type === 'acp' &&
@@ -38,6 +42,23 @@ export class WorkerTaskManager implements IWorkerTaskManager {
     );
     for (const item of idleTasks) {
       this.kill(item.id, 'idle_timeout');
+    }
+
+    // Phase 2: enforce max concurrent limit — evict least-recently-active agents
+    this.evictExcessAgents();
+  }
+
+  private evictExcessAgents(): void {
+    const acpTasks = this.taskList.filter(
+      (item) => item.task.type === 'acp' && !cronBusyGuard.isProcessing(item.id)
+    );
+    if (acpTasks.length <= MAX_CONCURRENT_ACP_AGENTS) return;
+
+    // Sort by lastActivityAt ascending (oldest first)
+    acpTasks.sort((a, b) => a.task.lastActivityAt - b.task.lastActivityAt);
+    const toEvict = acpTasks.length - MAX_CONCURRENT_ACP_AGENTS;
+    for (let i = 0; i < toEvict; i++) {
+      this.kill(acpTasks[i].id, 'idle_timeout');
     }
   }
 
@@ -60,6 +81,8 @@ export class WorkerTaskManager implements IWorkerTaskManager {
   private _buildAndCache(conversation: TChatConversation, options?: BuildConversationOptions): IAgentManager {
     const task = this.factory.create(conversation, options);
     this.addTask(conversation.id, task);
+    // Evict excess agents immediately after creating a new one
+    this.evictExcessAgents();
     return task;
   }
 

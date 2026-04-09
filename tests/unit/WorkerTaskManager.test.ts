@@ -95,12 +95,12 @@ describe('WorkerTaskManager', () => {
 
     const agent = {
       ...makeAgent('c1', 'acp'),
-      lastActivityAt: Date.now() - 31 * 60 * 1000,
+      lastActivityAt: Date.now() - 6 * 60 * 1000,
     };
     const mgr = new WorkerTaskManager(makeFactory(agent) as any, repo);
     mgr.addTask('c1', agent as any);
 
-    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    vi.advanceTimersByTime(1 * 60 * 1000 + 1);
 
     expect(agent.kill).toHaveBeenCalledWith('idle_timeout');
     expect(mgr.getTask('c1')).toBeUndefined();
@@ -137,6 +137,103 @@ describe('WorkerTaskManager', () => {
       { id: 'c2', type: 'acp' },
       { id: 'c3', type: 'nanobot' },
     ]);
+  });
+
+  // --- evictExcessAgents (LRU) ---
+
+  it('evicts least-recently-active acp agents when exceeding max concurrent limit', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-02T10:00:00Z'));
+
+    const mgr = new WorkerTaskManager(makeFactory() as any, repo);
+    const agents = [];
+
+    // Create 5 acp agents with staggered lastActivityAt
+    for (let i = 0; i < 5; i++) {
+      const agent = {
+        ...makeAgent(`c${i}`, 'acp'),
+        lastActivityAt: Date.now() - (5 - i) * 1000, // c0 oldest, c4 newest
+      };
+      agents.push(agent);
+      mgr.addTask(`c${i}`, agent as any);
+    }
+
+    // Trigger the idle check interval (1 minute) to run eviction
+    vi.advanceTimersByTime(1 * 60 * 1000 + 1);
+
+    // Should keep only the 3 most recent (c2, c3, c4) and evict c0, c1
+    expect(agents[0].kill).toHaveBeenCalledWith('idle_timeout');
+    expect(agents[1].kill).toHaveBeenCalledWith('idle_timeout');
+    expect(mgr.getTask('c0')).toBeUndefined();
+    expect(mgr.getTask('c1')).toBeUndefined();
+    expect(mgr.getTask('c2')).toBeDefined();
+    expect(mgr.getTask('c3')).toBeDefined();
+    expect(mgr.getTask('c4')).toBeDefined();
+  });
+
+  it('evicts excess agents immediately when building a new acp task', async () => {
+    const mgr = new WorkerTaskManager(makeFactory() as any, repo);
+    const agents = [];
+
+    // Pre-fill 3 acp agents (at the limit)
+    for (let i = 0; i < 3; i++) {
+      const agent = {
+        ...makeAgent(`c${i}`, 'acp'),
+        lastActivityAt: Date.now() - (3 - i) * 1000,
+      };
+      agents.push(agent);
+      mgr.addTask(`c${i}`, agent as any);
+    }
+
+    // Build a 4th — should evict the oldest (c0)
+    const newAgent = {
+      ...makeAgent('c3', 'acp'),
+      lastActivityAt: Date.now(),
+    };
+    const factory = makeFactory(newAgent);
+    // Need a new manager with this factory, but we want to keep the existing tasks
+    // Instead, manually simulate what _buildAndCache does
+    vi.mocked(repo.getConversation).mockReturnValue(makeConversation('c3', 'acp') as any);
+    const mgr2 = new WorkerTaskManager(factory as any, repo);
+    // Add existing agents
+    for (let i = 0; i < 3; i++) {
+      mgr2.addTask(`c${i}`, agents[i] as any);
+    }
+
+    await mgr2.getOrBuildTask('c3');
+
+    // c0 (oldest) should be evicted
+    expect(agents[0].kill).toHaveBeenCalledWith('idle_timeout');
+    expect(mgr2.getTask('c0')).toBeUndefined();
+    expect(mgr2.getTask('c3')).toBeDefined();
+  });
+
+  it('does not evict non-acp agents during LRU eviction', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-02T10:00:00Z'));
+
+    const mgr = new WorkerTaskManager(makeFactory() as any, repo);
+
+    // 4 acp agents + 2 gemini agents
+    const acpAgents = [];
+    for (let i = 0; i < 4; i++) {
+      const agent = {
+        ...makeAgent(`acp${i}`, 'acp'),
+        lastActivityAt: Date.now() - (4 - i) * 1000,
+      };
+      acpAgents.push(agent);
+      mgr.addTask(`acp${i}`, agent as any);
+    }
+    const geminiAgent = { ...makeAgent('g1', 'gemini'), lastActivityAt: Date.now() - 100_000 };
+    mgr.addTask('g1', geminiAgent as any);
+
+    vi.advanceTimersByTime(1 * 60 * 1000 + 1);
+
+    // Only oldest acp agent evicted (acp0), gemini untouched
+    expect(acpAgents[0].kill).toHaveBeenCalled();
+    expect(mgr.getTask('acp0')).toBeUndefined();
+    expect(mgr.getTask('g1')).toBeDefined();
+    expect(geminiAgent.kill).not.toHaveBeenCalled();
   });
 
   // --- getOrBuildTask: cache hit ---
