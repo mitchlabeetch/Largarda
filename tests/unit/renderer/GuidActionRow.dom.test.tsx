@@ -169,7 +169,7 @@ describe('GuidActionRow', () => {
       />
     );
 
-    expect(screen.getByText('settings.builtinSkills (2/2)', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('settings.autoInjectedSkills (2/2)', { exact: false })).toBeInTheDocument();
   });
 
   it('calls onToggleBuiltinSkill when skill checkbox is toggled', () => {
