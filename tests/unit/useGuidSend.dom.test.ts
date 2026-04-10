@@ -79,6 +79,8 @@ function makeDeps(overrides: Partial<GuidSendDeps> = {}): GuidSendDeps {
     getEffectiveAgentType: vi.fn(() => ({ agentType: 'remote', isAvailable: true })),
     resolvePresetRulesAndSkills: vi.fn().mockResolvedValue({}),
     resolveEnabledSkills: vi.fn(),
+    resolveDisabledBuiltinSkills: vi.fn(),
+    guidDisabledBuiltinSkills: [],
     isMainAgentAvailable: vi.fn(() => true),
     getAvailableFallbackAgent: vi.fn(() => null),
     currentEffectiveAgentInfo: { agentType: 'remote', isAvailable: true },

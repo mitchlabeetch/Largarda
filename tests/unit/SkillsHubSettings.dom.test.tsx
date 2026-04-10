@@ -11,6 +11,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock react-router-dom
+const mockSetSearchParams = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useSearchParams: () => [new URLSearchParams(), mockSetSearchParams],
+}));
+
 // Mock @arco-design/web-react
 vi.mock('@arco-design/web-react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@arco-design/web-react')>();
@@ -51,6 +57,7 @@ vi.mock('@icon-park/react', () => {
     Delete: () => <span data-testid='icon-delete' />,
     FolderOpen: () => <span data-testid='icon-folder' />,
     Info: () => <span data-testid='icon-info' />,
+    Lightning: () => <span data-testid='icon-lightning' />,
     Search: () => <span data-testid='icon-search' />,
     Plus: () => <span data-testid='icon-plus' />,
     Refresh: () => <span data-testid='icon-refresh' />,
@@ -69,6 +76,7 @@ const mockImportSkillWithSymlink = vi.fn();
 const mockDeleteSkill = vi.fn();
 const mockExportSkillWithSymlink = vi.fn();
 const mockAddCustomExternalPath = vi.fn();
+const mockListBuiltinAutoSkills = vi.fn();
 const mockShowOpen = vi.fn();
 
 vi.mock('@/common', () => {
@@ -82,6 +90,7 @@ vi.mock('@/common', () => {
         deleteSkill: { invoke: (...args: any[]) => mockDeleteSkill(...args) },
         exportSkillWithSymlink: { invoke: (...args: any[]) => mockExportSkillWithSymlink(...args) },
         addCustomExternalPath: { invoke: (...args: any[]) => mockAddCustomExternalPath(...args) },
+        listBuiltinAutoSkills: { invoke: (...args: any[]) => mockListBuiltinAutoSkills(...args) },
       },
       dialog: {
         showOpen: { invoke: (...args: any[]) => mockShowOpen(...args) },
@@ -128,6 +137,8 @@ describe('SkillsHubSettings Component', () => {
       userSkillsDir: '/user/skills',
       builtinSkillsDir: '/builtin/skills',
     });
+
+    mockListBuiltinAutoSkills.mockResolvedValue([]);
   });
 
   it('should render main sections and load skills', async () => {

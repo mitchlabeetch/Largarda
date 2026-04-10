@@ -250,7 +250,9 @@ export class TeamSessionService {
     return '';
   }
 
-  private async loadPresetResources(customAgentId: string): Promise<{ rules?: string; enabledSkills?: string[] }> {
+  private async loadPresetResources(
+    customAgentId: string
+  ): Promise<{ rules?: string; enabledSkills?: string[]; excludeBuiltinSkills?: string[] }> {
     const language = await ProcessConfig.get('language');
     const localeKey = resolveLocaleKey(language || 'en-US');
     const deps: PresetAssistantResourceDeps = {
@@ -268,6 +270,10 @@ export class TeamSessionService {
         const customAgents = await ProcessConfig.get('acp.customAgents');
         return customAgents?.find((agent) => agent.id === assistantId)?.enabledSkills;
       },
+      getDisabledBuiltinSkills: async (assistantId) => {
+        const customAgents = await ProcessConfig.get('acp.customAgents');
+        return customAgents?.find((agent) => agent.id === assistantId)?.disabledBuiltinSkills;
+      },
       warn: (message, error) => {
         console.warn(message, error);
       },
@@ -277,6 +283,7 @@ export class TeamSessionService {
     return {
       rules: resources.rules,
       enabledSkills: resources.enabledSkills,
+      excludeBuiltinSkills: resources.disabledBuiltinSkills,
     };
   }
 

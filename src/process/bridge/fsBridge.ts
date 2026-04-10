@@ -13,7 +13,13 @@ import https from 'node:https';
 import http from 'node:http';
 import JSZip from 'jszip';
 import { ipcBridge } from '@/common';
-import { getSystemDir, getAssistantsDir, getSkillsDir, getBuiltinSkillsCopyDir } from '@process/utils/initStorage';
+import {
+  getSystemDir,
+  getAssistantsDir,
+  getSkillsDir,
+  getBuiltinSkillsCopyDir,
+  getAutoSkillsDir,
+} from '@process/utils/initStorage';
 import { readDirectoryRecursive } from '@process/utils';
 import type { IWorkspaceFlatFile } from '@/common/adapter/ipcBridge';
 
@@ -1026,6 +1032,48 @@ export function initFsBridge(): void {
       return result;
     } catch (error) {
       console.error('[fsBridge] Failed to list available skills:', error);
+      return [];
+    }
+  });
+
+  // 获取内置自动注入 skills 列表 / List builtin auto-injected skills from _builtin directory
+  ipcBridge.fs.listBuiltinAutoSkills.provider(async () => {
+    try {
+      const autoSkillsDir = getAutoSkillsDir();
+      const skills: Array<{ name: string; description: string }> = [];
+
+      try {
+        await fs.access(autoSkillsDir);
+      } catch {
+        return skills;
+      }
+
+      const entries = await fs.readdir(autoSkillsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+
+        const skillMdPath = path.join(autoSkillsDir, entry.name, 'SKILL.md');
+        try {
+          const content = await fs.readFile(skillMdPath, 'utf-8');
+          const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+          if (frontMatterMatch) {
+            const yaml = frontMatterMatch[1];
+            const nameMatch = yaml.match(/^name:\s*(.+)$/m);
+            const descMatch = yaml.match(/^description:\s*['"]?(.+?)['"]?$/m);
+            skills.push({
+              name: nameMatch ? nameMatch[1].trim() : entry.name,
+              description: descMatch ? descMatch[1].trim() : '',
+            });
+          }
+        } catch {
+          // SKILL.md not found or unreadable, skip
+        }
+      }
+
+      console.log(`[fsBridge] Listed ${skills.length} builtin auto-injected skills`);
+      return skills;
+    } catch (error) {
+      console.error('[fsBridge] Failed to list builtin auto skills:', error);
       return [];
     }
   });

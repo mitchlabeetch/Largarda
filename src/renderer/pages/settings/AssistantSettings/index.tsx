@@ -36,8 +36,8 @@ import AssistantEditDrawer from './AssistantEditDrawer';
 import AssistantListPanel from './AssistantListPanel';
 import DeleteAssistantModal from './DeleteAssistantModal';
 import SkillConfirmModals from './SkillConfirmModals';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 type AssistantNavigationState = {
   openAssistantId?: string;
@@ -50,7 +50,12 @@ const AssistantSettings: React.FC = () => {
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigationState = (location.state as AssistantNavigationState | null) ?? null;
+  const highlightId = searchParams.get('highlight');
+  const handleHighlightConsumed = useCallback(() => {
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
   const avatarImageMap: Record<string, string> = useMemo(
     () => ({
       'cowork.svg': coworkSvg,
@@ -148,6 +153,8 @@ const AssistantSettings: React.FC = () => {
             onCreate={() => void editor.handleCreate()}
             onToggleEnabled={(assistant, checked) => void editor.handleToggleEnabled(assistant, checked)}
             setActiveAssistantId={setActiveAssistantId}
+            highlightId={highlightId}
+            onHighlightConsumed={handleHighlightConsumed}
           />
 
           <AssistantEditDrawer
@@ -175,6 +182,9 @@ const AssistantSettings: React.FC = () => {
             setDeletePendingSkillName={editor.setDeletePendingSkillName}
             setDeleteCustomSkillName={editor.setDeleteCustomSkillName}
             setSkillsModalVisible={editor.setSkillsModalVisible}
+            builtinAutoSkills={editor.builtinAutoSkills}
+            disabledBuiltinSkills={editor.disabledBuiltinSkills}
+            setDisabledBuiltinSkills={editor.setDisabledBuiltinSkills}
             activeAssistant={activeAssistant}
             activeAssistantId={activeAssistantId}
             isReadonlyAssistant={isReadonlyAssistant}

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Track calls to prepareFirstMessageWithSkillsIndex
 const { mockPrepareFirstMessage, mockAgentSendMessage } = vi.hoisted(() => ({
-  mockPrepareFirstMessage: vi.fn(async (content: string) => `[injected] ${content}`),
+  mockPrepareFirstMessage: vi.fn(async (content: string) => ({ content: `[injected] ${content}`, loadedSkills: [] })),
   mockAgentSendMessage: vi.fn(async () => ({ success: true })),
 }));
 
@@ -35,6 +35,7 @@ vi.mock('@/common', () => ({
         remove: { emit: vi.fn() },
       },
       responseStream: { emit: vi.fn() },
+      listChanged: { emit: vi.fn() },
     },
   },
 }));
@@ -44,7 +45,10 @@ vi.mock('@process/channels/agent/ChannelEventBus', () => ({
 }));
 
 vi.mock('@process/services/database', () => ({
-  getDatabase: vi.fn(async () => ({ updateConversation: vi.fn() })),
+  getDatabase: vi.fn(async () => ({
+    updateConversation: vi.fn(),
+    getConversation: vi.fn(() => ({ success: true, data: { extra: {}, source: 'aionui' } })),
+  })),
 }));
 
 vi.mock('@process/utils/initStorage', () => ({

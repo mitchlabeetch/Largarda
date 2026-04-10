@@ -97,6 +97,9 @@ describe('GuidActionRow', () => {
         customAgents={[]}
         localeKey='en-US'
         onClosePresetTag={vi.fn()}
+        builtinAutoSkills={[]}
+        disabledBuiltinSkills={[]}
+        onToggleBuiltinSkill={vi.fn()}
         loading={false}
         isButtonDisabled={false}
         speechInputNode={<button aria-label='speech-input'>Mic</button>}

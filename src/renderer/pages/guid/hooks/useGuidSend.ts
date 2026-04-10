@@ -49,6 +49,10 @@ export type GuidSendDeps = {
   resolveEnabledSkills: (
     agentInfo: { backend: AcpBackend; customAgentId?: string } | undefined
   ) => string[] | undefined;
+  resolveDisabledBuiltinSkills: (
+    agentInfo: { backend: AcpBackend; customAgentId?: string } | undefined
+  ) => string[] | undefined;
+  guidDisabledBuiltinSkills: string[];
   isMainAgentAvailable: (agentType: string) => boolean;
   getAvailableFallbackAgent: () => string | null;
   currentEffectiveAgentInfo: EffectiveAgentInfo;
@@ -99,6 +103,8 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     getEffectiveAgentType,
     resolvePresetRulesAndSkills,
     resolveEnabledSkills,
+    resolveDisabledBuiltinSkills,
+    guidDisabledBuiltinSkills,
     isMainAgentAvailable,
     getAvailableFallbackAgent,
     currentEffectiveAgentInfo,
@@ -126,6 +132,9 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
 
     const { rules: presetRules } = await resolvePresetRulesAndSkills(agentInfo);
     const enabledSkills = resolveEnabledSkills(agentInfo);
+    // Use guid page's local skill state (initialized from assistant config, overridable by user)
+    const excludeBuiltinSkills =
+      guidDisabledBuiltinSkills.length > 0 ? guidDisabledBuiltinSkills : resolveDisabledBuiltinSkills(agentInfo);
 
     let finalEffectiveAgentType = effectiveAgentType;
     if (isPreset && !isMainAgentAvailable(effectiveAgentType)) {
@@ -168,11 +177,13 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             ? {
                 rules: presetRules,
                 enabledSkills,
+                excludeBuiltinSkills,
               }
             : undefined,
           sessionMode: selectedMode,
           extra: {
             defaultFiles: files,
+            excludeBuiltinSkills,
             webSearchEngine:
               placeholderModel.platform === 'gemini-with-google-auth' ||
               placeholderModel.platform === 'gemini-vertex-ai'
@@ -235,6 +246,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             switchedAt: Date.now(),
           },
           enabledSkills: isPreset ? enabledSkills : undefined,
+          excludeBuiltinSkills,
         },
       });
 
@@ -284,6 +296,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         extra: {
           defaultFiles: files,
           enabledSkills: isPreset ? enabledSkills : undefined,
+          excludeBuiltinSkills,
         },
       });
 
@@ -331,6 +344,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             customWorkspace: isCustomWorkspace,
             presetRules: isPreset ? presetRules : undefined,
             enabledSkills: isPreset ? enabledSkills : undefined,
+            excludeBuiltinSkills,
             presetAssistantId,
             sessionMode: selectedMode,
           },
@@ -401,12 +415,14 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
           ? {
               rules: presetRules,
               enabledSkills,
+              excludeBuiltinSkills,
             }
           : undefined,
         sessionMode: selectedMode,
         currentModelId: selectedAcpModel || undefined,
         extra: {
           defaultFiles: files,
+          excludeBuiltinSkills,
         },
       });
 
@@ -476,6 +492,8 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     getEffectiveAgentType,
     resolvePresetRulesAndSkills,
     resolveEnabledSkills,
+    resolveDisabledBuiltinSkills,
+    guidDisabledBuiltinSkills,
     isMainAgentAvailable,
     getAvailableFallbackAgent,
     navigate,

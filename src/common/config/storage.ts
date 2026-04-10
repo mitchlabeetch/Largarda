@@ -219,6 +219,8 @@ export type TChatConversation =
         presetRules?: string; // 系统规则，在初始化时注入 / System rules, injected at initialization
         /** 启用的 skills 列表，用于过滤 SkillManager 加载的 skills / Enabled skills list for filtering SkillManager skills */
         enabledSkills?: string[];
+        /** 实际加载的 skills 快照（首次消息时持久化）/ Snapshot of actually loaded skills (persisted on first message) */
+        loadedSkills?: Array<{ name: string; description: string }>;
         /** 预设助手 ID，用于在会话面板显示助手名称和头像 / Preset assistant ID for displaying name and avatar in conversation panel */
         presetAssistantId?: string;
         /** 是否置顶会话 / Whether this conversation is pinned */
@@ -246,6 +248,10 @@ export type TChatConversation =
           presetContext?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
           /** 启用的 skills 列表，用于过滤 SkillManager 加载的 skills / Enabled skills list for filtering SkillManager skills */
           enabledSkills?: string[];
+          /** 排除的内置自动注入 skills / Builtin auto-injected skills to exclude */
+          excludeBuiltinSkills?: string[];
+          /** 实际加载的 skills 快照 / Snapshot of actually loaded skills */
+          loadedSkills?: Array<{ name: string; description: string }>;
           /** 预设助手 ID，用于在会话面板显示助手名称和头像 / Preset assistant ID for displaying name and avatar in conversation panel */
           presetAssistantId?: string;
           /** 是否置顶会话 / Whether this conversation is pinned */
@@ -289,6 +295,8 @@ export type TChatConversation =
           presetContext?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
           /** 启用的 skills 列表，用于过滤 SkillManager 加载的 skills / Enabled skills list for filtering SkillManager skills */
           enabledSkills?: string[];
+          /** 实际加载的 skills 快照 / Snapshot of actually loaded skills */
+          loadedSkills?: Array<{ name: string; description: string }>;
           /** 预设助手 ID，用于在会话面板显示助手名称和头像 / Preset assistant ID for displaying name and avatar in conversation panel */
           presetAssistantId?: string;
           /** 是否置顶会话 / Whether this conversation is pinned */
@@ -338,6 +346,8 @@ export type TChatConversation =
           };
           /** 启用的 skills 列表 / Enabled skills list */
           enabledSkills?: string[];
+          /** 实际加载的 skills 快照 / Snapshot of actually loaded skills */
+          loadedSkills?: Array<{ name: string; description: string }>;
           /** 预设助手 ID / Preset assistant ID */
           presetAssistantId?: string;
           /** 是否置顶会话 / Whether this conversation is pinned */
@@ -360,6 +370,8 @@ export type TChatConversation =
           customWorkspace?: boolean;
           /** 启用的 skills 列表 / Enabled skills list */
           enabledSkills?: string[];
+          /** 实际加载的 skills 快照 / Snapshot of actually loaded skills */
+          loadedSkills?: Array<{ name: string; description: string }>;
           /** 预设助手 ID / Preset assistant ID */
           presetAssistantId?: string;
           /** 是否置顶会话 / Whether this conversation is pinned */
@@ -386,6 +398,8 @@ export type TChatConversation =
           sessionKey?: string;
           /** Enabled skills list */
           enabledSkills?: string[];
+          /** Snapshot of actually loaded skills */
+          loadedSkills?: Array<{ name: string; description: string }>;
           /** Preset assistant ID */
           presetAssistantId?: string;
           /** Whether this conversation is pinned */
@@ -410,6 +424,8 @@ export type TChatConversation =
         presetRules?: string;
         /** Enabled skills list */
         enabledSkills?: string[];
+        /** Snapshot of actually loaded skills */
+        loadedSkills?: Array<{ name: string; description: string }>;
         /** Preset assistant ID */
         presetAssistantId?: string;
         /** Whether this conversation is pinned */

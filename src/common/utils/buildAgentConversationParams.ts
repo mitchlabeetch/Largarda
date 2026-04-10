@@ -12,6 +12,7 @@ import { ACP_ROUTED_PRESET_TYPES } from '@/common/types/acpTypes';
 export type BuildAgentConversationPresetResources = {
   rules?: string;
   enabledSkills?: string[];
+  excludeBuiltinSkills?: string[];
 };
 
 export type BuildAgentConversationInput = {
@@ -87,6 +88,7 @@ export function buildAgentConversationParams(input: BuildAgentConversationInput)
 
   if (isPreset) {
     extra.enabledSkills = presetResources?.enabledSkills;
+    extra.excludeBuiltinSkills = presetResources?.excludeBuiltinSkills;
     extra.presetAssistantId = effectivePresetAssistantId;
     if (type === 'gemini') {
       extra.presetRules = presetResources?.rules;

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ipcBridge } from '@/common';
 import { resolveLocaleKey } from '@/common/utils';
 import { useAssistantBackends } from '@/renderer/hooks/assistant';
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
@@ -67,6 +68,23 @@ const GuidPage: React.FC = () => {
     }
   }, []);
 
+  // --- Skills state ---
+  const [builtinAutoSkills, setBuiltinAutoSkills] = useState<Array<{ name: string; description: string }>>([]);
+  const [guidDisabledBuiltinSkills, setGuidDisabledBuiltinSkills] = useState<string[]>([]);
+
+  useEffect(() => {
+    ipcBridge.fs.listBuiltinAutoSkills
+      .invoke()
+      .then(setBuiltinAutoSkills)
+      .catch(() => setBuiltinAutoSkills([]));
+  }, []);
+
+  const handleToggleBuiltinSkill = useCallback((skillName: string) => {
+    setGuidDisabledBuiltinSkills((prev) =>
+      prev.includes(skillName) ? prev.filter((s) => s !== skillName) : [...prev, skillName]
+    );
+  }, []);
+
   // --- Hooks ---
   const modelSelection = useGuidModelSelection();
 
@@ -116,6 +134,8 @@ const GuidPage: React.FC = () => {
     getEffectiveAgentType: agentSelection.getEffectiveAgentType,
     resolvePresetRulesAndSkills: agentSelection.resolvePresetRulesAndSkills,
     resolveEnabledSkills: agentSelection.resolveEnabledSkills,
+    resolveDisabledBuiltinSkills: agentSelection.resolveDisabledBuiltinSkills,
+    guidDisabledBuiltinSkills,
     isMainAgentAvailable: agentSelection.isMainAgentAvailable,
     getAvailableFallbackAgent: agentSelection.getAvailableFallbackAgent,
     currentEffectiveAgentInfo: agentSelection.currentEffectiveAgentInfo,
@@ -269,6 +289,16 @@ const GuidPage: React.FC = () => {
     const candidates = new Set([selectedId, `builtin-${strippedId}`, strippedId]);
     return agentSelection.customAgents.find((item) => candidates.has(item.id));
   }, [agentSelection.customAgents, agentSelection.isPresetAgent, agentSelection.selectedAgentInfo?.customAgentId]);
+
+  // Sync disabledBuiltinSkills from preset assistant config
+  useEffect(() => {
+    if (agentSelection.isPresetAgent && selectedAssistantRecord) {
+      setGuidDisabledBuiltinSkills(selectedAssistantRecord.disabledBuiltinSkills || []);
+    } else {
+      setGuidDisabledBuiltinSkills([]);
+    }
+  }, [agentSelection.isPresetAgent, selectedAssistantRecord]);
+
   const heroTitle = useMemo(() => {
     if (!agentSelection.isPresetAgent) return t('conversation.welcome.title');
     const i18nName = selectedAssistantRecord?.nameI18n?.[localeKey];
@@ -476,6 +506,9 @@ const GuidPage: React.FC = () => {
       }
       cachedConfigOptions={agentSelection.cachedConfigOptions}
       onConfigOptionSelect={agentSelection.setPendingConfigOption}
+      builtinAutoSkills={builtinAutoSkills}
+      disabledBuiltinSkills={guidDisabledBuiltinSkills}
+      onToggleBuiltinSkill={handleToggleBuiltinSkill}
       hidePresetTag
       loading={guidInput.loading}
       isButtonDisabled={send.isButtonDisabled}

@@ -36,7 +36,21 @@ type AssistantLike = {
  * - customAgentId: ACP 会话的旧格式
  * - enabledSkills: Gemini Cowork 会话的旧格式
  */
-function resolvePresetId(conversation: TChatConversation): string | null {
+/**
+ * Resolve the assistant config ID (preserving original prefix like 'builtin-').
+ * Use this when matching against the assistant list in acp.customAgents.
+ */
+export function resolveAssistantConfigId(conversation: TChatConversation): string | null {
+  const extra = conversation.extra as {
+    presetAssistantId?: unknown;
+    customAgentId?: unknown;
+  };
+  const presetAssistantId = typeof extra?.presetAssistantId === 'string' ? extra.presetAssistantId.trim() : '';
+  const customAgentId = typeof extra?.customAgentId === 'string' ? extra.customAgentId.trim() : '';
+  return presetAssistantId || customAgentId || null;
+}
+
+export function resolvePresetId(conversation: TChatConversation): string | null {
   const extra = conversation.extra as {
     presetAssistantId?: unknown;
     customAgentId?: unknown;

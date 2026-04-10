@@ -145,8 +145,10 @@ export class AcpSkillManager {
   /**
    * 初始化：发现并加载内置 skills 的索引（所有场景自动注入）
    * Initialize: discover and load index of builtin skills (auto-injected for all scenarios)
+   *
+   * @param excludeSkills - 排除的内置 skill 名称列表 / Builtin skill names to exclude
    */
-  async discoverAutoSkills(): Promise<void> {
+  async discoverAutoSkills(excludeSkills?: string[]): Promise<void> {
     if (this.autoInitialized) return;
 
     const builtinDir = this.autoSkillsDir;
@@ -156,6 +158,8 @@ export class AcpSkillManager {
       return;
     }
 
+    const excludeSet = new Set(excludeSkills ?? []);
+
     try {
       const entries = await fs.readdir(builtinDir, { withFileTypes: true });
 
@@ -163,6 +167,10 @@ export class AcpSkillManager {
         if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 
         const skillName = entry.name;
+
+        // Skip excluded builtin skills
+        if (excludeSet.has(skillName)) continue;
+
         const skillFile = path.join(builtinDir, skillName, 'SKILL.md');
         if (!existsSync(skillFile)) continue;
 
@@ -177,13 +185,19 @@ export class AcpSkillManager {
             // body 不在这里加载，按需获取
           };
 
+          // Also check by resolved name
+          if (name && excludeSet.has(name)) continue;
+
           this.autoSkills.set(skillName, skillDef);
         } catch (error) {
           console.warn(`[AcpSkillManager] Failed to load builtin skill ${skillName}:`, error);
         }
       }
 
-      console.log(`[AcpSkillManager] Discovered ${this.autoSkills.size} builtin skills`);
+      console.log(
+        `[AcpSkillManager] Discovered ${this.autoSkills.size} builtin skills` +
+          (excludeSet.size > 0 ? ` (excluded: ${[...excludeSet].join(', ')})` : '')
+      );
     } catch (error) {
       console.error(`[AcpSkillManager] Failed to discover builtin skills:`, error);
     }
@@ -246,10 +260,13 @@ export class AcpSkillManager {
   /**
    * 初始化：发现并加载所有 skills 的索引（不加载 body）
    * Initialize: discover and load index of all skills (without body)
+   *
+   * @param enabledSkills - 启用的可选 skills 列表 / Enabled optional skills list
+   * @param excludeBuiltinSkills - 排除的内置自动注入 skills / Builtin auto-injected skills to exclude
    */
-  async discoverSkills(enabledSkills?: string[]): Promise<void> {
+  async discoverSkills(enabledSkills?: string[], excludeBuiltinSkills?: string[]): Promise<void> {
     // 始终先加载内置 skills / Always load builtin skills first
-    await this.discoverAutoSkills();
+    await this.discoverAutoSkills(excludeBuiltinSkills);
 
     // 加载扩展贡献的 skills / Load extension-contributed skills
     await this.discoverExtensionSkills(enabledSkills);

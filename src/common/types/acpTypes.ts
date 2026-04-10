@@ -330,6 +330,15 @@ export interface AcpBackendConfig {
    * These skills will be displayed in the Custom Skills section even after being imported.
    */
   customSkillNames?: string[];
+
+  /**
+   * 禁用的内置自动注入 skills 列表（仅 isPreset=true 时生效）
+   * 内置 skills（_builtin/ 目录下）默认自动注入所有对话，此列表中的 skills 将被排除
+   *
+   * Disabled builtin auto-injected skills (only applies when isPreset=true).
+   * Builtin skills (in _builtin/ directory) are auto-injected by default; skills in this list will be excluded.
+   */
+  disabledBuiltinSkills?: string[];
 }
 
 // 所有后端配置 - 包括暂时禁用的 / All backend configurations - including temporarily disabled ones

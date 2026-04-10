@@ -54,6 +54,8 @@ interface AcpAgentManagerData {
   presetContext?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
   /** 启用的 skills 列表，用于过滤 SkillManager 加载的 skills / Enabled skills list for filtering SkillManager skills */
   enabledSkills?: string[];
+  /** 排除的内置自动注入 skills / Builtin auto-injected skills to exclude */
+  excludeBuiltinSkills?: string[];
   /** Force yolo mode (auto-approve) - used by CronService for scheduled tasks */
   yoloMode?: boolean;
   /** ACP session ID for resume support / ACP session ID 用于会话恢复 */
@@ -758,10 +760,12 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
             }
           } else {
             // Custom workspace or no native support — inject rules + skills via prompt
-            contentToSend = await prepareFirstMessageWithSkillsIndex(contentToSend, {
+            const { content: injectedContent } = await prepareFirstMessageWithSkillsIndex(contentToSend, {
               presetContext: this.options.presetContext,
               enabledSkills: this.options.enabledSkills,
+              excludeBuiltinSkills: this.options.excludeBuiltinSkills,
             });
+            contentToSend = injectedContent;
           }
         }
 

@@ -295,5 +295,8 @@
   "thinking": {
     "complete": "Düşünme tamamlandı",
     "label": "Düşünüyor..."
+  },
+  "skills": {
+    "loaded": "Yüklenen Beceriler"
   }
 }
