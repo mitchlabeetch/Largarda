@@ -52,7 +52,7 @@ export type GuidSendDeps = {
   resolveDisabledBuiltinSkills: (
     agentInfo: { backend: AcpBackend; customAgentId?: string } | undefined
   ) => string[] | undefined;
-  guidDisabledBuiltinSkills: string[];
+  guidDisabledBuiltinSkills: string[] | undefined;
   isMainAgentAvailable: (agentType: string) => boolean;
   getAvailableFallbackAgent: () => string | null;
   currentEffectiveAgentInfo: EffectiveAgentInfo;
@@ -133,8 +133,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     const { rules: presetRules } = await resolvePresetRulesAndSkills(agentInfo);
     const enabledSkills = resolveEnabledSkills(agentInfo);
     // Use guid page's local skill state (initialized from assistant config, overridable by user)
-    const excludeBuiltinSkills =
-      guidDisabledBuiltinSkills.length > 0 ? guidDisabledBuiltinSkills : resolveDisabledBuiltinSkills(agentInfo);
+    const excludeBuiltinSkills = guidDisabledBuiltinSkills ?? resolveDisabledBuiltinSkills(agentInfo);
 
     let finalEffectiveAgentType = effectiveAgentType;
     if (isPreset && !isMainAgentAvailable(effectiveAgentType)) {

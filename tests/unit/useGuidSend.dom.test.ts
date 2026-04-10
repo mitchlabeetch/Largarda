@@ -272,9 +272,29 @@ describe('useGuidSend', () => {
       );
     });
 
-    it('falls back to resolveDisabledBuiltinSkills when guidDisabledBuiltinSkills is empty', async () => {
+    it('respects explicit empty array — does not fall back to resolveDisabledBuiltinSkills', async () => {
       const deps = makeDeps({
         guidDisabledBuiltinSkills: [],
+        resolveDisabledBuiltinSkills: vi.fn(() => ['office-cli']),
+      });
+      const { result } = renderHook(() => useGuidSend(deps));
+
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extra: expect.objectContaining({
+            excludeBuiltinSkills: [],
+          }),
+        })
+      );
+    });
+
+    it('falls back to resolveDisabledBuiltinSkills when guidDisabledBuiltinSkills is undefined', async () => {
+      const deps = makeDeps({
+        guidDisabledBuiltinSkills: undefined,
         resolveDisabledBuiltinSkills: vi.fn(() => ['office-cli']),
       });
       const { result } = renderHook(() => useGuidSend(deps));

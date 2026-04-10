@@ -70,7 +70,7 @@ const GuidPage: React.FC = () => {
 
   // --- Skills state ---
   const [builtinAutoSkills, setBuiltinAutoSkills] = useState<Array<{ name: string; description: string }>>([]);
-  const [guidDisabledBuiltinSkills, setGuidDisabledBuiltinSkills] = useState<string[]>([]);
+  const [guidDisabledBuiltinSkills, setGuidDisabledBuiltinSkills] = useState<string[] | undefined>(undefined);
 
   useEffect(() => {
     ipcBridge.fs.listBuiltinAutoSkills
@@ -80,9 +80,10 @@ const GuidPage: React.FC = () => {
   }, []);
 
   const handleToggleBuiltinSkill = useCallback((skillName: string) => {
-    setGuidDisabledBuiltinSkills((prev) =>
-      prev.includes(skillName) ? prev.filter((s) => s !== skillName) : [...prev, skillName]
-    );
+    setGuidDisabledBuiltinSkills((prev) => {
+      const list = prev ?? [];
+      return list.includes(skillName) ? list.filter((s) => s !== skillName) : [...list, skillName];
+    });
   }, []);
 
   // --- Hooks ---
@@ -293,9 +294,9 @@ const GuidPage: React.FC = () => {
   // Sync disabledBuiltinSkills from preset assistant config
   useEffect(() => {
     if (agentSelection.isPresetAgent && selectedAssistantRecord) {
-      setGuidDisabledBuiltinSkills(selectedAssistantRecord.disabledBuiltinSkills || []);
+      setGuidDisabledBuiltinSkills(selectedAssistantRecord.disabledBuiltinSkills ?? []);
     } else {
-      setGuidDisabledBuiltinSkills([]);
+      setGuidDisabledBuiltinSkills(undefined);
     }
   }, [agentSelection.isPresetAgent, selectedAssistantRecord]);
 
@@ -507,7 +508,7 @@ const GuidPage: React.FC = () => {
       cachedConfigOptions={agentSelection.cachedConfigOptions}
       onConfigOptionSelect={agentSelection.setPendingConfigOption}
       builtinAutoSkills={builtinAutoSkills}
-      disabledBuiltinSkills={guidDisabledBuiltinSkills}
+      disabledBuiltinSkills={guidDisabledBuiltinSkills ?? []}
       onToggleBuiltinSkill={handleToggleBuiltinSkill}
       hidePresetTag
       loading={guidInput.loading}

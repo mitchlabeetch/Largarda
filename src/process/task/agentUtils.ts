@@ -196,7 +196,8 @@ export async function buildSystemInstructionsWithSkillsIndex(config: FirstMessag
   await skillManager.discoverSkills(config.enabledSkills, config.excludeBuiltinSkills);
 
   if (skillManager.hasAnySkills()) {
-    const skillsIndex = skillManager.getSkillsIndex();
+    const excludeSet = new Set(config.excludeBuiltinSkills ?? []);
+    const skillsIndex = skillManager.getSkillsIndex().filter((s) => !excludeSet.has(s.name));
     if (skillsIndex.length > 0) {
       const indexText = buildSkillsIndexText(skillsIndex);
       instructions.push(indexText);
