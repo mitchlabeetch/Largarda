@@ -5,8 +5,8 @@ import {
   isExtensionAssistant as isExtensionAssistantUtil,
   normalizeExtensionAssistants,
   sortAssistants as sortAssistantsUtil,
-} from '@/renderer/pages/settings/AgentSettings/AssistantManagement/assistantUtils';
-import type { AssistantListItem } from '@/renderer/pages/settings/AgentSettings/AssistantManagement/types';
+} from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
+import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';

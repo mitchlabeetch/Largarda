@@ -11,12 +11,12 @@ import {
   useAssistantList,
   useAssistantSkills,
 } from '@/renderer/hooks/assistant';
-import AddCustomPathModal from '@/renderer/pages/settings/AgentSettings/AssistantManagement/AddCustomPathModal';
-import AddSkillsModal from '@/renderer/pages/settings/AgentSettings/AssistantManagement/AddSkillsModal';
-import AssistantEditDrawer from '@/renderer/pages/settings/AgentSettings/AssistantManagement/AssistantEditDrawer';
-import DeleteAssistantModal from '@/renderer/pages/settings/AgentSettings/AssistantManagement/DeleteAssistantModal';
-import SkillConfirmModals from '@/renderer/pages/settings/AgentSettings/AssistantManagement/SkillConfirmModals';
-import { resolveAvatarImageSrc } from '@/renderer/pages/settings/AgentSettings/AssistantManagement/assistantUtils';
+import AddCustomPathModal from '@/renderer/pages/settings/AssistantSettings/AddCustomPathModal';
+import AddSkillsModal from '@/renderer/pages/settings/AssistantSettings/AddSkillsModal';
+import AssistantEditDrawer from '@/renderer/pages/settings/AssistantSettings/AssistantEditDrawer';
+import DeleteAssistantModal from '@/renderer/pages/settings/AssistantSettings/DeleteAssistantModal';
+import SkillConfirmModals from '@/renderer/pages/settings/AssistantSettings/SkillConfirmModals';
+import { resolveAvatarImageSrc } from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '../constants';
 import styles from '../index.module.css';
 import type { AcpBackendConfig, AvailableAgent, EffectiveAgentInfo } from '../types';

@@ -1,4 +1,3 @@
-import type { Message } from '@arco-design/web-react';
 import type { AcpBackendConfig } from '@/common/types/acpTypes';
 
 // Skill info type
@@ -22,10 +21,6 @@ export type PendingSkill = {
   path: string;
   name: string;
   description: string;
-};
-
-export type AssistantManagementProps = {
-  message: ReturnType<typeof Message.useMessage>[0];
 };
 
 export type AssistantListItem = AcpBackendConfig & {
