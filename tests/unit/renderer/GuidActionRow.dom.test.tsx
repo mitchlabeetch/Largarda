@@ -18,18 +18,31 @@ vi.mock('@arco-design/web-react', () => ({
     <button {...props}>{icon ?? children}</button>
   ),
   Dropdown: ({ children, droplist }: React.PropsWithChildren & { droplist?: React.ReactNode }) => (
-    <>{droplist}{children}</>
+    <>
+      {droplist}
+      {children}
+    </>
   ),
   Menu: Object.assign(({ children }: React.PropsWithChildren) => <div>{children}</div>, {
     Item: ({ children, onClick }: React.PropsWithChildren & { onClick?: (e: any) => void }) => (
       <div onClick={onClick}>{children}</div>
     ),
     SubMenu: ({ children, title }: React.PropsWithChildren & { title?: React.ReactNode }) => (
-      <div>{title}{children}</div>
+      <div>
+        {title}
+        {children}
+      </div>
     ),
   }),
-  Checkbox: ({ children, checked, onChange }: React.PropsWithChildren & { checked?: boolean; onChange?: () => void }) => (
-    <label><input type='checkbox' checked={checked} onChange={onChange} />{children}</label>
+  Checkbox: ({
+    children,
+    checked,
+    onChange,
+  }: React.PropsWithChildren & { checked?: boolean; onChange?: () => void }) => (
+    <label>
+      <input type='checkbox' checked={checked} onChange={onChange} />
+      {children}
+    </label>
   ),
   Message: {
     error: vi.fn(),

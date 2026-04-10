@@ -44,9 +44,7 @@ vi.mock('@/renderer/styles/colors', () => ({
 import type { TChatConversation } from '@/common/config/storage';
 import ConversationSkillsIndicator from '@/renderer/pages/conversation/components/ConversationSkillsIndicator';
 
-const createConversation = (
-  loadedSkills?: Array<{ name: string; description: string }>,
-): TChatConversation =>
+const createConversation = (loadedSkills?: Array<{ name: string; description: string }>): TChatConversation =>
   ({
     extra: loadedSkills !== undefined ? { loadedSkills } : {},
   }) as unknown as TChatConversation;
@@ -111,8 +109,6 @@ describe('ConversationSkillsIndicator', () => {
 
     fireEvent.click(screen.getByText('Skill & Tricks / More'));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/settings/skills-hub?highlight=Skill%20%26%20Tricks%20%2F%20More',
-    );
+    expect(mockNavigate).toHaveBeenCalledWith('/settings/skills-hub?highlight=Skill%20%26%20Tricks%20%2F%20More');
   });
 });

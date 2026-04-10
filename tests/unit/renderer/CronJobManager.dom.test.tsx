@@ -43,25 +43,13 @@ vi.mock('@arco-design/web-react', () => ({
       {children}
     </button>
   ),
-  Popover: ({
-    children,
-    content,
-  }: {
-    children?: React.ReactNode;
-    content?: React.ReactNode;
-  }) => (
+  Popover: ({ children, content }: { children?: React.ReactNode; content?: React.ReactNode }) => (
     <div data-testid='arco-popover'>
       {content}
       {children}
     </div>
   ),
-  Tooltip: ({
-    children,
-    content,
-  }: {
-    children?: React.ReactNode;
-    content?: React.ReactNode;
-  }) => (
+  Tooltip: ({ children, content }: { children?: React.ReactNode; content?: React.ReactNode }) => (
     <div data-testid='arco-tooltip' data-tooltip-content={typeof content === 'string' ? content : undefined}>
       {children}
     </div>
@@ -143,9 +131,7 @@ describe('CronJobManager', () => {
   });
 
   it('returns null when hasCronSkill=false and no jobs', () => {
-    const { container } = render(
-      <CronJobManager conversationId='conv-1' hasCronSkill={false} />
-    );
+    const { container } = render(<CronJobManager conversationId='conv-1' hasCronSkill={false} />);
 
     expect(container.innerHTML).toBe('');
   });
@@ -205,9 +191,7 @@ describe('CronJobManager', () => {
       hasJobs: false,
     });
 
-    const { container } = render(
-      <CronJobManager conversationId='conv-1' />
-    );
+    const { container } = render(<CronJobManager conversationId='conv-1' />);
 
     // loading=true and no job -> the component hits `if (loading || !job) return null`
     expect(container.innerHTML).toBe('');
@@ -220,9 +204,7 @@ describe('CronJobManager', () => {
       hasJobs: false,
     });
 
-    const { container } = render(
-      <CronJobManager conversationId='conv-1' hasCronSkill={false} />
-    );
+    const { container } = render(<CronJobManager conversationId='conv-1' hasCronSkill={false} />);
 
     expect(container.innerHTML).toBe('');
   });
