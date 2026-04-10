@@ -209,7 +209,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
             <div className='flex items-center gap-8px'>
               <Lightning theme='filled' size='16' fill={iconColors.primary} style={{ lineHeight: 0 }} />
               <span>
-                {t('settings.builtinSkills')} ({activeSkillCount}/{builtinAutoSkills.length})
+                {t('settings.autoInjectedSkills')} ({activeSkillCount}/{builtinAutoSkills.length})
               </span>
             </div>
           }
