@@ -253,4 +253,43 @@ describe('useGuidSend', () => {
       expect(result.current.isButtonDisabled).toBe(false);
     });
   });
+
+  describe('excludeBuiltinSkills', () => {
+    it('passes guidDisabledBuiltinSkills when non-empty', async () => {
+      const deps = makeDeps({ guidDisabledBuiltinSkills: ['cron'] });
+      const { result } = renderHook(() => useGuidSend(deps));
+
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extra: expect.objectContaining({
+            excludeBuiltinSkills: ['cron'],
+          }),
+        })
+      );
+    });
+
+    it('falls back to resolveDisabledBuiltinSkills when guidDisabledBuiltinSkills is empty', async () => {
+      const deps = makeDeps({
+        guidDisabledBuiltinSkills: [],
+        resolveDisabledBuiltinSkills: vi.fn(() => ['office-cli']),
+      });
+      const { result } = renderHook(() => useGuidSend(deps));
+
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extra: expect.objectContaining({
+            excludeBuiltinSkills: ['office-cli'],
+          }),
+        })
+      );
+    });
+  });
 });
