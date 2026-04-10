@@ -32,7 +32,7 @@ import { setInitialLanguage } from '@process/services/i18n';
 import { workerTaskManager } from './process/task/workerTaskManagerSingleton';
 import { setupApplicationMenu } from './process/utils/appMenu';
 import { startWebServer } from './process/webserver';
-import { applyZoomToWindow, initializeZoomFactor } from './process/utils/zoom';
+import { initializeZoomFactor, setupZoomForWindow } from './process/utils/zoom';
 import {
   clearPendingDeepLinkUrl,
   getPendingDeepLinkUrl,
@@ -240,7 +240,12 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     ...(process.platform === 'darwin'
       ? {
           titleBarStyle: 'hidden',
-          trafficLightPosition: { x: 10, y: 10 },
+          // Align traffic-light vertical center with the titlebar button centers.
+          // Titlebar is 45px; buttons are 36px flex-centered → button center y≈22.5.
+          // Empirically y=13 places the traffic lights on the same horizontal line
+          // as the sidebar / back / forward icons.
+          // NOTE: requires a full app restart to take effect (BrowserWindow option).
+          trafficLightPosition: { x: 10, y: 13 },
         }
       : { frame: false }),
     webPreferences: {
@@ -280,7 +285,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   bindMainWindowReferences(mainWindow);
   setupApplicationMenu();
 
-  void applyZoomToWindow(mainWindow);
+  setupZoomForWindow(mainWindow);
   registerWindowMaximizeListeners(mainWindow);
 
   // Initialize auto-updater service (skip when disabled via env, e.g. E2E / CI)

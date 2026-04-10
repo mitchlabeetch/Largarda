@@ -6,6 +6,7 @@
 
 import { getSkillsDir, getBuiltinSkillsCopyDir, loadSkillsContent } from '@process/utils/initStorage';
 import { AcpSkillManager, buildSkillsIndexText, type SkillIndex } from './AcpSkillManager';
+import { getTeamGuidePrompt } from '@process/resources/prompts/teamGuidePrompt';
 
 /**
  * 首次消息处理配置
@@ -18,6 +19,10 @@ export interface FirstMessageConfig {
   enabledSkills?: string[];
   /** 排除的内置自动注入 skills / Builtin auto-injected skills to exclude */
   excludeBuiltinSkills?: string[];
+  /** Inject Team mode guidance prompt when agent has aion_create_team capability */
+  enableTeamGuide?: boolean;
+  /** Agent backend type (e.g. 'claude', 'codex') — used to populate team guide prompt */
+  backend?: string;
 }
 
 /**
@@ -41,6 +46,11 @@ export async function buildSystemInstructions(config: FirstMessageConfig): Promi
     if (skillsContent) {
       instructions.push(skillsContent);
     }
+  }
+
+  // Inject Team Guide prompt when agent has team guide capability
+  if (config.enableTeamGuide) {
+    instructions.push(getTeamGuidePrompt(config.backend));
   }
 
   if (instructions.length === 0) {
@@ -141,6 +151,11 @@ For example:
     }
   }
 
+  // 3. Inject Team Guide prompt when agent has team guide capability
+  if (config.enableTeamGuide) {
+    instructions.push(getTeamGuidePrompt(config.backend));
+  }
+
   if (instructions.length === 0) {
     return { content, loadedSkills };
   }
@@ -186,6 +201,11 @@ export async function buildSystemInstructionsWithSkillsIndex(config: FirstMessag
       const indexText = buildSkillsIndexText(skillsIndex);
       instructions.push(indexText);
     }
+  }
+
+  // Inject Team Guide prompt when agent has team guide capability
+  if (config.enableTeamGuide) {
+    instructions.push(getTeamGuidePrompt(config.backend));
   }
 
   if (instructions.length === 0) {
