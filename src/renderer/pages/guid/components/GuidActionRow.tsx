@@ -90,9 +90,9 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   const isMobile = Boolean(layout?.isMobile);
   const [isPlusDropdownOpen, setIsPlusDropdownOpen] = useState(false);
   const modeBackend = effectiveModeAgent || selectedAgent;
-  const modeOptions = getAgentModes(modeBackend);
+  const modeOptions = getAgentModes(modeBackend, cachedConfigOptions);
   const currentModeOption = modeOptions.find((mode) => mode.value === selectedMode);
-  const showModeSwitch = supportsModeSwitch(modeBackend);
+  const showModeSwitch = supportsModeSwitch(modeBackend, cachedConfigOptions);
   const configOptionCount = (modelSelectorNode ? 1 : 0) + (showModeSwitch ? 1 : 0);
 
   // Browser file picker ref (WebUI only)
@@ -244,6 +244,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
               compactLabelOverride={permissionLabel}
               compactLeadingIcon={<Shield theme='outline' size='14' fill={iconColors.secondary} />}
               modeLabelFormatter={getModeDisplayLabel}
+              configOptions={cachedConfigOptions}
             />
           )}
           <AcpConfigSelector

@@ -9,6 +9,7 @@ import {
   CODEX_MODE_FULL_AUTO,
   CODEX_MODE_FULL_AUTO_NO_SANDBOX,
 } from '@/common/types/codex/codexModes';
+import type { AcpSessionConfigOption } from '@/common/types/acpTypes';
 
 /**
  * Agent mode option interface
@@ -24,9 +25,14 @@ export interface AgentModeOption {
 }
 
 /**
- * Agent modes configuration
- * Maps backend type to available modes
+ * Fallback agent modes configuration — used when cachedConfigOptions are unavailable.
+ * Maps backend type to available modes.
  * Labels match CLI display text exactly — no i18n.
+ *
+ * Prefer reading modes dynamically from configOptions (category: 'mode') returned by
+ * session/new, cached in acp.cachedConfigOptions. This hardcoded map serves as a
+ * fallback for backends that don't yet expose modes via configOptions or when the
+ * cache is empty (e.g., first launch before any session).
  *
  * Note:
  * - Claude: supports session/set_mode via ACP
@@ -40,7 +46,7 @@ export interface AgentModeOption {
  * - Goose: mode set at startup only, not during session
  * - Cursor: agent/plan/ask modes via ACP session/set_mode (verified via `agent acp` session/new response)
  */
-export const AGENT_MODES: Record<string, AgentModeOption[]> = {
+export const FALLBACK_AGENT_MODES: Record<string, AgentModeOption[]> = {
   claude: [
     { value: 'default', label: 'Default' },
     { value: 'acceptEdits', label: 'Accept Edits', description: 'Auto-approve file edits, prompt for commands' },
@@ -88,26 +94,52 @@ export const AGENT_MODES: Record<string, AgentModeOption[]> = {
 };
 
 /**
- * Get available modes for a given backend
- * Returns empty array if backend doesn't support mode switching
- *
- * @param backend - Agent backend type
- * @returns Array of available modes
+ * Extract mode options from ACP configOptions (category: 'mode').
+ * Returns null if configOptions is empty/undefined or contains no mode option,
+ * signaling the caller to fall back to FALLBACK_AGENT_MODES.
  */
-export function getAgentModes(backend: string | undefined): AgentModeOption[] {
-  if (!backend) return [];
-  return AGENT_MODES[backend] || [];
+function extractModesFromConfigOptions(configOptions: AcpSessionConfigOption[] | undefined): AgentModeOption[] | null {
+  if (!configOptions || configOptions.length === 0) return null;
+  const modeOption = configOptions.find((opt) => opt.category === 'mode' && opt.type === 'select');
+  if (!modeOption?.options || modeOption.options.length === 0) return null;
+  return modeOption.options.map((opt) => ({
+    value: opt.value,
+    label: opt.label || opt.name || opt.value,
+  }));
 }
 
 /**
- * Check if a backend supports mode switching during session
+ * Get available modes for a given backend.
+ * Prefers dynamic modes from cachedConfigOptions; falls back to FALLBACK_AGENT_MODES.
+ * Returns empty array if backend doesn't support mode switching.
  *
  * @param backend - Agent backend type
+ * @param configOptions - Optional cached config options from session/new
+ * @returns Array of available modes
+ */
+export function getAgentModes(
+  backend: string | undefined,
+  configOptions?: AcpSessionConfigOption[]
+): AgentModeOption[] {
+  if (!backend) return [];
+  const dynamic = extractModesFromConfigOptions(configOptions);
+  if (dynamic) return dynamic;
+  return FALLBACK_AGENT_MODES[backend] || [];
+}
+
+/**
+ * Check if a backend supports mode switching during session.
+ * Prefers dynamic detection from configOptions; falls back to FALLBACK_AGENT_MODES.
+ *
+ * @param backend - Agent backend type
+ * @param configOptions - Optional cached config options from session/new
  * @returns true if mode switching is supported
  */
-export function supportsModeSwitch(backend: string | undefined): boolean {
+export function supportsModeSwitch(backend: string | undefined, configOptions?: AcpSessionConfigOption[]): boolean {
   if (!backend) return false;
-  return backend in AGENT_MODES && AGENT_MODES[backend].length > 0;
+  const dynamic = extractModesFromConfigOptions(configOptions);
+  if (dynamic) return dynamic.length > 0;
+  return backend in FALLBACK_AGENT_MODES && FALLBACK_AGENT_MODES[backend].length > 0;
 }
 
 /**
@@ -133,3 +165,6 @@ export function getFullAutoMode(backend: string | undefined): string {
   if (!backend) return 'yolo';
   return FULL_AUTO_MODE[backend] || 'yolo';
 }
+
+/** @deprecated Use FALLBACK_AGENT_MODES — kept for backward compatibility */
+export const AGENT_MODES = FALLBACK_AGENT_MODES;

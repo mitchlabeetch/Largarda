@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import type { AcpSessionConfigOption } from '@/common/types/acpTypes';
 import { getAgentModes, supportsModeSwitch, type AgentModeOption } from '@/renderer/utils/model/agentModes';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { iconColors } from '@/renderer/styles/colors';
@@ -48,6 +49,8 @@ export interface AgentModeSelectorProps {
   hideCompactLabelPrefixOnMobile?: boolean;
   /** Callback fired after a successful mode change (for team-mode propagation) */
   onModeChanged?: (mode: string) => void;
+  /** Cached config options from session/new for dynamic mode discovery */
+  configOptions?: AcpSessionConfigOption[];
 }
 
 /**
@@ -74,11 +77,12 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
   compactLabelPrefix,
   hideCompactLabelPrefixOnMobile = false,
   onModeChanged,
+  configOptions,
 }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
-  const modes = getAgentModes(backend);
+  const modes = getAgentModes(backend, configOptions);
   const defaultMode = modes[0]?.value ?? 'default';
   // Validate initialMode against available modes; fall back to backend's default
   // when the provided value doesn't match (e.g. opencode has 'build'/'plan', not 'default')
@@ -91,7 +95,7 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
     [modeLabelFormatter]
   );
 
-  const canSwitchMode = supportsModeSwitch(backend) && (conversationId || onModeSelect);
+  const canSwitchMode = supportsModeSwitch(backend, configOptions) && (conversationId || onModeSelect);
   // Mobile conversation header agent pill is display-only by design.
   const canInteract = canSwitchMode && !(compact && compactLabelType === 'agent');
 

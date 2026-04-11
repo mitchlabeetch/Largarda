@@ -381,6 +381,7 @@ Please check your local CLI tool authentication status`,
                 compactLabelPrefix={t('agentMode.permission')}
                 hideCompactLabelPrefixOnMobile
                 onModeChanged={teamPermission?.propagateMode}
+                configOptions={cachedConfigOptions}
               />
             )}
             <AcpConfigSelector
