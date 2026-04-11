@@ -510,6 +510,14 @@ export class AcpAgent {
   }
 
   /**
+   * Get ALL config options from ACP connection, including mode and model categories.
+   * Used for caching the full set so renderer can dynamically discover available modes/models.
+   */
+  getAllConfigOptions(): AcpSessionConfigOption[] {
+    return this.connection.getConfigOptions() || [];
+  }
+
+  /**
    * Set a config option value on the ACP connection.
    * Used for reasoning effort and other non-model config options.
    */
