@@ -1,8 +1,11 @@
-import type { HubExtensionStatus, IHubAgentItem, IHubExtension } from '@/common/types/hub';
-import { acpDetector } from '@process/agent/acp/AcpDetector';
 import { ipcBridge } from '@/common';
+import type { HubExtensionStatus, IHubAgentItem, IHubExtension } from '@/common/types/hub';
+import { acpDetector, DetectedAgent } from '@process/agent/acp/AcpDetector';
+import { EXTENSION_MANIFEST_FILE } from '@process/extensions/constants';
 import { ExtensionRegistry } from '@process/extensions/ExtensionRegistry';
 import { loadPersistedStates, savePersistedStates } from '@process/extensions/lifecycle/statePersistence';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * HubStateManager
@@ -81,10 +84,9 @@ class HubStateManagerImpl {
    * (install/uninstall) since last check are reflected immediately.
    */
   public async getExtensionListWithStatus(extensions: Record<string, IHubExtension>): Promise<IHubAgentItem[]> {
-    // Refresh builtin CLI detection so status reflects current PATH
-    const refreshStart = Date.now();
-    await acpDetector.refreshBuiltinAgents();
-    console.log(`[HubStateManager] refreshBuiltinAgents completed in ${Date.now() - refreshStart}ms`);
+    // Refresh builtin CLI detection so status reflects current PATH.
+    // Use stale check to avoid redundant refresh when install just completed.
+    await acpDetector.refreshAllIfStale(5_000);
 
     const loadedByName = new Map(
       ExtensionRegistry.getInstance()
@@ -92,27 +94,23 @@ class HubStateManagerImpl {
         .map((e) => [e.manifest.name, e])
     );
 
-    const detectedAgents = acpDetector.getDetectedAgents();
-    const detectedBackends = new Set<string>(
-      detectedAgents
-        .map((a) => {
-          if (a.backend === 'custom' && a.isExtension) return a.customAgentId ?? a.name;
-          if (a.backend !== 'custom') return a.backend;
-          return null;
-        })
-        .filter((b): b is string => b !== null)
+    const detectedAgentsIds = new Set<string>(
+      acpDetector
+        .getDetectedAgents()
+        .filter((a): a is DetectedAgent => a.kind === 'builtinAgent' || a.kind === 'extensionAgent')
+        .map((a) => a.id)
     );
 
-    console.log(
-      `[HubStateManager] Status context: ${loadedByName.size} loaded extension(s) [${[...loadedByName.keys()].join(', ')}], ` +
-        `${detectedAgents.length} detected agent(s) [${[...detectedBackends].join(', ')}], ` +
-        `${Object.keys(extensions).length} hub extension(s)`
-    );
+    // console.log(
+    //   `[HubStateManager] Status context: ${loadedByName.size} loaded extension(s) [${[...loadedByName.keys()].join(', ')}], ` +
+    //     `${detectedAgents.length} detected agent(s) [${[...detectedBackends].join(', ')}], ` +
+    //     `${Object.keys(extensions).length} hub extension(s)`
+    // );
 
     const result: IHubAgentItem[] = [];
 
     for (const ext of Object.values(extensions)) {
-      const status = await this.deriveStatus(ext, loadedByName, detectedBackends);
+      const status = await this.deriveStatus(ext, loadedByName, detectedAgentsIds);
 
       result.push({
         ...ext,
@@ -137,7 +135,7 @@ class HubStateManagerImpl {
   private async deriveStatus(
     ext: IHubExtension,
     loadedByName: Map<string, { directory: string }>,
-    detectedBackends: Set<string>
+    detectedAgentsIds: Set<string>
   ): Promise<HubExtensionStatus> {
     // 1. Transient state (installing / uninstalling)
     const transient = this.transientStates.get(ext.name);
@@ -147,27 +145,26 @@ class HubStateManagerImpl {
     const hasError = await this.getPersistentInstallError(ext.name);
     if (hasError) return 'install_failed';
 
-    // 3. Loaded in ExtensionRegistry — check for update
-    // TODO: integrity 各平台不一致，暂时无法使用。后续可以考虑在安装时记录版本号或自定义 hash 来辅助判断更新。
-    // const loaded = loadedByName.get(ext.name);
-    // if (loaded) {
-    //   const manifestPath = path.join(loaded.directory, EXTENSION_MANIFEST_FILE);
-    //   try {
-    //     if (fs.existsSync(manifestPath)) {
-    //       const localManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    //       if (localManifest.dist?.integrity && localManifest.dist.integrity !== ext.dist.integrity) {
-    //         return 'update_available';
-    //       }
-    //     }
-    //   } catch {
-    //     // Ignore read errors — treat as installed
-    //   }
-    // }
+    // 3. Loaded in ExtensionRegistry — check for update via content hash
+    const loaded = loadedByName.get(ext.name);
+    if (loaded) {
+      const manifestPath = path.join(loaded.directory, EXTENSION_MANIFEST_FILE);
+      try {
+        if (fs.existsSync(manifestPath)) {
+          const localManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+          if (localManifest.dist?.integrity && localManifest.dist.integrity !== ext.dist.integrity) {
+            return 'update_available';
+          }
+        }
+      } catch {
+        // Ignore read errors — treat as installed
+      }
+    }
 
     // 4. All contributed acpAdapters are already detected on system
     const adapterIds = ext.contributes?.acpAdapters;
     if (adapterIds && adapterIds.length > 0) {
-      if (adapterIds.every((id) => detectedBackends.has(id))) {
+      if (adapterIds.every((id) => detectedAgentsIds.has(id))) {
         return 'installed';
       }
     }
