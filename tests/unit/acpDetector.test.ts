@@ -95,7 +95,6 @@ function makeExtAdapter(opts: {
   avatar?: string;
   connectionType?: string;
   defaultCliPath?: string;
-  installedBinaryPath?: string;
   env?: Record<string, string>;
   skillsDirs?: string[];
 }) {
@@ -108,7 +107,6 @@ function makeExtAdapter(opts: {
     avatar: opts.avatar,
     _extensionName: opts.extensionName,
     defaultCliPath: opts.defaultCliPath,
-    installedBinaryPath: opts.installedBinaryPath,
     env: opts.env,
     skillsDirs: opts.skillsDirs,
   };
@@ -180,7 +178,7 @@ describe('AcpDetector', () => {
       expect(gooseAgent!.cliPath).toBe('bunx @goose/cli');
     });
 
-    it('should skip extension agents without defaultCliPath or installedBinaryPath', async () => {
+    it('should skip extension agents without defaultCliPath or cliCommand', async () => {
       setAvailableClis([]);
       mockGetAcpAdapters.mockReturnValue([
         makeExtAdapter({ id: 'missing', name: 'Missing Agent', cliCommand: 'nonexistent', extensionName: 'ext-test' }),
@@ -336,7 +334,7 @@ describe('AcpDetector', () => {
           id: 'temp',
           name: 'Temp',
           extensionName: 'ext-temp',
-          installedBinaryPath: 'bin/temp',
+          cliCommand: 'temp',
         }),
       ]);
 
@@ -351,7 +349,7 @@ describe('AcpDetector', () => {
           id: 'temp',
           name: 'Temp',
           extensionName: 'ext-temp',
-          installedBinaryPath: 'bin/temp',
+          cliCommand: 'temp',
         }),
       ]);
 
@@ -530,7 +528,6 @@ describe('AcpDetector', () => {
           name: 'Auggie',
           cliCommand: 'auggie',
           extensionName: 'aionext-auggie',
-          installedBinaryPath: 'node_modules/.bin/auggie',
           env: { AUGGIE_MODE: 'acp' },
         }),
       ]);
@@ -555,7 +552,6 @@ describe('AcpDetector', () => {
           id: 'auggie',
           name: 'Auggie',
           extensionName: 'aionext-auggie',
-          installedBinaryPath: 'node_modules/.bin/auggie',
           defaultCliPath: 'bunx @anthropic/auggie',
         }),
       ]);
@@ -603,7 +599,6 @@ describe('AcpDetector', () => {
           name: 'Goose',
           cliCommand: 'goose',
           extensionName: 'aionext-goose',
-          installedBinaryPath: 'goose',
           defaultCliPath: 'bunx @goose/cli',
         }),
       ]);
@@ -641,7 +636,7 @@ describe('AcpDetector', () => {
       expect(agent!.env).toEqual({ API_KEY: 'secret', AGENT_MODE: 'acp' });
     });
 
-    it('should skip adapters without defaultCliPath or installedBinaryPath', async () => {
+    it('should skip adapters without defaultCliPath or cliCommand', async () => {
       setAvailableClis([]);
       mockResolveManagedBinary.mockReturnValue(null);
       mockGetAcpAdapters.mockReturnValue([
@@ -651,7 +646,7 @@ describe('AcpDetector', () => {
           connectionType: 'cli',
           acpArgs: ['--acp'],
           _extensionName: 'ext-empty',
-          // no cliCommand, no defaultCliPath, no installedBinaryPath
+          // no cliCommand, no defaultCliPath
         },
       ]);
 
@@ -678,8 +673,8 @@ describe('AcpDetector', () => {
         makeExtAdapter({
           id: 'auggie',
           name: 'Auggie',
+          cliCommand: 'auggie',
           extensionName: 'aionext-auggie',
-          installedBinaryPath: 'node_modules/.bin/auggie',
         }),
       ]);
       mockCleanOldVersions.mockResolvedValue([]);
@@ -700,6 +695,7 @@ describe('AcpDetector', () => {
         makeExtAdapter({
           id: 'goose',
           name: 'Goose',
+          cliCommand: 'goose',
           extensionName: 'aionext-goose',
           defaultCliPath: 'bunx @goose/cli',
         }),
@@ -724,14 +720,14 @@ describe('AcpDetector', () => {
         makeExtAdapter({
           id: 'adapter-1',
           name: 'Agent A',
+          cliCommand: 'agent-a',
           extensionName: 'aionext-multi',
-          installedBinaryPath: 'bin/agent-a',
         }),
         makeExtAdapter({
           id: 'adapter-2',
           name: 'Agent B',
+          cliCommand: 'agent-b',
           extensionName: 'aionext-multi',
-          installedBinaryPath: 'bin/agent-b',
         }),
       ]);
       mockCleanOldVersions.mockResolvedValue([]);
