@@ -32,12 +32,7 @@ import { ProcessConfig } from '@process/utils/initStorage';
 import { getEnhancedEnv, resolveNpxPath } from '@process/utils/shellEnv';
 import { AcpConnection } from './AcpConnection';
 import { AcpApprovalStore, createAcpApprovalKey } from './ApprovalStore';
-import {
-  CLAUDE_YOLO_SESSION_MODE,
-  CODEBUDDY_YOLO_SESSION_MODE,
-  IFLOW_YOLO_SESSION_MODE,
-  QWEN_YOLO_SESSION_MODE,
-} from './constants';
+import { resolveYoloMode } from './constants';
 import { buildAcpModelInfo } from './modelInfo';
 import {
   buildBuiltinAcpSessionMcpServers,
@@ -358,13 +353,7 @@ export class AcpAgent {
 
       // YOLO mode: bypass all permission checks for supported backends
       if (this.extra.yoloMode) {
-        const yoloModeMap: Partial<Record<AcpBackend, string>> = {
-          claude: CLAUDE_YOLO_SESSION_MODE,
-          codebuddy: CODEBUDDY_YOLO_SESSION_MODE,
-          qwen: QWEN_YOLO_SESSION_MODE,
-          iflow: IFLOW_YOLO_SESSION_MODE,
-        };
-        const sessionMode = yoloModeMap[this.extra.backend];
+        const sessionMode = resolveYoloMode(this.extra.backend, this.connection.getConfigOptions());
         if (sessionMode) {
           await this.applySessionMode(sessionMode, true, `${this.extra.backend} YOLO mode`);
         }
@@ -493,11 +482,7 @@ export class AcpAgent {
     this.extra.yoloMode = true;
 
     if (this.connection.isConnected && this.connection.hasActiveSession) {
-      const yoloModeMap: Partial<Record<AcpBackend, string>> = {
-        claude: CLAUDE_YOLO_SESSION_MODE,
-        qwen: QWEN_YOLO_SESSION_MODE,
-      };
-      const sessionMode = yoloModeMap[this.extra.backend];
+      const sessionMode = resolveYoloMode(this.extra.backend, this.connection.getConfigOptions());
       if (sessionMode) {
         await this.connection.setSessionMode(sessionMode);
       }
