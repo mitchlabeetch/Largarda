@@ -18,14 +18,7 @@ import type {
   AcpSessionUpdate,
 } from '@/common/types/acpTypes';
 import { ACP_METHODS, JSONRPC_VERSION } from '@/common/types/acpTypes';
-import type { ChildProcess } from 'child_process';
-import { execFile as execFileCb } from 'child_process';
-import { promisify } from 'util';
-import type { AcpSessionMcpServer } from './mcpSessionConfig';
-import { promises as fs } from 'fs';
-import os from 'os';
-import path from 'path';
-import { getNpxCacheDir, getWindowsShellExecutionOptions, resolveNpxPath } from '@process/utils/shellEnv';
+import type { SpawnResult } from '@process/agent/acp/acpConnectors';
 import {
   ACP_PERF_LOG,
   connectClaude,
@@ -33,64 +26,21 @@ import {
   connectCodex,
   prepareCleanEnv,
   spawnGenericBackend,
-} from './acpConnectors';
-import type { SpawnResult } from './acpConnectors';
-import { killChild, readTextFile, writeJsonRpcMessage, writeTextFile } from './utils';
+} from '@process/agent/acp/acpConnectors';
+import { buildStartupErrorMessage } from '@process/agent/acp/AcpErrors';
+import type { AcpSessionMcpServer } from '@process/agent/acp/mcpSessionConfig';
+import { killChild, readTextFile, writeJsonRpcMessage, writeTextFile } from '@process/agent/acp/utils';
+import { getNpxCacheDir, getWindowsShellExecutionOptions, resolveNpxPath } from '@process/utils/shellEnv';
+import type { ChildProcess } from 'child_process';
+import { execFile as execFileCb } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { promisify } from 'util';
 
 const execFile = promisify(execFileCb);
 
 // Re-export for unit tests that import from this module
-export { createGenericSpawnConfig } from './acpConnectors';
-
-/**
- * Build a user-friendly error message for ACP startup failures.
- * Detects known error patterns (CLI not found, config errors) and
- * provides actionable guidance instead of raw stderr.
- *
- * Exported for unit testing.
- */
-export function buildStartupErrorMessage(
-  backend: string,
-  code: number | null,
-  signal: NodeJS.Signals | null,
-  stderrCombined: string,
-  spawnErrorMessage: string | undefined,
-  resolvedBackend: string | null
-): string {
-  let errMsg: string;
-  if (stderrCombined) {
-    errMsg = `${backend} ACP process exited during startup (code: ${code}):\n${stderrCombined}`;
-  } else if (code === 0) {
-    // Exit code 0 with no stderr strongly suggests the CLI version does not support ACP mode
-    errMsg =
-      `${backend} ACP process exited during startup (code: 0). ` +
-      `This usually means the installed ${backend} CLI version does not support ACP mode. ` +
-      `Please upgrade to a newer version that supports ACP.`;
-  } else {
-    errMsg = `${backend} ACP process exited during startup (code: ${code}, signal: ${signal})`;
-  }
-
-  // Detect "command not found" patterns across platforms and provide a clear hint
-  if (
-    code !== 0 &&
-    /not recognized|not found|No such file|command not found|ENOENT/i.test(stderrCombined + (spawnErrorMessage ?? ''))
-  ) {
-    const cliHint = resolvedBackend ?? backend;
-    errMsg = `'${cliHint}' CLI not found. Please install it or update the CLI path in Settings.\n${stderrCombined}`;
-  }
-
-  // Detect CLI config loading errors and provide actionable guidance.
-  // e.g. Codex multi-agent config in config.toml that codex-acp cannot parse.
-  if (code !== 0 && /error loading config/i.test(stderrCombined)) {
-    const configPathMatch = stderrCombined.match(/error loading config:\s*([^\s:]+)/i);
-    const configHint = configPathMatch?.[1] ?? 'the CLI config file';
-    errMsg =
-      `${backend} CLI failed to start due to a config file error. ` +
-      `Please review or temporarily rename ${configHint} and try again.\n${stderrCombined}`;
-  }
-
-  return errMsg;
-}
+export { createGenericSpawnConfig } from '@process/agent/acp/acpConnectors';
 
 interface PendingRequest<T = unknown> {
   resolve: (value: T) => void;
@@ -101,6 +51,19 @@ interface PendingRequest<T = unknown> {
   startTime: number;
   timeoutDuration: number;
 }
+
+type onSessionUpdateFunction = (data: AcpSessionUpdate) => void;
+type onPermissionRequestFunction = (data: AcpPermissionRequest) => Promise<{ optionId: string }>;
+type onEndTurnFunction = () => void;
+type onPromptUsageFunction = (usage: AcpPromptResponseUsage) => void;
+type onFileOperationFunction = (operation: {
+  method: string;
+  path: string;
+  content?: string;
+  sessionId: string;
+}) => void;
+
+type onDisconnectFunction = (error: { code: number | null; signal: NodeJS.Signals | null }) => void;
 
 export class AcpConnection {
   private child: ChildProcess | null = null;
@@ -123,14 +86,12 @@ export class AcpConnection {
   private lastPromptSentAt: number = 0;
   private firstChunkReceived: boolean = true;
 
-  public onSessionUpdate: (data: AcpSessionUpdate) => void = () => {};
-  public onPermissionRequest: (data: AcpPermissionRequest) => Promise<{
-    optionId: string;
-  }> = () => Promise.resolve({ optionId: 'allow' }); // Returns a resolved Promise for interface consistency
-  public onEndTurn: () => void = () => {}; // Handler for end_turn messages
-  public onPromptUsage: (usage: AcpPromptResponseUsage) => void = () => {}; // Handler for PromptResponse.usage (per-turn token data)
-  public onFileOperation: (operation: { method: string; path: string; content?: string; sessionId: string }) => void =
-    () => {};
+  public onSessionUpdate: onSessionUpdateFunction = () => {};
+  public onPermissionRequest: onPermissionRequestFunction = () => Promise.resolve({ optionId: 'allow' }); // Returns a resolved Promise for interface consistency
+  public onEndTurn: onEndTurnFunction = () => {}; // Handler for end_turn messages
+  public onPromptUsage: onPromptUsageFunction = () => {}; // Handler for PromptResponse.usage (per-turn token data)
+  public onFileOperation: onFileOperationFunction = () => {};
+  public onDisconnect: onDisconnectFunction = () => {}; // Disconnect callback - called when child process exits unexpectedly during runtime
 
   /**
    * Set the prompt timeout duration in seconds.
@@ -139,9 +100,6 @@ export class AcpConnection {
   setPromptTimeout(seconds: number): void {
     this.promptTimeoutMs = Math.max(30, seconds) * 1000;
   }
-
-  // Disconnect callback - called when child process exits unexpectedly during runtime
-  public onDisconnect: (error: { code: number | null; signal: NodeJS.Signals | null }) => void = () => {};
 
   // Track if initial setup is complete (to distinguish startup errors from runtime exits)
   private isSetupComplete = false;
@@ -359,10 +317,22 @@ export class AcpConnection {
     });
 
     child.on('error', (error) => {
-      // Provide a friendlier message when the CLI binary is not found (ENOENT)
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        const cliHint = this.backend ?? backend;
-        spawnError = new Error(`'${cliHint}' CLI not found. Please install it or update the CLI path in Settings.`);
+      const errnoError = error as NodeJS.ErrnoException;
+      if (errnoError.code === 'ENOENT') {
+        // Differentiate between missing CLI binary and missing working directory.
+        // Node.js reports syscall 'spawn' for a missing executable and 'chdir'
+        // for a non-existent cwd — the user action is completely different.
+        if (errnoError.syscall === 'chdir') {
+          spawnError = new Error(
+            `Working directory does not exist: ${this.workingDir}. ` +
+              'The workspace may have been removed. Please create a new conversation.'
+          );
+        } else {
+          const cliHint = this.backend ?? backend;
+          spawnError = new Error(
+            `'${cliHint}' CLI not found. Please install it or update the CLI path in Settings.`
+          );
+        }
       } else {
         spawnError = error;
       }
@@ -635,18 +605,21 @@ export class AcpConnection {
   }
 
   private sendMessage(message: AcpRequest | AcpNotification): void {
+    // console.debug(`[ACP ${this.backend}] -> ${JSON.stringify(message)}`);
     if (this.child) {
       writeJsonRpcMessage(this.child, message);
     }
   }
 
   private sendResponseMessage(response: AcpResponse): void {
+    // console.debug(`[ACP ${this.backend}] -> ${JSON.stringify(response)}`);
     if (this.child) {
       writeJsonRpcMessage(this.child, response);
     }
   }
 
   private handleMessage(message: AcpMessage): void {
+    // console.debug(`[ACP ${this.backend}] <- ${JSON.stringify(message)}`);
     try {
       // 优先检查是否为 request/notification（有 method 字段）
       if ('method' in message) {

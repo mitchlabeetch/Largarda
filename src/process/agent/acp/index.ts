@@ -287,6 +287,15 @@ export class AcpAgent {
   async start(): Promise<void> {
     const startTotal = Date.now();
     try {
+      // Ensure workspace directory exists before spawning the CLI subprocess.
+      // Temp workspaces (e.g. codex-temp-*) may have been removed by OS cleanup
+      // or manually deleted between sessions, causing spawn to fail with ENOENT
+      // on the cwd — which is misleadingly reported as "CLI not found".
+      // Same defensive pattern as GeminiAgent.initialize() (Sentry ELECTRON-6W).
+      if (this.extra.workspace) {
+        await fs.mkdir(this.extra.workspace, { recursive: true });
+      }
+
       this.emitStatusMessage('connecting');
 
       const connectStart = Date.now();
