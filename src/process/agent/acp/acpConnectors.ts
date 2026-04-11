@@ -237,7 +237,7 @@ export function createGenericSpawnConfig(
 
   // Default to --experimental-acp only if acpArgs is strictly undefined.
   // This allows passing an empty array [] to bypass default flags.
-  const effectiveAcpArgs = acpArgs === undefined ? ['--experimental-acp'] : acpArgs;
+  const effectiveAcpArgs = acpArgs === undefined ? [] : acpArgs;
 
   let spawnCommand: string;
   let spawnArgs: string[];
@@ -337,6 +337,7 @@ export function spawnNpxBackend(
   } else {
     effectiveCommand = isWindows ? `chcp 65001 >nul && "${npxCommand}"` : npxCommand;
   }
+  console.log(`[AcpConnectors] Spawning ${backend} with command: ${effectiveCommand} ${spawnArgs.join(' ')} (preferOffline=${preferOffline})`);
   const child = spawn(effectiveCommand, spawnArgs, {
     cwd: workingDir,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -504,9 +505,8 @@ export async function spawnGenericBackend(
   }
 
   const cleanEnv = await prepareCleanEnv();
-  if (customEnv) {
-    Object.assign(cleanEnv, customEnv);
-  }
+  if (customEnv) Object.assign(cleanEnv, customEnv);
+
   ensureMinNodeVersion(cleanEnv, 18, 17, `${backend} ACP`);
 
   const spawnStart = Date.now();

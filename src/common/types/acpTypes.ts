@@ -36,11 +36,11 @@ export const ACP_ROUTED_PRESET_TYPES: readonly PresetAgentType[] = [
   'kiro',
 ] as const;
 
-export const CODEX_ACP_BRIDGE_VERSION = '0.9.5';
+export const CODEX_ACP_BRIDGE_VERSION = '0.11.1';
 export const CODEX_ACP_NPX_PACKAGE = `@zed-industries/codex-acp@${CODEX_ACP_BRIDGE_VERSION}`;
 
-export const CLAUDE_ACP_BRIDGE_VERSION = '0.21.0';
-export const CLAUDE_ACP_NPX_PACKAGE = `@zed-industries/claude-agent-acp@${CLAUDE_ACP_BRIDGE_VERSION}`;
+export const CLAUDE_ACP_BRIDGE_VERSION = '0.26.0';
+export const CLAUDE_ACP_NPX_PACKAGE = `@agentclientprotocol/claude-agent-acp@${CLAUDE_ACP_BRIDGE_VERSION}`;
 
 export const CODEBUDDY_ACP_BRIDGE_VERSION = '2.73.0';
 export const CODEBUDDY_ACP_NPX_PACKAGE = `@tencent-ai/codebuddy-code@${CODEBUDDY_ACP_BRIDGE_VERSION}`;
@@ -98,9 +98,6 @@ export interface PotentialAcpCli {
   backendId: AcpBackendAll;
 }
 
-/** 默认的 ACP 启动参数 / Default ACP launch arguments */
-const DEFAULT_ACP_ARGS = ['--experimental-acp'];
-
 /**
  * 从 ACP_BACKENDS_ALL 生成可检测的 CLI 列表
  * 仅包含有 cliCommand 且已启用的后端（排除 gemini 和 custom）
@@ -120,7 +117,7 @@ function generatePotentialAcpClis(): PotentialAcpCli[] {
     })
     .map(([id, config]) => ({
       cmd: config.cliCommand!,
-      args: config.acpArgs || DEFAULT_ACP_ARGS,
+      args: config.acpArgs ?? [],
       name: config.name,
       backendId: id as AcpBackendAll,
     }));
@@ -333,217 +330,178 @@ export interface AcpBackendConfig {
   customSkillNames?: string[];
 }
 
-// 所有后端配置 - 包括暂时禁用的 / All backend configurations - including temporarily disabled ones
+// 所有后端配置 / All backend configurations
+//
+// NOTE (ACP Registry Migration): Fields marked with [TRANSITIONAL] below are
+// consumed by builtin agent detection (POTENTIAL_ACP_CLIS + which). Once all
+// agents are Hub-installable and builtin detection is removed, these fields
+// can be deleted — the canonical source will be the extension manifest's
+// `contributes.acpAdapters`.
+//
+// Dead-code fields removed in this cleanup:
+//   authRequired, supportsStreaming — never consumed at runtime
+//   defaultCliPath — now provided by extension manifest; builtin connectors
+//     (claude/codex/codebuddy) hardcode their NPX packages independently
 export const ACP_BACKENDS_ALL: Record<AcpBackendAll, AcpBackendConfig> = {
   claude: {
     id: 'claude',
     name: 'Claude Code',
-    cliCommand: 'claude',
-    authRequired: true,
+    cliCommand: 'claude', // [TRANSITIONAL] builtin detection via `which`
     enabled: true,
-    supportsStreaming: false,
-    skillsDirs: ['.claude/skills'],
+    skillsDirs: ['.claude/skills'], // [TRANSITIONAL] builtin skill discovery
   },
   gemini: {
     id: 'gemini',
     name: 'Google CLI',
     cliCommand: 'gemini',
-    authRequired: true,
     enabled: false,
-    supportsStreaming: true,
     skillsDirs: ['.gemini/skills'],
   },
   qwen: {
     id: 'qwen',
     name: 'Qwen Code',
-    cliCommand: 'qwen',
-    defaultCliPath: 'npx @qwen-code/qwen-code',
-    authRequired: true,
-    enabled: true, // ✅ 已验证支持：Qwen CLI v0.0.10+ 支持 --acp
-    supportsStreaming: true,
-    acpArgs: ['--acp'], // Use --acp instead of deprecated --experimental-acp
-    skillsDirs: ['.qwen/skills'],
+    cliCommand: 'qwen', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['--acp'], // [TRANSITIONAL]
+    skillsDirs: ['.qwen/skills'], // [TRANSITIONAL]
   },
   iflow: {
     id: 'iflow',
     name: 'iFlow CLI',
-    cliCommand: 'iflow',
-    authRequired: true,
+    cliCommand: 'iflow', // [TRANSITIONAL]
     enabled: true,
-    supportsStreaming: false,
-    skillsDirs: ['.iflow/skills'],
+    skillsDirs: ['.iflow/skills'], // [TRANSITIONAL]
   },
   codex: {
     id: 'codex',
     name: 'Codex',
-    cliCommand: 'codex', // Detect local codex CLI (codex-acp bridge invokes it)
-    defaultCliPath: `npx ${CODEX_ACP_NPX_PACKAGE}`,
-    authRequired: true, // Needs OPENAI_API_KEY or ChatGPT auth
-    enabled: true, // ✅ Codex via codex-acp ACP bridge
-    supportsStreaming: false,
-    acpArgs: [], // codex-acp is ACP by default, no flag needed
-    skillsDirs: ['.codex/skills'],
+    cliCommand: 'codex', // [TRANSITIONAL] detect local codex CLI
+    enabled: true,
+    acpArgs: [], // [TRANSITIONAL] codex-acp is ACP by default
+    skillsDirs: ['.codex/skills'], // [TRANSITIONAL]
   },
   codebuddy: {
     id: 'codebuddy',
     name: 'CodeBuddy',
-    cliCommand: 'codebuddy',
-    defaultCliPath: `npx ${CODEBUDDY_ACP_NPX_PACKAGE}`,
-    authRequired: true,
-    enabled: true, // ✅ Tencent CodeBuddy Code CLI，使用 `codebuddy --acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['--acp'], // codebuddy 使用 --acp flag
-    skillsDirs: ['.codebuddy/skills'],
+    cliCommand: 'codebuddy', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['--acp'], // [TRANSITIONAL]
+    skillsDirs: ['.codebuddy/skills'], // [TRANSITIONAL]
   },
   goose: {
     id: 'goose',
     name: 'Goose',
-    cliCommand: 'goose',
-    authRequired: false,
-    enabled: true, // ✅ Block's Goose CLI，使用 `goose acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['acp'], // goose 使用子命令而非 flag
-    skillsDirs: ['.goose/skills'],
+    cliCommand: 'goose', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['acp'], // [TRANSITIONAL] goose uses subcommand
+    skillsDirs: ['.goose/skills'], // [TRANSITIONAL]
   },
   auggie: {
     id: 'auggie',
     name: 'Augment Code',
-    cliCommand: 'auggie',
-    authRequired: false,
-    enabled: true, // ✅ Augment Code CLI，使用 `auggie --acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['--acp'], // auggie 使用 --acp flag
+    cliCommand: 'auggie', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['--acp'], // [TRANSITIONAL]
   },
   kimi: {
     id: 'kimi',
     name: 'Kimi CLI',
-    cliCommand: 'kimi',
-    authRequired: false,
-    enabled: true, // ✅ Kimi CLI (Moonshot)，使用 `kimi acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['acp'], // kimi 使用 acp 子命令
-    skillsDirs: ['.kimi/skills'],
+    cliCommand: 'kimi', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['acp'], // [TRANSITIONAL]
+    skillsDirs: ['.kimi/skills'], // [TRANSITIONAL]
   },
   opencode: {
     id: 'opencode',
     name: 'OpenCode',
-    cliCommand: 'opencode',
-    authRequired: false,
-    enabled: true, // ✅ OpenCode CLI，使用 `opencode acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['acp'], // opencode 使用 acp 子命令
+    cliCommand: 'opencode', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['acp'], // [TRANSITIONAL]
   },
   droid: {
     id: 'droid',
     name: 'Factory Droid',
-    cliCommand: 'droid',
-    // Droid uses FACTORY_API_KEY from environment, not an interactive auth flow.
-    authRequired: false,
-    enabled: true, // ✅ Factory docs: `droid exec --output-format acp` (JetBrains/Zed ACP integration)
-    supportsStreaming: false,
-    acpArgs: ['exec', '--output-format', 'acp'],
-    skillsDirs: ['.factory/skills'],
+    cliCommand: 'droid', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['exec', '--output-format', 'acp'], // [TRANSITIONAL]
+    skillsDirs: ['.factory/skills'], // [TRANSITIONAL]
   },
   copilot: {
     id: 'copilot',
     name: 'GitHub Copilot',
-    cliCommand: 'copilot',
-    authRequired: false,
-    enabled: true, // ✅ GitHub Copilot CLI，使用 `copilot --acp --stdio` 启动
-    supportsStreaming: false,
-    acpArgs: ['--acp', '--stdio'], // copilot 使用 --acp --stdio 启动 ACP mode
+    cliCommand: 'copilot', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['--acp', '--stdio'], // [TRANSITIONAL]
   },
   qoder: {
     id: 'qoder',
     name: 'Qoder CLI',
-    cliCommand: 'qodercli',
-    authRequired: false,
-    enabled: true, // ✅ Qoder CLI，使用 `qodercli --acp` 启动
-    supportsStreaming: false,
-    acpArgs: ['--acp'], // qoder 使用 --acp flag
+    cliCommand: 'qodercli', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['--acp'], // [TRANSITIONAL]
   },
   vibe: {
     id: 'vibe',
     name: 'Mistral Vibe',
-    cliCommand: 'vibe-acp',
-    authRequired: false,
-    enabled: true, // ✅ Mistral Vibe CLI，使用 `vibe-acp` 启动
-    supportsStreaming: false,
-    acpArgs: [],
-    skillsDirs: ['.vibe/skills'],
+    cliCommand: 'vibe-acp', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: [], // [TRANSITIONAL]
+    skillsDirs: ['.vibe/skills'], // [TRANSITIONAL]
   },
   'openclaw-gateway': {
     id: 'openclaw-gateway',
     name: 'OpenClaw',
-    cliCommand: 'openclaw',
-    authRequired: false,
-    enabled: true, // ✅ OpenClaw Gateway WebSocket mode
-    supportsStreaming: true,
-    acpArgs: ['gateway'], // openclaw gateway command (for detection)
+    cliCommand: 'openclaw', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['gateway'], // [TRANSITIONAL]
   },
   nanobot: {
     id: 'nanobot',
     name: 'Nano Bot',
-    cliCommand: 'nanobot',
-    authRequired: false,
+    cliCommand: 'nanobot', // [TRANSITIONAL]
     enabled: true,
-    supportsStreaming: false,
   },
   cursor: {
     id: 'cursor',
     name: 'Cursor Agent',
-    // Note: Cursor CLI uses the generic command name "agent". Detection relies on `which agent`
-    // which may match other tools. Users should ensure the Cursor CLI is the `agent` on their PATH.
-    cliCommand: 'agent',
-    authRequired: true, // Requires active Cursor subscription
-    enabled: true, // ✅ Cursor AI Agent CLI, launched via `agent acp`
-    supportsStreaming: false,
-    acpArgs: ['acp'], // Cursor uses `agent acp` subcommand
-    skillsDirs: ['.cursor/skills'],
+    cliCommand: 'agent', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['acp'], // [TRANSITIONAL]
+    skillsDirs: ['.cursor/skills'], // [TRANSITIONAL]
   },
   kiro: {
     id: 'kiro',
     name: 'Kiro',
-    cliCommand: 'kiro-cli',
-    authRequired: true, // Requires Kiro / AWS Builder ID login
-    enabled: true, // ✅ Kiro CLI, launched via `kiro-cli acp`
-    supportsStreaming: false,
-    acpArgs: ['acp'], // Kiro uses `kiro-cli acp` subcommand
+    cliCommand: 'kiro-cli', // [TRANSITIONAL]
+    enabled: true,
+    acpArgs: ['acp'], // [TRANSITIONAL]
   },
   hermes: {
     id: 'hermes',
     name: 'Hermes Agent',
     description: 'AI agent by Nous Research with 90+ tools, persistent memory, and multi-platform support',
     cliCommand: 'hermes',
-    authRequired: true,
     enabled: true, // ✅ Nous Research Hermes Agent，使用 `hermes acp` 启动
-    supportsStreaming: false,
     acpArgs: ['acp'], // hermes 使用 acp 子命令
   },
   remote: {
     id: 'remote',
     name: 'Remote Agent',
-    cliCommand: undefined, // No local CLI — connected via WebSocket URL
-    authRequired: false,
+    cliCommand: undefined,
     enabled: true,
-    supportsStreaming: true,
   },
   aionrs: {
     id: 'aionrs',
     name: 'Aion CLI',
     cliCommand: 'aionrs',
-    authRequired: false, // Auth handled via env vars from model config
     enabled: true,
-    supportsStreaming: true,
     skillsDirs: ['.aionrs/skills'],
   },
   custom: {
     id: 'custom',
     name: 'Custom Agent',
-    cliCommand: undefined, // User-configured via settings
-    authRequired: false,
+    cliCommand: undefined,
     enabled: true,
-    supportsStreaming: false,
   },
 };
 

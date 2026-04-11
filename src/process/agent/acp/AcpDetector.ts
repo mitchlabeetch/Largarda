@@ -8,22 +8,48 @@ import type { AcpBackendAll, PresetAgentType } from '@/common/types/acpTypes';
 import { POTENTIAL_ACP_CLIS } from '@/common/types/acpTypes';
 import { ExtensionRegistry } from '@process/extensions';
 import { ProcessConfig } from '@process/utils/initStorage';
+import { safeExec, safeExecFile } from '@process/utils/safeExec';
 import { getEnhancedEnv } from '@process/utils/shellEnv';
-import { execSync } from 'child_process';
+import { cleanOldVersions, resolveManagedBinary } from '@process/extensions/hub/ManagedInstallResolver';
+
+/** How the CLI path was resolved — useful for diagnostics and UI display */
+export type CliResolvedFrom = 'user-config' | 'managed' | 'default-cli-path' | 'none';
+export type DetectedKind = 'builtinAgent' | 'extensionAgent' | 'customAgent' | 'assistant';
 
 interface DetectedAgent {
+  id: string;
+  kind: DetectedKind;
+  // There are 4 real-kind: builtinAgent, extensionAgent, customAgent, AssistantAgent
+  // - Builtin:   backend is a known CLI id (claude, qwen, goose, …) or 'gemini'
+  // - Extension: `backend: 'custom', isExtension: true`,           isPreset: false, customAgentId = `ext:<extensionName>:<adapterId>`
+  // - Custom:    `backend: 'custom', isExtension: false|undefined, isPreset: false, customAgentId is user-defined
+  // - Assistant: `backend: 'custom', isExtension: false|undefined, isPreset: true`, customAgentId is user-defined
   backend: AcpBackendAll;
+  isExtension?: boolean;
+  customAgentId?: string;
+  isPreset?: boolean;
+
   name: string;
   cliPath?: string;
   acpArgs?: string[];
-  customAgentId?: string;
-  isPreset?: boolean;
   context?: string;
   avatar?: string;
   presetAgentType?: PresetAgentType | string;
-  isExtension?: boolean;
   extensionName?: string;
+  /** How the CLI path was resolved (extension agents only) */
+  resolvedFrom?: CliResolvedFrom;
+  /** Custom env from manifest (extension agents only) */
+  env?: Record<string, string>;
+  /** Skill directories from manifest (extension agents only) */
+  skillsDirs?: string[];
 }
+
+const isBuiltinAgent = (agent: DetectedAgent): boolean => agent.backend !== 'gemini' && agent.backend !== 'custom';
+const isExtensionAgent = (agent: DetectedAgent): boolean => agent.backend === 'custom' && agent.isExtension === true;
+const isCustomAgent = (agent: DetectedAgent): boolean =>
+  agent.backend === 'custom' && !agent.isExtension && !agent.isPreset;
+const isAssistant = (agent: DetectedAgent): boolean =>
+  agent.backend === 'custom' && !agent.isExtension && agent.isPreset;
 
 /**
  * Global ACP detector — detects available agents from three sources:
@@ -54,9 +80,12 @@ class AcpDetector {
   private isDetected = false;
   private enhancedEnv: NodeJS.ProcessEnv | undefined;
   private mutationQueue: Promise<void> = Promise.resolve();
+  private lastRefreshAt = 0;
 
   private createGeminiAgent(): DetectedAgent {
     return {
+      kind: 'builtinAgent',
+      id: 'gemini',
       backend: 'gemini',
       name: 'Gemini CLI',
       cliPath: undefined,
@@ -70,7 +99,8 @@ class AcpDetector {
     customAgents?: DetectedAgent[];
   }): DetectedAgent[] {
     const { builtinAgents = [], extensionAgents = [], customAgents = [] } = params;
-    return this.deduplicate([this.createGeminiAgent(), ...builtinAgents, ...extensionAgents, ...customAgents]);
+    const deduped = this.deduplicate(builtinAgents, extensionAgents, customAgents);
+    return [this.createGeminiAgent(), ...deduped];
   }
 
   private async runExclusiveMutation<T>(task: () => Promise<T>): Promise<T> {
@@ -91,46 +121,75 @@ class AcpDetector {
   }
 
   /**
-   * Check if a CLI command is available on the system PATH.
+   * Check which CLI commands are available on the system PATH (batch).
+   *
+   * On POSIX: single shell invocation using `command -v` (shell builtin,
+   * no per-command process spawn). Outputs found command names, one per line.
+   *
+   * On Windows: parallel `where` calls with PowerShell fallback (unchanged
+   * from prior per-command approach, since `where` doesn't support batch).
    */
-  private isCliAvailable(cliCommand: string): boolean {
-    const isWindows = process.platform === 'win32';
-    const whichCommand = isWindows ? 'where' : 'which';
+  private async batchCheckCliAvailability(commands: string[]): Promise<Set<string>> {
+    if (commands.length === 0) return new Set();
 
     if (!this.enhancedEnv) {
       this.enhancedEnv = getEnhancedEnv();
     }
 
-    try {
-      execSync(`${whichCommand} ${cliCommand}`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        timeout: 1000,
-        env: this.enhancedEnv,
-      });
-      return true;
-    } catch {
-      if (!isWindows) return false;
-    }
+    const isWindows = process.platform === 'win32';
 
-    if (isWindows) {
+    if (!isWindows) {
+      // Single shell: `command -v` is a POSIX shell builtin — no child process per command.
+      // We echo the command name only when found, so output is a clean list of available CLIs.
+      const checks = commands.map((cmd) => `command -v '${cmd}' >/dev/null 2>&1 && echo '${cmd}'`);
+      // Append `; true` so the script always exits 0 — otherwise safeExec
+      // rejects when the last CLI is not found (command -v returns 1).
+      const script = checks.join('; ') + '; true';
       try {
-        execSync(
-          `powershell -NoProfile -NonInteractive -Command "Get-Command -All ${cliCommand} | Select-Object -First 1 | Out-Null"`,
-          {
-            encoding: 'utf-8',
-            stdio: 'pipe',
-            timeout: 1000,
-            env: this.enhancedEnv,
-          }
-        );
-        return true;
-      } catch {
-        return false;
+        const { stdout } = await safeExec(script, { timeout: 3000, env: this.enhancedEnv });
+        return new Set(stdout.trim().split('\n').filter(Boolean));
+      } catch (err) {
+        console.error('[AcpDetector] Batch CLI availability check failed, falling back to individual checks:', err);
+        return new Set();
       }
     }
 
-    return false;
+    // Windows: parallel individual `where` + PowerShell fallback
+    const results = await Promise.allSettled(
+      commands.map(async (cmd): Promise<string | null> => {
+        try {
+          await safeExecFile('where', [cmd], { timeout: 1000, env: this.enhancedEnv });
+          return cmd;
+        } catch {
+          /* where failed, try PowerShell */
+        }
+        try {
+          await safeExecFile(
+            'powershell',
+            [
+              '-NoProfile',
+              '-NonInteractive',
+              '-Command',
+              `Get-Command -All ${cmd} | Select-Object -First 1 | Out-Null`,
+            ],
+            { timeout: 1000, env: this.enhancedEnv }
+          );
+          return cmd;
+        } catch {
+          return null;
+        }
+      })
+    );
+    return new Set(
+      results
+        .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && r.value !== null)
+        .map((r) => r.value)
+    );
+  }
+
+  /** Collect backend IDs of extension agents resolved via managed install directory. */
+  private collectManagedAgentIds(extensionAgents: DetectedAgent[]): Set<string> {
+    return new Set(extensionAgents.filter((a) => a.resolvedFrom === 'managed').map((a) => a.id));
   }
 
   // ---------------------------------------------------------------------------
@@ -138,71 +197,110 @@ class AcpDetector {
   // ---------------------------------------------------------------------------
 
   /**
-   * Source 1: Built-in POTENTIAL_ACP_CLIS — parallel CLI availability check.
+   * Source 1: Built-in POTENTIAL_ACP_CLIS — batch CLI availability check.
+   *
+   * @param skipIds - Backend IDs to skip (already resolved via managed install).
+   *   When an extension agent was found through its managed install directory,
+   *   there is no need to also `which` the same CLI on the system PATH.
    */
-  private async detectBuiltinAgents(): Promise<DetectedAgent[]> {
-    const promises = POTENTIAL_ACP_CLIS.map((cli) =>
-      Promise.resolve().then((): DetectedAgent | null =>
-        this.isCliAvailable(cli.cmd)
-          ? { backend: cli.backendId, name: cli.name, cliPath: cli.cmd, acpArgs: cli.args }
-          : null
-      )
-    );
+  private async detectBuiltinAgents(skipIds?: Set<string>): Promise<DetectedAgent[]> {
+    const clis = skipIds ? POTENTIAL_ACP_CLIS.filter((cli) => !skipIds.has(cli.backendId)) : [...POTENTIAL_ACP_CLIS];
 
-    const results = await Promise.allSettled(promises);
-    return results
-      .filter((r): r is PromiseFulfilledResult<DetectedAgent> => r.status === 'fulfilled' && r.value !== null)
-      .map((r) => r.value);
+    if (clis.length === 0) return [];
+
+    const available = await this.batchCheckCliAvailability(clis.map((cli) => cli.cmd));
+
+    return clis
+      .filter((cli) => available.has(cli.cmd))
+      .map((cli) => ({
+        kind: 'builtinAgent' as const,
+        id: cli.backendId,
+        backend: cli.backendId,
+        isExtension: false,
+        isPreset: false,
+        name: cli.name,
+        cliPath: cli.cmd,
+        acpArgs: cli.args,
+      }));
   }
 
   /**
-   * Source 2: Extension-contributed ACP adapters — parallel CLI availability check.
+   * Source 2: Extension-contributed ACP adapters.
+   *
+   * Resolution priority for each adapter:
+   *   1. Managed install directory (absolute path, no `which` needed)
+   *   2. defaultCliPath from manifest (bunx fallback, no `which` needed)
+   *   3. Skip — adapter not available
    */
   private async detectExtensionAgents(): Promise<DetectedAgent[]> {
     try {
       const adapters = ExtensionRegistry.getInstance().getAcpAdapters();
       if (!adapters || adapters.length === 0) return [];
 
-      const candidates: Array<{ agent: DetectedAgent; cliCommand: string }> = [];
+      const agents: DetectedAgent[] = [];
 
       for (const item of adapters) {
         const adapter = item as Record<string, unknown>;
         const id = typeof adapter.id === 'string' ? adapter.id : '';
         const name = typeof adapter.name === 'string' ? adapter.name : id;
-        const cliCommand = typeof adapter.cliCommand === 'string' ? adapter.cliCommand : undefined;
+        const defaultCliPath = typeof adapter.defaultCliPath === 'string' ? adapter.defaultCliPath : undefined;
         const acpArgs = Array.isArray(adapter.acpArgs)
           ? adapter.acpArgs.filter((v): v is string => typeof v === 'string')
           : undefined;
+        const env =
+          typeof adapter.env === 'object' && adapter.env !== null ? (adapter.env as Record<string, string>) : undefined;
         const avatar = typeof adapter.avatar === 'string' ? adapter.avatar : undefined;
         const extensionName = typeof adapter._extensionName === 'string' ? adapter._extensionName : 'unknown-extension';
         const connectionType = typeof adapter.connectionType === 'string' ? adapter.connectionType : 'unknown';
+        const installedBinaryPath =
+          typeof adapter.installedBinaryPath === 'string' ? adapter.installedBinaryPath : undefined;
 
         if (connectionType !== 'cli' && connectionType !== 'stdio') continue;
-        if (!cliCommand) continue;
+        if (!defaultCliPath && !installedBinaryPath) continue;
 
-        candidates.push({
-          cliCommand,
-          agent: {
+        // Priority 1: Check managed install directory
+        const managed = resolveManagedBinary(extensionName, installedBinaryPath);
+        if (managed) {
+          agents.push({
+            kind: 'extensionAgent',
+            id: id,
             backend: 'custom' as const,
-            name,
-            cliPath: cliCommand,
-            acpArgs,
-            avatar,
-            customAgentId: id,
             isExtension: true,
-            extensionName,
-          },
-        });
+            customAgentId: `ext:${extensionName}:${id}`,
+            isPreset: false,
+            name: name,
+            cliPath: managed.binaryPath,
+            acpArgs: acpArgs,
+            env: env,
+            avatar: avatar,
+            extensionName: extensionName,
+            resolvedFrom: 'managed',
+          });
+          continue;
+        }
+
+        // Priority 2: defaultCliPath (bunx fallback — always available, no `which` needed)
+        if (defaultCliPath) {
+          agents.push({
+            kind: 'extensionAgent',
+            id: id,
+            backend: 'custom' as const,
+            isExtension: true,
+            customAgentId: `ext:${extensionName}:${id}`,
+            isPreset: false,
+            name: name,
+            cliPath: defaultCliPath,
+            acpArgs: acpArgs,
+            env: env,
+            avatar: avatar,
+            extensionName: extensionName,
+            resolvedFrom: 'default-cli-path',
+          });
+          continue;
+        }
       }
 
-      const promises = candidates.map((c) =>
-        Promise.resolve().then((): DetectedAgent | null => (this.isCliAvailable(c.cliCommand) ? c.agent : null))
-      );
-
-      const results = await Promise.allSettled(promises);
-      return results
-        .filter((r): r is PromiseFulfilledResult<DetectedAgent> => r.status === 'fulfilled' && r.value !== null)
-        .map((r) => r.value);
+      return agents;
     } catch (error) {
       console.warn('[AcpDetector] Failed to load extension ACP adapters:', error);
       return [];
@@ -221,12 +319,15 @@ class AcpDetector {
       if (enabledAgents.length === 0) return [];
 
       return enabledAgents.map((agent) => ({
+        kind: agent.isPreset ? 'assistant' : 'customAgent',
+        id: agent.id,
         backend: 'custom' as const,
+        isExtension: false,
+        customAgentId: agent.id,
+        isPreset: agent.isPreset,
         name: agent.name || 'Custom Agent',
         cliPath: agent.defaultCliPath,
         acpArgs: agent.acpArgs,
-        customAgentId: agent.id,
-        isPreset: agent.isPreset,
         context: agent.context,
         avatar: agent.avatar,
         presetAgentType: agent.presetAgentType,
@@ -249,23 +350,63 @@ class AcpDetector {
    * input arrays determines priority: builtin > extension > custom).
    * Agents without cliPath (e.g. Gemini, presets) are always kept.
    */
-  private deduplicate(agents: DetectedAgent[]): DetectedAgent[] {
-    const seen = new Set<string>();
-    const result: DetectedAgent[] = [];
-    // console.debug(
-    //   `[AcpDetector] Deduplicating ${agents.length} agents: [ ${agents.map((a) => a.name).join(', ')} ]`
-    // );
-    // console.debug(
-    //   `[AcpDetector] Deduplicating ${agents.length} agents: [ ${agents.map((a) => JSON.stringify(a)).join('\n')} ]`
-    // );
-    for (const agent of agents) {
-      if (agent.cliPath) {
-        if (seen.has(agent.cliPath)) continue;
-        seen.add(agent.cliPath);
+  private deduplicate(
+    builtinAgents: DetectedAgent[],
+    extensionAgents: DetectedAgent[],
+    customAgents: DetectedAgent[]
+  ): DetectedAgent[] {
+    const agents = [...builtinAgents, ...extensionAgents, ...customAgents];
+    console.debug(`[AcpDetector] Deduplicating ${agents.length} agents: [ ${agents.map((a) => a.name).join(', ')} ]`);
+
+    // customAgent dedup by customAgentId (if present) to allow multiple custom agents with same CLI but different configs
+    const customSeen = new Set<string>();
+    const customeDeduped: DetectedAgent[] = [];
+    for (const agent of customAgents) {
+      if (agent.customAgentId) {
+        if (customSeen.has(agent.customAgentId)) continue;
+        customSeen.add(agent.customAgentId);
       }
-      result.push(agent);
+      customeDeduped.push(agent);
     }
 
+    // extensionAgent dedup by cliPath to avoid duplicates between managed/default/system paths — keep the first one found by priority
+    const extSeen = new Set<string>();
+    const extensionDeduped: DetectedAgent[] = [];
+    for (const agent of extensionAgents) {
+      if (agent.cliPath) {
+        if (extSeen.has(agent.cliPath)) continue;
+        extSeen.add(agent.cliPath);
+      }
+      extensionDeduped.push(agent);
+    }
+
+    // builtinAgent dedup by cliPath to avoid duplicates between different builtins that resolve to the same CLI (unlikely but just in case) — keep the first one found by priority
+    const builtinSeen = new Set<string>();
+    const builtinDeduped: DetectedAgent[] = [];
+    for (const agent of builtinAgents) {
+      if (agent.cliPath) {
+        if (builtinSeen.has(agent.cliPath)) continue;
+        builtinSeen.add(agent.cliPath);
+      }
+      builtinDeduped.push(agent);
+    }
+
+    // Deduplicate across extension and builtin as well by name
+    const nameSeen = new Set<string>();
+    const finalDeduped: DetectedAgent[] = [];
+    for (const agent of [...extensionDeduped, ...builtinDeduped]) {
+      if (nameSeen.has(agent.name)) continue;
+      nameSeen.add(agent.name);
+      finalDeduped.push(agent);
+    }
+
+    const result = [...customeDeduped, ...finalDeduped];
+    console.debug(
+      `[AcpDetector] Deduplication result: ${result.length} agents: [ ${result.map((a) => a.name).join(', ')} ]`
+    );
+    console.debug(
+      `[AcpDetector] Deduplication result: ${result.length} agents: \n${result.map((a) => JSON.stringify(a)).join('\n')}`
+    );
     return result;
   }
 
@@ -280,21 +421,41 @@ class AcpDetector {
       console.log('[ACP] Starting agent detection...');
       const startTime = Date.now();
 
-      // Run all three sources in parallel
-      const [builtinAgents, extensionAgents, customAgents] = await Promise.all([
-        this.detectBuiltinAgents(),
+      // Phase 1: extension + custom (parallel, no `which` needed)
+      const [extensionAgents, customAgents] = await Promise.all([
         this.detectExtensionAgents(),
         this.detectCustomAgents(),
       ]);
 
+      // Phase 2: builtin — skip CLIs already found via managed install
+      const managedIds = this.collectManagedAgentIds(extensionAgents);
+      if (managedIds.size > 0) {
+        console.log(`[AcpDetector] Skipping builtin detection for managed agents: [${[...managedIds].join(', ')}]`);
+      }
+      const builtinAgents = await this.detectBuiltinAgents(managedIds);
+
       this.detectedAgents = this.mergeDetectedAgents({ builtinAgents, extensionAgents, customAgents });
       this.isDetected = true;
+      this.lastRefreshAt = Date.now();
       const elapsed = Date.now() - startTime;
 
-      const agentSummary = this.detectedAgents.map((a) => a.name).join(', ');
+      const agentSummary = this.detectedAgents.map((a) => `* ${a.backend}: ${a.name}`).join('\n');
       console.log(
-        `[ACP Detector] Completed in ${elapsed}ms, found ${this.detectedAgents.length} agents: ${agentSummary}`
+        `[ACP Detector] Completed in ${elapsed}ms, found ${this.detectedAgents.length} agents:\n${agentSummary}`
       );
+
+      // Background cleanup: remove old version directories for managed extensions.
+      // Non-blocking — does not delay startup. Keep 3 most recent versions per extension.
+      const extensionNames = new Set(
+        this.detectedAgents
+          .filter((a) => isExtensionAgent(a) && a.resolvedFrom === 'managed' && a.extensionName)
+          .map((a) => a.extensionName!)
+      );
+      if (extensionNames.size > 0) {
+        Promise.all([...extensionNames].map((name) => cleanOldVersions(name, 3))).catch((err) =>
+          console.warn('[AcpDetector] Background version cleanup failed:', err)
+        );
+      }
     });
   }
 
@@ -311,10 +472,8 @@ class AcpDetector {
    */
   async refreshCustomAgents(): Promise<void> {
     await this.runExclusiveMutation(async () => {
-      const builtinAgents = this.detectedAgents.filter(
-        (agent) => agent.backend !== 'gemini' && agent.backend !== 'custom'
-      );
-      const extensionAgents = this.detectedAgents.filter((agent) => agent.backend === 'custom' && agent.isExtension);
+      const builtinAgents = this.detectedAgents.filter(isBuiltinAgent);
+      const extensionAgents = this.detectedAgents.filter(isExtensionAgent);
       const customAgents = await this.detectCustomAgents();
       this.detectedAgents = this.mergeDetectedAgents({ builtinAgents, extensionAgents, customAgents });
     });
@@ -329,12 +488,11 @@ class AcpDetector {
     await this.runExclusiveMutation(async () => {
       this.enhancedEnv = undefined;
       // Snapshot old builtin backends for diff logging
-      const oldBuiltins = this.detectedAgents
-        .filter((a) => a.backend !== 'gemini' && a.backend !== 'custom')
-        .map((a) => a.backend);
-      const extensionAgents = this.detectedAgents.filter((agent) => agent.backend === 'custom' && agent.isExtension);
-      const customAgents = this.detectedAgents.filter((agent) => agent.backend === 'custom' && !agent.isExtension);
-      const builtinAgents = await this.detectBuiltinAgents();
+      const extensionAgents = this.detectedAgents.filter(isExtensionAgent);
+      const customAgents = this.detectedAgents.filter(isCustomAgent);
+
+      const oldBuiltins = this.detectedAgents.filter(isBuiltinAgent).map((a) => a.backend);
+      const builtinAgents = await this.detectBuiltinAgents(this.collectManagedAgentIds(extensionAgents));
       const newBuiltins = builtinAgents.map((a) => a.backend);
       this.detectedAgents = this.mergeDetectedAgents({ builtinAgents, extensionAgents, customAgents });
 
@@ -353,12 +511,11 @@ class AcpDetector {
   async refreshExtensionAgents(): Promise<void> {
     await this.runExclusiveMutation(async () => {
       this.enhancedEnv = undefined;
-      const builtinAgents = this.detectedAgents.filter(
-        (agent) => agent.backend !== 'gemini' && agent.backend !== 'custom'
-      );
-      const customAgents = this.detectedAgents.filter((agent) => agent.backend === 'custom' && !agent.isExtension);
+      const builtinAgents = this.detectedAgents.filter(isBuiltinAgent);
+      const customAgents = this.detectedAgents.filter(isCustomAgent);
       const extensionAgents = await this.detectExtensionAgents();
       this.detectedAgents = this.mergeDetectedAgents({ builtinAgents, extensionAgents, customAgents });
+      this.lastRefreshAt = Date.now();
     });
   }
 
@@ -371,15 +528,31 @@ class AcpDetector {
     await this.runExclusiveMutation(async () => {
       this.enhancedEnv = undefined;
 
-      const [builtinAgents, extensionAgents, customAgents] = await Promise.all([
-        this.detectBuiltinAgents(),
+      // Phase 1: extension + custom (no `which`)
+      const [extensionAgents, customAgents] = await Promise.all([
         this.detectExtensionAgents(),
         this.detectCustomAgents(),
       ]);
 
+      // Phase 2: builtin — skip CLIs already found via managed install
+      const builtinAgents = await this.detectBuiltinAgents(this.collectManagedAgentIds(extensionAgents));
+
       this.detectedAgents = this.mergeDetectedAgents({ builtinAgents, extensionAgents, customAgents });
+      this.lastRefreshAt = Date.now();
     });
+  }
+
+  /**
+   * Refresh all agents only if the last refresh was more than `ttlMs` ago.
+   * Avoids redundant back-to-back refreshes (e.g. install just refreshed,
+   * then getExtensionListWithStatus triggers another one immediately).
+   */
+  async refreshAllIfStale(ttlMs: number): Promise<void> {
+    if (Date.now() - this.lastRefreshAt < ttlMs) return;
+    await this.refreshAll();
   }
 }
 
 export const acpDetector = new AcpDetector();
+export { isAssistant, isBuiltinAgent, isCustomAgent, isExtensionAgent };
+export type { DetectedAgent };
