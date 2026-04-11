@@ -4,8 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks — must be declared before importing the module under test
 // ---------------------------------------------------------------------------
 
-vi.mock('child_process', () => ({
-  execSync: vi.fn(),
+const mockSafeExec = vi.fn();
+const mockSafeExecFile = vi.fn();
+vi.mock('@process/utils/safeExec', () => ({
+  safeExec: (...args: unknown[]) => mockSafeExec(...args),
+  safeExecFile: (...args: unknown[]) => mockSafeExecFile(...args),
+}));
+
+const mockResolveManagedBinary = vi.fn(() => null);
+const mockCleanOldVersions = vi.fn(async () => []);
+vi.mock('@process/extensions/hub/ManagedInstallResolver', () => ({
+  resolveManagedBinary: (...args: unknown[]) => mockResolveManagedBinary(...args),
+  cleanOldVersions: (...args: unknown[]) => mockCleanOldVersions(...args),
 }));
 
 vi.mock('@/common/types/acpTypes', () => ({
@@ -35,10 +45,7 @@ vi.mock('@process/utils/shellEnv', () => ({
   getEnhancedEnv: vi.fn(() => ({ ...process.env })),
 }));
 
-import { execSync } from 'child_process';
 import { ProcessConfig } from '@process/utils/initStorage';
-
-const mockedExecSync = vi.mocked(execSync);
 
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -55,14 +62,26 @@ async function createFreshDetector() {
   return mod.acpDetector;
 }
 
-// Helper: make execSync succeed for given commands, throw for others
+// Helper: set which CLIs are "available" on the system.
+// On POSIX the detector uses a single `safeExec` shell call (batch `command -v`).
+// On Windows it falls back to per-command `safeExecFile` (where / powershell).
 function setAvailableClis(clis: string[]): void {
-  mockedExecSync.mockImplementation((cmd: string) => {
-    const command = typeof cmd === 'string' ? cmd : '';
-    for (const cli of clis) {
-      if (command.includes(cli)) return Buffer.from('');
+  const available = new Set(clis);
+
+  // POSIX batch: safeExec receives a shell script with `command -v 'cmd' && echo 'cmd'`
+  mockSafeExec.mockImplementation((script: string) => {
+    const found: string[] = [];
+    for (const m of script.matchAll(/echo '([^']+)'/g)) {
+      if (available.has(m[1])) found.push(m[1]);
     }
-    throw new Error('not found');
+    return Promise.resolve({ stdout: found.join('\n'), stderr: '' });
+  });
+
+  // Windows fallback: individual safeExecFile calls
+  mockSafeExecFile.mockImplementation((_bin: string, args: string[]) => {
+    const cmd = args[0];
+    if (available.has(cmd)) return Promise.resolve({ stdout: '', stderr: '' });
+    return Promise.reject(new Error('not found'));
   });
 }
 
@@ -70,11 +89,15 @@ function setAvailableClis(clis: string[]): void {
 function makeExtAdapter(opts: {
   id: string;
   name: string;
-  cliCommand: string;
+  cliCommand?: string;
   extensionName: string;
   acpArgs?: string[];
   avatar?: string;
   connectionType?: string;
+  defaultCliPath?: string;
+  installedBinaryPath?: string;
+  env?: Record<string, string>;
+  skillsDirs?: string[];
 }) {
   return {
     id: opts.id,
@@ -84,6 +107,10 @@ function makeExtAdapter(opts: {
     acpArgs: opts.acpArgs ?? ['--acp'],
     avatar: opts.avatar,
     _extensionName: opts.extensionName,
+    defaultCliPath: opts.defaultCliPath,
+    installedBinaryPath: opts.installedBinaryPath,
+    env: opts.env,
+    skillsDirs: opts.skillsDirs,
   };
 }
 
@@ -133,23 +160,28 @@ describe('AcpDetector', () => {
       expect(agents[0]).toMatchObject({ backend: 'gemini', name: 'Gemini CLI' });
     });
 
-    it('should detect extension-contributed agents when CLI is available', async () => {
-      setAvailableClis(['goose']);
+    it('should detect extension-contributed agents via defaultCliPath', async () => {
+      setAvailableClis([]);
       mockGetAcpAdapters.mockReturnValue([
-        makeExtAdapter({ id: 'goose', name: 'Goose', cliCommand: 'goose', extensionName: 'aionext-goose' }),
+        makeExtAdapter({
+          id: 'goose',
+          name: 'Goose',
+          extensionName: 'aionext-goose',
+          defaultCliPath: 'bunx @goose/cli',
+        }),
       ]);
 
       const detector = await createFreshDetector();
       await detector.initialize();
       const agents = detector.getDetectedAgents();
 
-      // gemini + builtin goose (from POTENTIAL_ACP_CLIS if present) or ext goose
-      const gooseAgent = agents.find((a) => a.cliPath === 'goose');
+      const gooseAgent = agents.find((a) => a.name === 'Goose');
       expect(gooseAgent).toBeDefined();
+      expect(gooseAgent!.cliPath).toBe('bunx @goose/cli');
     });
 
-    it('should skip extension agents whose CLI is not available', async () => {
-      setAvailableClis([]); // nothing available
+    it('should skip extension agents without defaultCliPath or installedBinaryPath', async () => {
+      setAvailableClis([]);
       mockGetAcpAdapters.mockReturnValue([
         makeExtAdapter({ id: 'missing', name: 'Missing Agent', cliCommand: 'nonexistent', extensionName: 'ext-test' }),
       ]);
@@ -201,39 +233,22 @@ describe('AcpDetector', () => {
       await detector.initialize();
       await detector.initialize(); // second call — should be no-op
 
-      // execSync called only during first init
-      const callCount = mockedExecSync.mock.calls.length;
+      // safeExecFile called only during first init
+      const callCount = mockSafeExecFile.mock.calls.length;
       await detector.initialize();
-      expect(mockedExecSync.mock.calls.length).toBe(callCount);
+      expect(mockSafeExecFile.mock.calls.length).toBe(callCount);
     });
   });
 
   describe('deduplicate', () => {
-    it('should deduplicate by cliPath — builtin wins over extension', async () => {
+    it('should deduplicate by name — extension wins over builtin', async () => {
       setAvailableClis(['qwen']);
       mockGetAcpAdapters.mockReturnValue([
-        makeExtAdapter({ id: 'Qwen Code', name: 'Qwen Code', cliCommand: 'qwen', extensionName: 'aionext-qwen' }),
-      ]);
-
-      const detector = await createFreshDetector();
-      await detector.initialize();
-      const agents = detector.getDetectedAgents();
-
-      // Should have only one qwen entry (builtin with backend 'qwen'), not the extension duplicate
-      const qwenAgents = agents.filter((a) => a.cliPath === 'qwen');
-      expect(qwenAgents).toHaveLength(1);
-      expect(qwenAgents[0].backend).toBe('qwen'); // builtin wins
-      expect(qwenAgents[0].isExtension).toBeUndefined(); // not the extension one
-    });
-
-    it('should keep extension agent when no builtin matches the same cliPath', async () => {
-      setAvailableClis(['custom-cli']);
-      mockGetAcpAdapters.mockReturnValue([
         makeExtAdapter({
-          id: 'unique',
-          name: 'Unique Agent',
-          cliCommand: 'custom-cli',
-          extensionName: 'ext-unique',
+          id: 'Qwen Code',
+          name: 'Qwen Code',
+          extensionName: 'aionext-qwen',
+          defaultCliPath: 'bunx @qwen/cli',
         }),
       ]);
 
@@ -241,7 +256,29 @@ describe('AcpDetector', () => {
       await detector.initialize();
       const agents = detector.getDetectedAgents();
 
-      const agent = agents.find((a) => a.cliPath === 'custom-cli');
+      // Dedup by name: extension is iterated first, so extension wins
+      const qwenAgents = agents.filter((a) => a.name === 'Qwen Code');
+      expect(qwenAgents).toHaveLength(1);
+      expect(qwenAgents[0].backend).toBe('custom'); // extension wins
+      expect(qwenAgents[0].isExtension).toBe(true);
+    });
+
+    it('should keep extension agent when no builtin matches the same name', async () => {
+      setAvailableClis([]);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'unique',
+          name: 'Unique Agent',
+          extensionName: 'ext-unique',
+          defaultCliPath: 'bunx @unique/cli',
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      const agent = agents.find((a) => a.name === 'Unique Agent');
       expect(agent).toBeDefined();
       expect(agent!.isExtension).toBe(true);
     });
@@ -272,34 +309,55 @@ describe('AcpDetector', () => {
       expect(detector.getDetectedAgents().find((a) => a.isExtension)).toBeUndefined();
 
       // Now an extension is installed that contributes a new CLI
-      setAvailableClis(['claude', 'new-ext-cli']);
       mockGetAcpAdapters.mockReturnValue([
-        makeExtAdapter({ id: 'new', name: 'New Ext', cliCommand: 'new-ext-cli', extensionName: 'ext-new' }),
+        makeExtAdapter({
+          id: 'new',
+          name: 'New Ext',
+          extensionName: 'ext-new',
+          defaultCliPath: 'bunx @ext/new-cli',
+        }),
       ]);
 
       await detector.refreshExtensionAgents();
       const agents = detector.getDetectedAgents();
 
-      const extAgent = agents.find((a) => a.cliPath === 'new-ext-cli');
+      const extAgent = agents.find((a) => a.name === 'New Ext');
       expect(extAgent).toBeDefined();
       expect(extAgent!.isExtension).toBe(true);
     });
 
-    it('should remove extension agents whose CLI is no longer available', async () => {
-      setAvailableClis(['ext-cli']);
+    it('should remove extension agents whose managed binary is no longer available', async () => {
+      mockResolveManagedBinary.mockReturnValue({
+        binaryPath: '/managed/ext-temp/1.0.0/bin/temp',
+        versionDir: '1.0.0',
+      });
       mockGetAcpAdapters.mockReturnValue([
-        makeExtAdapter({ id: 'temp', name: 'Temp', cliCommand: 'ext-cli', extensionName: 'ext-temp' }),
+        makeExtAdapter({
+          id: 'temp',
+          name: 'Temp',
+          extensionName: 'ext-temp',
+          installedBinaryPath: 'bin/temp',
+        }),
       ]);
 
       const detector = await createFreshDetector();
       await detector.initialize();
-      expect(detector.getDetectedAgents().find((a) => a.cliPath === 'ext-cli')).toBeDefined();
+      expect(detector.getDetectedAgents().find((a) => a.name === 'Temp')).toBeDefined();
 
-      // CLI removed
-      setAvailableClis([]);
+      // Managed binary removed, no defaultCliPath fallback
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'temp',
+          name: 'Temp',
+          extensionName: 'ext-temp',
+          installedBinaryPath: 'bin/temp',
+        }),
+      ]);
+
       await detector.refreshExtensionAgents();
 
-      expect(detector.getDetectedAgents().find((a) => a.cliPath === 'ext-cli')).toBeUndefined();
+      expect(detector.getDetectedAgents().find((a) => a.name === 'Temp')).toBeUndefined();
     });
 
     it('should still deduplicate after refresh', async () => {
@@ -308,20 +366,20 @@ describe('AcpDetector', () => {
       const detector = await createFreshDetector();
       await detector.initialize();
 
-      // Extension contributes same CLI as builtin
+      // Extension contributes same name as builtin
       mockGetAcpAdapters.mockReturnValue([
         makeExtAdapter({
           id: 'qwen',
-          name: 'Qwen Ext',
-          cliCommand: 'qwen',
+          name: 'Qwen Code',
           extensionName: 'aionext-qwen',
+          defaultCliPath: 'bunx @qwen/cli',
         }),
       ]);
 
       await detector.refreshExtensionAgents();
-      const qwenAgents = detector.getDetectedAgents().filter((a) => a.cliPath === 'qwen');
+      const qwenAgents = detector.getDetectedAgents().filter((a) => a.name === 'Qwen Code');
       expect(qwenAgents).toHaveLength(1);
-      expect(qwenAgents[0].backend).toBe('qwen'); // builtin still wins
+      expect(qwenAgents[0].backend).toBe('custom'); // extension wins (iterated first in dedup)
     });
 
     it('should keep extension agents ahead of custom agents after refresh', async () => {
@@ -333,20 +391,20 @@ describe('AcpDetector', () => {
       const detector = await createFreshDetector();
       await detector.initialize();
 
-      setAvailableClis(['ext-cli']);
       mockGetAcpAdapters.mockReturnValue([
         makeExtAdapter({
           id: 'ext-1',
           name: 'Ext Agent',
-          cliCommand: 'ext-cli',
           extensionName: 'ext-test',
+          defaultCliPath: 'bunx @ext/agent',
         }),
       ]);
 
       await detector.refreshExtensionAgents();
       const agents = detector.getDetectedAgents();
 
-      expect(agents.map((agent) => agent.name)).toEqual(['Gemini CLI', 'Ext Agent', 'My Agent']);
+      // Order: Gemini > Custom > Extension (deduplicate puts custom first, then extension+builtin)
+      expect(agents.map((agent) => agent.name)).toEqual(['Gemini CLI', 'My Agent', 'Ext Agent']);
     });
   });
 
@@ -413,7 +471,8 @@ describe('AcpDetector', () => {
       builtinSpy.mockRestore();
 
       const agents = detector.getDetectedAgents();
-      expect(agents.map((agent) => agent.name)).toEqual(['Gemini CLI', 'Claude Code', 'New Agent']);
+      // Order: Gemini > Custom > Extension+Builtin (deduplicate puts custom first)
+      expect(agents.map((agent) => agent.name)).toEqual(['Gemini CLI', 'New Agent', 'Claude Code']);
       expect(agents.find((agent) => agent.name === 'Old Agent')).toBeUndefined();
     });
   });
@@ -451,6 +510,240 @@ describe('AcpDetector', () => {
       await detector.initialize();
 
       expect(detector.getDetectedAgents().find((a) => a.customAgentId === 'disabled')).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Priority chain tests (Task 3b)
+  // ---------------------------------------------------------------------------
+
+  describe('extension agent priority chain', () => {
+    it('Priority 1: should use managed binary when resolveManagedBinary returns a result', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue({
+        binaryPath: '/home/user/.aionui-agents/aionext-auggie/1.2.0_abc12345/node_modules/.bin/auggie',
+        versionDir: '1.2.0_abc12345',
+      });
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'auggie',
+          name: 'Auggie',
+          cliCommand: 'auggie',
+          extensionName: 'aionext-auggie',
+          installedBinaryPath: 'node_modules/.bin/auggie',
+          env: { AUGGIE_MODE: 'acp' },
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      const auggie = agents.find((a) => a.name === 'Auggie');
+      expect(auggie).toBeDefined();
+      expect(auggie!.cliPath).toBe('/home/user/.aionui-agents/aionext-auggie/1.2.0_abc12345/node_modules/.bin/auggie');
+      expect(auggie!.resolvedFrom).toBe('managed');
+      expect(auggie!.isExtension).toBe(true);
+      expect(auggie!.env).toEqual({ AUGGIE_MODE: 'acp' });
+    });
+
+    it('Priority 2: should use defaultCliPath when managed binary is not available', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'auggie',
+          name: 'Auggie',
+          extensionName: 'aionext-auggie',
+          installedBinaryPath: 'node_modules/.bin/auggie',
+          defaultCliPath: 'bunx @anthropic/auggie',
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      const auggie = agents.find((a) => a.name === 'Auggie');
+      expect(auggie).toBeDefined();
+      expect(auggie!.cliPath).toBe('bunx @anthropic/auggie');
+      expect(auggie!.resolvedFrom).toBe('default-cli-path');
+      expect(auggie!.isExtension).toBe(true);
+    });
+
+    it('Priority 3: should skip agent when no resolution method succeeds', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'missing',
+          name: 'Missing Agent',
+          cliCommand: 'nonexistent',
+          extensionName: 'ext-missing',
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      expect(agents.find((a) => a.name === 'Missing Agent')).toBeUndefined();
+      expect(agents).toHaveLength(1); // only gemini
+    });
+
+    it('should stop at Priority 1 and not check Priority 2', async () => {
+      setAvailableClis(['goose']); // available on PATH, but should not be checked
+      mockResolveManagedBinary.mockReturnValue({
+        binaryPath: '/managed/goose/1.0.0_abc/goose',
+        versionDir: '1.0.0_abc',
+      });
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'goose',
+          name: 'Goose',
+          cliCommand: 'goose',
+          extensionName: 'aionext-goose',
+          installedBinaryPath: 'goose',
+          defaultCliPath: 'bunx @goose/cli',
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      const goose = agents.find((a) => a.name === 'Goose');
+      expect(goose).toBeDefined();
+      // Must be managed path, not defaultCliPath
+      expect(goose!.cliPath).toBe('/managed/goose/1.0.0_abc/goose');
+      expect(goose!.resolvedFrom).toBe('managed');
+    });
+
+    it('should pass through env from adapter to detected agent', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'myagent',
+          name: 'My Agent',
+          extensionName: 'ext-myagent',
+          defaultCliPath: 'bunx @ext/myagent',
+          env: { API_KEY: 'secret', AGENT_MODE: 'acp' },
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      const agent = agents.find((a) => a.name === 'My Agent');
+      expect(agent).toBeDefined();
+      expect(agent!.env).toEqual({ API_KEY: 'secret', AGENT_MODE: 'acp' });
+    });
+
+    it('should skip adapters without defaultCliPath or installedBinaryPath', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        {
+          id: 'empty',
+          name: 'Empty Agent',
+          connectionType: 'cli',
+          acpArgs: ['--acp'],
+          _extensionName: 'ext-empty',
+          // no cliCommand, no defaultCliPath, no installedBinaryPath
+        },
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+      const agents = detector.getDetectedAgents();
+
+      expect(agents.find((a) => a.name === 'Empty Agent')).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Background version cleanup (Task 5b)
+  // ---------------------------------------------------------------------------
+
+  describe('background version cleanup on initialize', () => {
+    it('should call cleanOldVersions for managed extension agents after detection', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue({
+        binaryPath: '/managed/aionext-auggie/1.0.0_abc/node_modules/.bin/auggie',
+        versionDir: '1.0.0_abc',
+      });
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'auggie',
+          name: 'Auggie',
+          extensionName: 'aionext-auggie',
+          installedBinaryPath: 'node_modules/.bin/auggie',
+        }),
+      ]);
+      mockCleanOldVersions.mockResolvedValue([]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+
+      // Allow background promise to settle
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockCleanOldVersions).toHaveBeenCalledWith('aionext-auggie', 3);
+    });
+
+    it('should not call cleanOldVersions when no managed agents detected', async () => {
+      setAvailableClis([]);
+      mockResolveManagedBinary.mockReturnValue(null);
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'goose',
+          name: 'Goose',
+          extensionName: 'aionext-goose',
+          defaultCliPath: 'bunx @goose/cli',
+        }),
+      ]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockCleanOldVersions).not.toHaveBeenCalled();
+    });
+
+    it('should deduplicate extension names for cleanup (one call per extension)', async () => {
+      setAvailableClis([]);
+      // Same extension with two adapters resolved via managed
+      mockResolveManagedBinary.mockReturnValue({
+        binaryPath: '/managed/aionext-multi/1.0.0_abc/bin/agent',
+        versionDir: '1.0.0_abc',
+      });
+      mockGetAcpAdapters.mockReturnValue([
+        makeExtAdapter({
+          id: 'adapter-1',
+          name: 'Agent A',
+          extensionName: 'aionext-multi',
+          installedBinaryPath: 'bin/agent-a',
+        }),
+        makeExtAdapter({
+          id: 'adapter-2',
+          name: 'Agent B',
+          extensionName: 'aionext-multi',
+          installedBinaryPath: 'bin/agent-b',
+        }),
+      ]);
+      mockCleanOldVersions.mockResolvedValue([]);
+
+      const detector = await createFreshDetector();
+      await detector.initialize();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Should only be called once for 'aionext-multi', not twice
+      expect(mockCleanOldVersions).toHaveBeenCalledTimes(1);
+      expect(mockCleanOldVersions).toHaveBeenCalledWith('aionext-multi', 3);
     });
   });
 });
