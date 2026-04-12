@@ -1,4 +1,6 @@
 import { ipcBridge } from '@/common';
+import type { TeamAgent } from '@/common/types/teamTypes';
+import { getModeLevel, mapLeaderModeToMemberMode } from '@/common/types/agentPermissionLevel';
 import React, { createContext, useCallback, useContext, useMemo } from 'react';
 
 type TeamPermissionContextValue = {
@@ -22,20 +24,49 @@ export const TeamPermissionProvider: React.FC<{
   isLeadAgent: boolean;
   leadConversationId: string;
   allConversationIds: string[];
-}> = ({ children, teamId, isLeadAgent, leadConversationId, allConversationIds }) => {
+  /** All agents in the team, used to map leader mode to per-member backend mode */
+  agents: TeamAgent[];
+  /** Backend of the team leader (e.g. 'claude', 'gemini') */
+  leaderBackend: string;
+}> = ({ children, teamId, isLeadAgent, leadConversationId, allConversationIds, agents, leaderBackend }) => {
   const propagateMode = useCallback(
     (mode: string) => {
-      // Persist sessionMode on the team record so newly spawned agents inherit it
+      // 1. Persist sessionMode on the team record so newly spawned agents inherit it.
+      //    This is the source of truth for addAgent() — it reads team.sessionMode first.
       void ipcBridge.team.setSessionMode.invoke({ teamId, sessionMode: mode }).catch(() => {
-        // Best-effort: if this fails, agents still get mode via per-conversation setMode below
+        // Best-effort: team DB write failure is non-fatal
       });
-      for (const conversationId of allConversationIds) {
-        void ipcBridge.acpConversation.setMode.invoke({ conversationId, mode }).catch(() => {
-          // Silently ignore failures for non-ACP agents (e.g. gemini, codex) that don't support setMode
-        });
+
+      // 2. For each member agent: write the mapped mode into conversation extra (DB layer)
+      //    so that the member picks it up correctly when woken, regardless of whether the
+      //    runtime setMode call below succeeds.
+      //    Also write teamLeaderLevel so Manager-layer fallback can auto-approve when member
+      //    backend ceiling is below leader's required level (e.g. cursor/opencode max at L1).
+      const leaderLevel = getModeLevel(leaderBackend, mode);
+      for (const agent of agents) {
+        if (!agent.conversationId) continue;
+        const memberMode = mapLeaderModeToMemberMode(leaderBackend, mode, agent.agentType);
+        // Merge sessionMode + teamLeaderLevel into conversation extra — does not depend on an active session.
+        void ipcBridge.conversation.update
+          .invoke({
+            id: agent.conversationId,
+            updates: { extra: { sessionMode: memberMode, teamLeaderLevel: leaderLevel } } as any,
+            mergeExtra: true,
+          })
+          .catch(() => {
+            // Best-effort: DB write failure is non-fatal; runtime setMode below is a second chance
+          });
+
+        // 3. If the agent has an active session, also update it at runtime so the running CLI
+        //    process reflects the new mode immediately (no restart required).
+        void ipcBridge.acpConversation.setMode
+          .invoke({ conversationId: agent.conversationId, mode: memberMode })
+          .catch(() => {
+            // Silently ignore: agent may be idle / not yet initialised — DB write above is the fallback
+          });
       }
     },
-    [teamId, allConversationIds]
+    [teamId, agents, leaderBackend]
   );
 
   const value = useMemo<TeamPermissionContextValue>(

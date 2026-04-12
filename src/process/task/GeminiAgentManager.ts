@@ -33,6 +33,7 @@ import { extractTextFromMessage, processCronInMessage } from './MessageMiddlewar
 import { stripThinkTags, extractAndStripThinkTags } from './ThinkTagDetector';
 import { teamEventBus } from '@process/team/teamEventBus';
 import * as fs from 'node:fs';
+import { getMaxAvailableLevel, PermissionLevel } from '@/common/types/agentPermissionLevel';
 
 // gemini agent管理器类
 type UiMcpServerConfig = {
@@ -124,6 +125,12 @@ export class GeminiAgentManager extends BaseAgentManager<
   /** Stored webSearchEngine for worker re-bootstrap / 保存 webSearchEngine 用于重建 worker */
   private webSearchEngine?: 'google' | 'default';
 
+  /**
+   * Leader's abstract permission level. Set from constructor data when this manager
+   * is running as a team member. Used by tryAutoApprove fallback.
+   */
+  private teamLeaderLevel?: number;
+
   /** Team MCP stdio config injected by TeamSessionService */
   private teamMcpStdioConfig?: {
     name: string;
@@ -156,6 +163,11 @@ export class GeminiAgentManager extends BaseAgentManager<
       };
       /** Builtin skill names to exclude from discovery (e.g. 'cron' for cron-spawned conversations) */
       excludeBuiltinSkills?: string[];
+      /**
+       * Leader's abstract permission level (PermissionLevel enum value).
+       * Used by Manager-layer fallback when member backend ceiling < leader level.
+       */
+      teamLeaderLevel?: number;
     },
     model: TProviderWithModel
   ) {
@@ -171,6 +183,7 @@ export class GeminiAgentManager extends BaseAgentManager<
     this.currentMode = data.sessionMode || 'default';
     this.webSearchEngine = data.webSearchEngine;
     this.teamMcpStdioConfig = data.teamMcpStdioConfig;
+    this.teamLeaderLevel = data.teamLeaderLevel;
     mainLog(
       '[GeminiAgentManager]',
       'constructor teamMcpStdioConfig:',
@@ -656,6 +669,21 @@ export class GeminiAgentManager extends BaseAgentManager<
     if (this.currentMode === 'yolo') {
       // yolo: auto-approve ALL operations
       console.log(`[GeminiAgentManager] YOLO auto-approving ${type}: callId=${content.callId}`);
+      void this.postMessagePromise(content.callId, ToolConfirmationOutcome.ProceedOnce);
+      return true;
+    }
+    // Manager-layer fallback: when this backend's ceiling is below the leader's required level,
+    // auto-approve remaining requests. Currently gemini supports yolo (L3) so this branch does
+    // not trigger in practice — kept as a safety net in case backend capabilities change.
+    // Extension point: reverse interceptor (clamp member to leader level) not yet implemented.
+    if (
+      this.teamLeaderLevel !== undefined &&
+      this.teamLeaderLevel >= PermissionLevel.L3_FULL_AUTO &&
+      getMaxAvailableLevel('gemini') < PermissionLevel.L3_FULL_AUTO
+    ) {
+      console.log(
+        `[GeminiAgentManager] Team leader-level fallback auto-approving ${type}: leaderLevel=${this.teamLeaderLevel}, callId=${content.callId}`
+      );
       void this.postMessagePromise(content.callId, ToolConfirmationOutcome.ProceedOnce);
       return true;
     }

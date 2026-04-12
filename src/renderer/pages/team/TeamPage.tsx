@@ -332,6 +332,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onAddAgent, onR
       isLeadAgent={isLeadAgent}
       leadConversationId={leadConversationId}
       allConversationIds={allConversationIds}
+      agents={agents}
+      leaderBackend={leadAgent?.agentType ?? 'claude'}
     >
       {messageContext}
       {leadConversationId && <TeamConfirmOverlay allConversationIds={allConversationIds} />}

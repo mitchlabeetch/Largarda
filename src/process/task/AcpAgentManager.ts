@@ -46,6 +46,7 @@ import { prepareFirstMessageWithSkillsIndex } from '@process/task/agentUtils';
 import { shouldInjectTeamGuideMcp } from '@process/resources/prompts/teamGuidePrompt';
 import { extractTextFromMessage, processCronInMessage } from './MessageMiddleware';
 import { ConversationTurnCompletionService } from './ConversationTurnCompletionService';
+import { getMaxAvailableLevel, PermissionLevel } from '@/common/types/agentPermissionLevel';
 
 interface AcpAgentManagerData {
   workspace?: string;
@@ -72,6 +73,13 @@ interface AcpAgentManagerData {
   sandboxMode?: CodexSandboxMode;
   /** Pending config option selections from Guid page (applied after session creation) */
   pendingConfigOptions?: Record<string, string>;
+  /**
+   * Leader's abstract permission level (PermissionLevel enum value).
+   * Written by TeamPermissionContext.propagateMode via conversation extra.
+   * Used by Manager-layer fallback: when member backend ceiling < leader level,
+   * auto-approve remaining permission requests so the user never sees dialogs.
+   */
+  teamLeaderLevel?: number;
 }
 
 type BufferedStreamTextMessage = {
@@ -778,6 +786,28 @@ ${collectedResponses.join('\n')}`;
           void this.confirm(v.msg_id, toolCall.toolCallId || v.msg_id, autoOption);
         }, 50);
         return;
+      }
+
+      // Manager-layer fallback: when this member's backend ceiling is below the leader's
+      // required level (currently: opencode ceiling=L2, leader=L3), auto-approve all remaining
+      // requests. Safety net for cases the level→mode mapping table cannot fully cover.
+      // Guarantees "leader doesn't pop dialogs → members don't either" (first-priority rule).
+      //
+      // Extension point: if a future backend's minimum mode is already "yolo", even a strict
+      // leader (L0/L1) would get rounded up. A reverse interceptor would be needed to clamp
+      // member responses back to the leader's level. Not yet implemented.
+      if (options.length > 0) {
+        const leaderLevel = this.options.teamLeaderLevel ?? -1;
+        if (
+          leaderLevel >= PermissionLevel.L3_FULL_AUTO &&
+          getMaxAvailableLevel(this.options.backend) < PermissionLevel.L3_FULL_AUTO
+        ) {
+          const autoOption = options[0];
+          setTimeout(() => {
+            void this.confirm(v.msg_id, toolCall.toolCallId || v.msg_id, autoOption);
+          }, 50);
+          return;
+        }
       }
 
       // Auto-approve team MCP tools — internal tools provided by AionUi.
