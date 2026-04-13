@@ -231,6 +231,8 @@ export type TChatConversation =
         pinnedAt?: number;
         /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
         sessionMode?: string;
+        /** Leader's abstract permission level for team member auto-approve fallback */
+        teamLeaderLevel?: number;
         /** Explicit marker for temporary health-check conversations */
         isHealthCheck?: boolean;
         /** Cron job ID that spawned this conversation */
@@ -268,6 +270,8 @@ export type TChatConversation =
           lastContextLimit?: number;
           /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
           sessionMode?: string;
+          /** Leader's abstract permission level for team member auto-approve fallback */
+          teamLeaderLevel?: number;
           /** Persisted model ID for resume support / 持久化的模型 ID，用于恢复 */
           currentModelId?: string;
           /** Cached config options from ACP backend / 缓存的 ACP 配置选项 */

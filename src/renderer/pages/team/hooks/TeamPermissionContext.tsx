@@ -50,7 +50,7 @@ export const TeamPermissionProvider: React.FC<{
         void ipcBridge.conversation.update
           .invoke({
             id: agent.conversationId,
-            updates: { extra: { sessionMode: memberMode, teamLeaderLevel: leaderLevel } } as any,
+            updates: { extra: { sessionMode: memberMode, teamLeaderLevel: leaderLevel } },
             mergeExtra: true,
           })
           .catch(() => {
