@@ -5,7 +5,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { AcpBackendConfig, AcpModelInfo, AvailableAgent } from '../../src/renderer/pages/guid/types';
 import type { IProvider } from '../../src/common/config/storage';
 
@@ -197,7 +199,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
   };
 
   it('currentAcpCachedModelInfo uses effective backend type for preset agent', async () => {
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     // Wait for initial data to load (availableAgents + cachedModels)
     await waitFor(() => {
@@ -224,7 +228,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
   it('currentAcpCachedModelInfo returns null when cached models have no entry for effective backend', async () => {
     setupMocks({ cachedModels: { codex: CLAUDE_CACHED_MODEL } });
 
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     await waitFor(() => {
       expect(result.current.availableAgents).toBeDefined();
@@ -249,7 +255,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
       },
     });
 
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     await waitFor(() => {
       expect(result.current.availableAgents).toBeDefined();
@@ -268,7 +276,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
   it('selectedMode defaults to "default" when no preferred mode is saved', async () => {
     setupMocks({ acpConfig: {} });
 
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     await waitFor(() => {
       expect(result.current.availableAgents).toBeDefined();
@@ -287,7 +297,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
   });
 
   it('non-preset agent uses its own key for model cache lookup', async () => {
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     await waitFor(() => {
       expect(result.current.availableAgents).toBeDefined();
@@ -309,7 +321,9 @@ describe('useGuidAgentSelection – preset agent config resolution', () => {
   });
 
   it('setSelectedMode saves mode under effective backend for preset agent', async () => {
-    const { result } = renderHook(() => useGuidAgentSelection(hookOptions));
+    const { result } = renderHook(() => useGuidAgentSelection(hookOptions), {
+      wrapper: ({ children }) => React.createElement(MemoryRouter, null, children),
+    });
 
     await waitFor(() => {
       expect(result.current.availableAgents).toBeDefined();
