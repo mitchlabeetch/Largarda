@@ -51,14 +51,16 @@ const TeamStackedAvatar: React.FC<{ agents: TeamAgent[] }> = ({ agents }) => {
     return (
       <div className='flex items-center shrink-0'>
         <AgentCircle src={logos[0]} />
-        <span className={`${DASHED} -ml-5px`} />
+        <span className={`${DASHED} -ml-8px`} />
       </div>
     );
   }
   return (
     <div className='flex items-center shrink-0'>
       <AgentCircle src={logos[0]} />
-      <AgentCircle src={logos[1]} />
+      <span className='-ml-8px'>
+        <AgentCircle src={logos[1]} />
+      </span>
     </div>
   );
 };
@@ -141,9 +143,11 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
       cleanupSiderTooltips();
       blurActiveElement();
       Promise.resolve(navigate(`/team/${teamId}`)).catch(console.error);
+      // Refresh team list to sync member avatars
+      void refreshTeams();
       if (onSessionClick) onSessionClick();
     },
-    [navigate, onSessionClick]
+    [navigate, onSessionClick, refreshTeams]
   );
 
   return (

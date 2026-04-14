@@ -172,13 +172,15 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
               <Suspense fallback={<div className='min-h-200px' />}>
                 <WorkspaceGroupedHistory {...workspaceHistoryProps} />
               </Suspense>
-              {/* Team section */}
-              <TeamSiderSection
-                collapsed={collapsed}
-                pathname={pathname}
-                siderTooltipProps={siderTooltipProps}
-                onSessionClick={onSessionClick}
-              />
+              {/* Team section — mt-4px separates it from Messages */}
+              <div className='mt-4px'>
+                <TeamSiderSection
+                  collapsed={collapsed}
+                  pathname={pathname}
+                  siderTooltipProps={siderTooltipProps}
+                  onSessionClick={onSessionClick}
+                />
+              </div>
             </div>
           </div>
         )}

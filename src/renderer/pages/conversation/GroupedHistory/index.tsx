@@ -554,7 +554,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           );
 
           return (
-            <div key={agentGroup.agentKey} className='mb-4px min-w-0'>
+            <div key={agentGroup.agentKey} className='mb-8px min-w-0'>
               {collapsed ? (
                 <Tooltip content={agentGroup.displayName} position='right'>
                   <div
@@ -576,7 +576,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                 headerContent
               )}
               {!isCollapsed && (
-                <div className='min-w-0 pl-8px'>
+                <div className='min-w-0 pl-12px'>
                   {agentGroup.conversations.map((conversation) => renderConversation(conversation))}
                 </div>
               )}
