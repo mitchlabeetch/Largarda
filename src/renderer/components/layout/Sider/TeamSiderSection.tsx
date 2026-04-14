@@ -21,7 +21,18 @@ import { useSiderTeamBadges } from '@renderer/pages/team/hooks/useSiderTeamBadge
 import TeamCreateModal from '@renderer/pages/team/components/TeamCreateModal';
 import { ipcBridge } from '@/common';
 
-/** Stacked avatar: show up to 2 agent logos overlapping, like Accio */
+const CIRCLE = 'w-18px h-18px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden shrink-0';
+const DASHED = 'w-18px h-18px rounded-full border border-dashed border-[var(--color-border-2)] shrink-0';
+
+/** Single avatar circle */
+const AgentCircle: React.FC<{ src: string; alt?: string }> = ({ src, alt }) => (
+  <span className={CIRCLE}>
+    <img src={src} alt={alt} width={11} height={11} className='object-contain' />
+  </span>
+);
+
+/** Stacked avatar: up to 2 agent logos overlapping, Accio-style.
+ *  If only 1 agent, shows a dashed placeholder next to it. */
 const TeamStackedAvatar: React.FC<{ agents: TeamAgent[] }> = ({ agents }) => {
   const logos = agents
     .slice(0, 2)
@@ -29,15 +40,25 @@ const TeamStackedAvatar: React.FC<{ agents: TeamAgent[] }> = ({ agents }) => {
     .filter((l): l is string => Boolean(l));
 
   if (logos.length === 0) {
-    return <Peoples theme='outline' size={18} fill='currentColor' style={{ lineHeight: 0 }} />;
+    return (
+      <span className={CIRCLE}>
+        <Peoples theme='outline' size={11} fill='currentColor' style={{ lineHeight: 0 }} />
+      </span>
+    );
   }
-  if (logos.length === 1) {
-    return <img src={logos[0]} width={18} height={18} className='object-contain' />;
+  if (agents.length <= 1 || logos.length === 1) {
+    // Single agent — dashed circle hints at empty slot
+    return (
+      <div className='flex items-center shrink-0'>
+        <AgentCircle src={logos[0]} />
+        <span className={`${DASHED} -ml-5px`} />
+      </div>
+    );
   }
   return (
     <div className='flex items-center shrink-0'>
-      <img src={logos[0]} width={14} height={14} className='object-contain rounded-full' />
-      <img src={logos[1]} width={14} height={14} className='object-contain rounded-full -ml-4px' />
+      <AgentCircle src={logos[0]} />
+      <AgentCircle src={logos[1]} />
     </div>
   );
 };

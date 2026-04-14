@@ -522,18 +522,18 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
             >
               {/* Agent avatar — 18px, 点击跳转 /guid */}
               <span
-                className='shrink-0 w-20px h-20px flex items-center justify-center cursor-pointer'
+                className='shrink-0 w-24px h-24px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden cursor-pointer'
                 onClick={(e) => {
                   e.stopPropagation();
                   void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
                 }}
               >
                 {agentGroup.avatarEmoji ? (
-                  <span className='text-18px leading-none'>{agentGroup.avatarEmoji}</span>
+                  <span className='text-14px leading-none'>{agentGroup.avatarEmoji}</span>
                 ) : logoSrc ? (
-                  <img src={logoSrc} alt={agentGroup.displayName} width={18} height={18} className='object-contain' />
+                  <img src={logoSrc} alt={agentGroup.displayName} width={14} height={14} className='object-contain' />
                 ) : (
-                  <Robot theme='outline' size={18} fill='currentColor' />
+                  <Robot theme='outline' size={14} fill='currentColor' />
                 )}
               </span>
               {/* Agent name */}
@@ -561,19 +561,15 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                     className='w-full h-36px flex items-center justify-center cursor-pointer'
                     onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
                   >
-                    {agentGroup.avatarEmoji ? (
-                      <span className='text-18px leading-none'>{agentGroup.avatarEmoji}</span>
-                    ) : logoSrc ? (
-                      <img
-                        src={logoSrc}
-                        alt={agentGroup.displayName}
-                        width={20}
-                        height={20}
-                        className='object-contain'
-                      />
-                    ) : (
-                      <Robot theme='outline' size={20} fill='currentColor' />
-                    )}
+                    <span className='w-26px h-26px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden'>
+                      {agentGroup.avatarEmoji ? (
+                        <span className='text-14px leading-none'>{agentGroup.avatarEmoji}</span>
+                      ) : logoSrc ? (
+                        <img src={logoSrc} alt={agentGroup.displayName} width={16} height={16} className='object-contain' />
+                      ) : (
+                        <Robot theme='outline' size={14} fill='currentColor' />
+                      )}
+                    </span>
                   </div>
                 </Tooltip>
               ) : (
