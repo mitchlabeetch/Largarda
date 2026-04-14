@@ -6,6 +6,7 @@
 
 import type { TChatConversation } from '@/common/config/storage';
 import { ConfigStorage } from '@/common/config/storage';
+import { ASSISTANT_PRESETS } from '@/common/config/presets/assistantPresets';
 import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
 import DirectorySelectionModal from '@/renderer/components/settings/DirectorySelectionModal';
 import { useCronJobsMap } from '@/renderer/pages/cron';
@@ -41,7 +42,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   onBatchModeChange,
 }) => {
   const { id } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getJobStatus, markAsRead, setActiveConversation } = useCronJobsMap();
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
@@ -76,7 +77,26 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 
   // Build agent-grouped history from conversations using static backend metadata + custom agents
   const agentDisplayMap = useMemo(() => {
+    const locale = i18n.language || 'en-US';
     const map = new Map<string, { displayName: string; avatarSrc: string | null; avatarEmoji?: string }>();
+
+    /** Resolve avatar string to {avatarSrc, avatarEmoji} */
+    const resolveAvatar = (
+      avatarValue: string
+    ): { avatarSrc: string | null; avatarEmoji?: string } => {
+      const v = avatarValue.trim();
+      if (!v) return { avatarSrc: null };
+      const mapped = CUSTOM_AVATAR_IMAGE_MAP[v];
+      if (mapped) return { avatarSrc: mapped };
+      const resolved = resolveExtensionAssetUrl(v) || v;
+      const isImage =
+        /\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) ||
+        /^(https?:|aion-asset:\/\/|file:\/\/|data:)/i.test(resolved);
+      if (isImage) return { avatarSrc: resolved };
+      if (v.endsWith('.svg')) return { avatarSrc: null };
+      return { avatarSrc: null, avatarEmoji: v };
+    };
+
     // Populate from ACP_BACKENDS_ALL for known backends
     for (const [key, config] of Object.entries(ACP_BACKENDS_ALL)) {
       map.set(key, {
@@ -84,57 +104,52 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
         avatarSrc: resolveAgentLogo({ backend: key }) ?? null,
       });
     }
+
     // Gemini backend key
     map.set('gemini', {
       displayName: 'Gemini',
       avatarSrc: resolveAgentLogo({ backend: 'gemini' }) ?? null,
     });
+
+    // Built-in preset assistants (Gemini type with presetAssistantId)
+    // agentKey can be 'financial-model-creator' or 'builtin-financial-model-creator'
+    for (const preset of ASSISTANT_PRESETS) {
+      const displayName = preset.nameI18n[locale] || preset.nameI18n['en-US'] || preset.id;
+      const { avatarSrc, avatarEmoji } = resolveAvatar(preset.avatar || '');
+      const entry = { displayName, avatarSrc, avatarEmoji };
+      map.set(preset.id, entry);
+      map.set(`builtin-${preset.id}`, entry);
+    }
+
     // Custom agents (agentKey = `custom:${id}`)
     if (Array.isArray(customAgents)) {
       for (const agent of customAgents as Array<{
         id?: string;
         name?: string;
+        nameI18n?: Record<string, string>;
         avatar?: string;
         presetAgentType?: string;
       }>) {
         if (!agent?.id) continue;
         const key = `custom:${agent.id}`;
-        const displayName = agent.name || agent.id;
-        const avatarValue = (agent.avatar || '').trim();
+        const displayName =
+          agent.nameI18n?.[locale] || agent.nameI18n?.['en-US'] || agent.name || agent.id;
+        const { avatarSrc, avatarEmoji } = resolveAvatar(agent.avatar || '');
 
-        // 1. Check mapped avatars (e.g. cowork.svg)
-        const mapped = CUSTOM_AVATAR_IMAGE_MAP[avatarValue];
-        if (mapped) {
-          map.set(key, { displayName, avatarSrc: mapped });
-          continue;
+        if (avatarSrc || avatarEmoji) {
+          map.set(key, { displayName, avatarSrc: avatarSrc ?? null, avatarEmoji });
+        } else {
+          // No custom avatar — fall back to the backing backend's logo
+          const backendSrc = agent.presetAgentType
+            ? (resolveAgentLogo({ backend: agent.presetAgentType }) ?? null)
+            : null;
+          map.set(key, { displayName, avatarSrc: backendSrc });
         }
-
-        // 2. Try to resolve as image URL
-        const resolved = avatarValue ? resolveExtensionAssetUrl(avatarValue) || avatarValue : '';
-        const isImage =
-          resolved &&
-          (/\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) ||
-            /^(https?:|aion-asset:\/\/|file:\/\/|data:)/i.test(resolved));
-        if (isImage) {
-          map.set(key, { displayName, avatarSrc: resolved });
-          continue;
-        }
-
-        // 3. Treat as emoji if non-empty and not a broken SVG identifier
-        if (avatarValue && !avatarValue.endsWith('.svg')) {
-          map.set(key, { displayName, avatarSrc: null, avatarEmoji: avatarValue });
-          continue;
-        }
-
-        // 4. Fall back to the backing backend's logo (e.g. Claude logo for Claude-backed preset)
-        const backendSrc = agent.presetAgentType
-          ? (resolveAgentLogo({ backend: agent.presetAgentType }) ?? null)
-          : null;
-        map.set(key, { displayName, avatarSrc: backendSrc });
       }
     }
+
     return map;
-  }, [customAgents]);
+  }, [customAgents, i18n.language]);
 
   const { agentGroups } = useMemo(
     () => buildAgentGroupedHistory(conversations, agentDisplayMap),
