@@ -5,21 +5,42 @@
  */
 
 import { DeleteOne, EditOne, Peoples, Plus, Pushpin } from '@icon-park/react';
-import { Input, Message, Modal, Tooltip } from '@arco-design/web-react';
+import { Dropdown, Input, Menu, Message, Modal, Tooltip } from '@arco-design/web-react';
 import classNames from 'classnames';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
-import { iconColors } from '@renderer/styles/colors';
+import type { TeamAgent } from '@/common/types/teamTypes';
 import { cleanupSiderTooltips } from '@renderer/utils/ui/siderTooltip';
 import { blurActiveElement } from '@renderer/utils/ui/focus';
+import { resolveAgentLogo } from '@renderer/utils/model/agentLogo';
+import { iconColors } from '@renderer/styles/colors';
 import { useTeamList } from '@renderer/pages/team/hooks/useTeamList';
 import { useSiderTeamBadges } from '@renderer/pages/team/hooks/useSiderTeamBadges';
 import TeamCreateModal from '@renderer/pages/team/components/TeamCreateModal';
 import { ipcBridge } from '@/common';
-import SiderItem from './SiderItem';
-import type { SiderMenuItem } from './SiderItem';
+
+/** Stacked avatar: show up to 2 agent logos overlapping, like Accio */
+const TeamStackedAvatar: React.FC<{ agents: TeamAgent[] }> = ({ agents }) => {
+  const logos = agents
+    .slice(0, 2)
+    .map((a) => resolveAgentLogo({ backend: a.agentType }))
+    .filter((l): l is string => Boolean(l));
+
+  if (logos.length === 0) {
+    return <Peoples theme='outline' size={18} fill='currentColor' style={{ lineHeight: 0 }} />;
+  }
+  if (logos.length === 1) {
+    return <img src={logos[0]} width={18} height={18} className='object-contain' />;
+  }
+  return (
+    <div className='flex items-center shrink-0'>
+      <img src={logos[0]} width={14} height={14} className='object-contain rounded-full' />
+      <img src={logos[1]} width={14} height={14} className='object-contain rounded-full -ml-4px' />
+    </div>
+  );
+};
 
 const TEAM_PINNED_KEY = 'team-pinned-ids';
 
@@ -119,14 +140,9 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                     )}
                     onClick={() => handleTeamClick(team.id)}
                   >
-                    <Peoples
-                      data-testid={`collapsed-team-icon-${team.id}`}
-                      data-icon-fill={iconColors.primary}
-                      theme='outline'
-                      size='20'
-                      fill={iconColors.primary}
-                      style={{ lineHeight: 0 }}
-                    />
+                    <span data-testid={`collapsed-team-icon-${team.id}`} data-icon-fill={iconColors.primary}>
+                      <TeamStackedAvatar agents={team.agents} />
+                    </span>
                     {(teamBadgeCounts.get(team.id) ?? 0) > 0 && (
                       <span
                         className='absolute top-4px right-4px w-18px h-18px rounded-full text-10px font-bold flex items-center justify-center leading-none'
@@ -155,70 +171,121 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
           {sortedTeams.length > 0 &&
             sortedTeams.map((team) => {
               const isPinned = pinnedIds.includes(team.id);
-              const menuItems: SiderMenuItem[] = [
-                {
-                  key: 'pin',
-                  icon: <Pushpin theme='outline' size='14' />,
-                  label: isPinned ? t('team.sider.unpin') : t('team.sider.pin'),
-                },
-                {
-                  key: 'rename',
-                  icon: <EditOne theme='outline' size='14' />,
-                  label: t('team.sider.rename'),
-                },
-                {
-                  key: 'delete',
-                  icon: <DeleteOne theme='outline' size='14' />,
-                  label: t('team.sider.delete'),
-                  danger: true,
-                },
-              ];
+              const isActive = pathname.startsWith(`/team/${team.id}`);
               const teamBadge = teamBadgeCounts.get(team.id) ?? 0;
               return (
-                <div key={team.id} className='relative group'>
-                  <SiderItem
-                    icon={<Peoples theme='outline' size='20' fill={iconColors.primary} style={{ lineHeight: 0 }} />}
-                    name={team.name}
-                    selected={pathname.startsWith(`/team/${team.id}`)}
-                    pinned={isPinned}
-                    menuItems={menuItems}
-                    onMenuAction={(key) => {
-                      if (key === 'pin') {
-                        togglePin(team.id);
-                      } else if (key === 'rename') {
-                        setRenameId(team.id);
-                        setRenameName(team.name);
-                        setRenameVisible(true);
-                      } else if (key === 'delete') {
-                        Modal.confirm({
-                          title: t('team.sider.deleteConfirm'),
-                          content: t('team.sider.deleteConfirmContent'),
-                          okText: t('team.sider.deleteOk'),
-                          cancelText: t('team.sider.deleteCancel'),
-                          okButtonProps: { status: 'warning' },
-                          onOk: async () => {
-                            await removeTeam(team.id);
-                            Message.success(t('team.sider.deleteSuccess'));
-                            if (pathname.startsWith(`/team/${team.id}`)) {
-                              Promise.resolve(navigate('/')).catch(() => {});
-                            }
-                          },
-                          style: { borderRadius: '12px' },
-                          alignCenter: true,
-                          getPopupContainer: () => document.body,
-                        });
-                      }
-                    }}
-                    onClick={() => handleTeamClick(team.id)}
-                  />
+                <div
+                  key={team.id}
+                  className={classNames(
+                    'group flex items-center gap-8px px-12px py-8px cursor-pointer rd-8px transition-colors min-w-0 relative',
+                    isActive ? '!bg-active' : 'hover:bg-[rgba(var(--primary-6),0.14)]'
+                  )}
+                  onClick={() => handleTeamClick(team.id)}
+                >
+                  {/* Stacked agent avatar */}
+                  <span className='shrink-0 w-20px h-20px flex items-center justify-center'>
+                    <TeamStackedAvatar agents={team.agents} />
+                  </span>
+                  {/* Team name */}
+                  <span className='text-13px text-t-primary font-medium truncate flex-1 min-w-0'>
+                    {team.name}
+                  </span>
+                  {/* Unread badge (hidden on hover, replaced by three-dot) */}
                   {teamBadge > 0 && (
                     <span
-                      className='absolute right-11px top-1/2 -translate-y-1/2 w-18px h-18px rounded-full text-10px font-bold flex items-center justify-center pointer-events-none z-10 group-hover:hidden'
+                      className='w-18px h-18px rounded-full text-10px font-bold flex items-center justify-center shrink-0 group-hover:hidden'
                       style={{ backgroundColor: '#F53F3F', color: '#fff', lineHeight: 1 }}
                     >
                       {teamBadge > 99 ? '99+' : teamBadge}
                     </span>
                   )}
+                  {/* Pin indicator */}
+                  {isPinned && (
+                    <span className='absolute right-8px top-1/2 -translate-y-1/2 text-t-secondary pointer-events-none group-hover:hidden'>
+                      <Pushpin theme='outline' size='14' />
+                    </span>
+                  )}
+                  {/* Three-dot menu */}
+                  <div
+                    className={classNames(
+                      'absolute right-0 top-0 h-full items-center justify-end pr-8px hidden group-hover:flex',
+                      { flex: false }
+                    )}
+                    style={{
+                      backgroundImage: isActive
+                        ? 'linear-gradient(to right, transparent, var(--aou-2) 20%)'
+                        : 'linear-gradient(to right, transparent, var(--aou-1) 20%)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Dropdown
+                      droplist={
+                        <Menu
+                          onClickMenuItem={(key) => {
+                            if (key === 'pin') {
+                              togglePin(team.id);
+                            } else if (key === 'rename') {
+                              setRenameId(team.id);
+                              setRenameName(team.name);
+                              setRenameVisible(true);
+                            } else if (key === 'delete') {
+                              Modal.confirm({
+                                title: t('team.sider.deleteConfirm'),
+                                content: t('team.sider.deleteConfirmContent'),
+                                okText: t('team.sider.deleteOk'),
+                                cancelText: t('team.sider.deleteCancel'),
+                                okButtonProps: { status: 'warning' },
+                                onOk: async () => {
+                                  await removeTeam(team.id);
+                                  Message.success(t('team.sider.deleteSuccess'));
+                                  if (pathname.startsWith(`/team/${team.id}`)) {
+                                    Promise.resolve(navigate('/')).catch(() => {});
+                                  }
+                                },
+                                style: { borderRadius: '12px' },
+                                alignCenter: true,
+                                getPopupContainer: () => document.body,
+                              });
+                            }
+                          }}
+                        >
+                          <Menu.Item key='pin'>
+                            <div className='flex items-center gap-8px'>
+                              <Pushpin theme='outline' size='14' />
+                              <span>{isPinned ? t('team.sider.unpin') : t('team.sider.pin')}</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key='rename'>
+                            <div className='flex items-center gap-8px'>
+                              <EditOne theme='outline' size='14' />
+                              <span>{t('team.sider.rename')}</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key='delete'>
+                            <div className='flex items-center gap-8px text-[rgb(var(--warning-6))]'>
+                              <DeleteOne theme='outline' size='14' />
+                              <span>{t('team.sider.delete')}</span>
+                            </div>
+                          </Menu.Item>
+                        </Menu>
+                      }
+                      trigger='click'
+                      position='br'
+                      getPopupContainer={() => document.body}
+                      unmountOnExit={false}
+                    >
+                      <span
+                        className='flex-center cursor-pointer hover:bg-fill-2 rd-4px p-4px transition-colors text-t-primary'
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className='flex flex-col gap-2px items-center justify-center' style={{ width: 16, height: 16 }}>
+                          <div className='w-2px h-2px rounded-full bg-current' />
+                          <div className='w-2px h-2px rounded-full bg-current' />
+                          <div className='w-2px h-2px rounded-full bg-current' />
+                        </div>
+                      </span>
+                    </Dropdown>
+                  </div>
                 </div>
               );
             })}
