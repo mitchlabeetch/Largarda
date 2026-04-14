@@ -10,7 +10,7 @@ import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { TokenUsageData } from '@/common/config/storage';
 import { useAddOrUpdateMessage } from '@/renderer/pages/conversation/Messages/hooks';
 import type { ThoughtData } from '@/renderer/components/chat/ThoughtDisplay';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type UseAcpMessageReturn = {
   thought: ThoughtData;
@@ -83,38 +83,6 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
     pending: ThoughtData | null;
     timer: ReturnType<typeof setTimeout> | null;
   }>({ lastUpdate: 0, pending: null, timer: null });
-
-  const throttledSetThought = useMemo(() => {
-    const THROTTLE_MS = 50;
-    return (data: ThoughtData) => {
-      const now = Date.now();
-      const ref = thoughtThrottleRef.current;
-      if (now - ref.lastUpdate >= THROTTLE_MS) {
-        ref.lastUpdate = now;
-        ref.pending = null;
-        if (ref.timer) {
-          clearTimeout(ref.timer);
-          ref.timer = null;
-        }
-        setThought(data);
-      } else {
-        ref.pending = data;
-        if (!ref.timer) {
-          ref.timer = setTimeout(
-            () => {
-              ref.lastUpdate = Date.now();
-              ref.timer = null;
-              if (ref.pending) {
-                setThought(ref.pending);
-                ref.pending = null;
-              }
-            },
-            THROTTLE_MS - (now - ref.lastUpdate)
-          );
-        }
-      }
-    };
-  }, []);
 
   // Clean up throttle timer
   useEffect(() => {
@@ -312,7 +280,7 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
           break;
       }
     },
-    [conversation_id, addOrUpdateMessage, throttledSetThought, setThought, setRunning, setAiProcessing, setAcpStatus]
+    [conversation_id, addOrUpdateMessage, setThought, setRunning, setAiProcessing, setAcpStatus]
   );
 
   useEffect(() => {

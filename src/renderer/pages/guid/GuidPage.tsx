@@ -60,6 +60,8 @@ const GuidPage: React.FC = () => {
   const descriptionTextRef = useRef<HTMLDivElement>(null);
   // Holds the current preheated conversation so useGuidSend can claim it on send
   const preheatRef = useRef<{ conversationId: string; backend: string } | null>(null);
+  // Tracks the latest requested preheat backend so in-flight .then() can detect staleness
+  const pendingPreheatBackendRef = useRef<string | null>(null);
   const { closeAllTabs, openTab } = useConversationTabs();
   const { activeBorderColor, inactiveBorderColor, activeShadow } = useInputFocusRing();
   const { availableBackends, extensionAcpAdapters } = useAssistantBackends();
@@ -251,9 +253,23 @@ const GuidPage: React.FC = () => {
         preheatRef.current = null;
       }
 
+      // Mark this backend as the latest pending preheat so in-flight callbacks
+      // from earlier invocations can detect they are stale and self-cancel.
+      pendingPreheatBackendRef.current = backend;
+
       ipcBridge.conversation.preheat
         .invoke({ backend })
         .then((result) => {
+          // If another preheat was triggered while this one was in-flight,
+          // this result is stale — cancel it instead of adopting it.
+          if (pendingPreheatBackendRef.current !== backend) {
+            ipcBridge.conversation.cancelPreheat
+              .invoke({ conversation_id: result.conversation_id })
+              .catch((err) => {
+                console.warn('[GuidPage] cancelPreheat (stale) failed:', err);
+              });
+            return;
+          }
           preheatRef.current = { conversationId: result.conversation_id, backend };
         })
         .catch((err) => {
@@ -273,6 +289,9 @@ const GuidPage: React.FC = () => {
   // Cancel any pending preheat when the GuidPage unmounts
   useEffect(() => {
     return () => {
+      // Invalidate any in-flight preheat so its .then() self-cancels
+      pendingPreheatBackendRef.current = null;
+
       const current = preheatRef.current;
       if (current) {
         ipcBridge.conversation.cancelPreheat.invoke({ conversation_id: current.conversationId }).catch((err) => {
