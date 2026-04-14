@@ -68,7 +68,10 @@
     "pinnedSection": "Pinned",
     "deleteSuccess": "削除しました",
     "deleteFailed": "削除に失敗しました",
-    "messagesSection": "メッセージ"
+    "messagesSection": "メッセージ",
+    "deleteAgentGroup": "すべての会話を削除",
+    "deleteAgentGroupConfirm": "このエージェント下の {{count}} 件の会話をすべて削除しますか？この操作は元に戻せません。",
+    "deleteAgentGroupSuccess": "{{count}} 件の会話を削除しました"
   },
   "historySearch": {
     "tooltip": "メッセージを検索",

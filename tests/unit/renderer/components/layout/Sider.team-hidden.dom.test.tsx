@@ -37,10 +37,6 @@ vi.mock('@/renderer/components/layout/Sider/SiderNav/SiderToolbar', () => ({
   default: () => <div data-testid='sider-toolbar' />,
 }));
 
-vi.mock('@/renderer/components/layout/Sider/SiderNav/SiderSearchEntry', () => ({
-  default: () => <div data-testid='sider-search-entry' />,
-}));
-
 vi.mock('@/renderer/components/layout/Sider/SiderNav/SiderScheduledEntry', () => ({
   default: () => <div data-testid='sider-scheduled-entry' />,
 }));
@@ -116,7 +112,6 @@ describe('Sider team entry visibility', () => {
     );
 
     expect(screen.getByTestId('sider-toolbar')).toBeInTheDocument();
-    expect(screen.getByTestId('sider-search-entry')).toBeInTheDocument();
     expect(screen.getByTestId('sider-scheduled-entry')).toBeInTheDocument();
     expect(screen.getByTestId('sider-assistants-entry')).toBeInTheDocument();
     expect(await screen.findByTestId('workspace-grouped-history')).toBeInTheDocument();

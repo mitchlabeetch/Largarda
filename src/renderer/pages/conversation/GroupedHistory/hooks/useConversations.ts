@@ -124,6 +124,21 @@ export const useConversations = () => {
     return keys;
   }, [conversations]);
 
+  // Auto-expand the agent group when a conversation is navigated to directly
+  useEffect(() => {
+    if (!id) return;
+    const conversation = conversations.find((c) => c.id === id);
+    if (!conversation) return;
+    const agentKey = resolveAgentKey(conversation);
+    setCollapsedAgentGroups((prev) => {
+      if (!prev.has(agentKey)) return prev;
+      const next = new Set(prev);
+      next.delete(agentKey);
+      writeCollapsedAgentGroups(next);
+      return next;
+    });
+  }, [id, conversations]);
+
   // Remove stale collapsed agent group entries that no longer have conversations
   useEffect(() => {
     if (currentAgentKeys.size === 0) return;

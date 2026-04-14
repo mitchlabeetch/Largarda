@@ -97,8 +97,8 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
       <div
         id={'c-' + conversation.id}
         className={classNames(
-          'chat-history__item h-40px rd-8px flex items-center group cursor-pointer relative overflow-hidden shrink-0 conversation-item [&.conversation-item+&.conversation-item]:mt-2px min-w-0 transition-colors',
-          collapsed ? 'justify-center px-0' : 'justify-start gap-8px px-10px',
+          'chat-history__item h-30px rd-8px flex items-center group cursor-pointer relative overflow-hidden shrink-0 conversation-item [&.conversation-item+&.conversation-item]:mt-2px min-w-0 transition-colors',
+          collapsed ? 'justify-center px-0' : 'justify-start pl-36px pr-10px',
           {
             'hover:bg-[rgba(var(--primary-6),0.14)]': !batchMode,
             '!bg-active': selected,
@@ -119,9 +119,11 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
             <Checkbox checked={checked} />
           </span>
         )}
-        <span className='w-28px h-28px flex items-center justify-center shrink-0'>
-          {isGenerating && !batchMode ? <Spin size={16} /> : renderLeadingIcon()}
-        </span>
+        {collapsed && (
+          <span className='w-24px h-24px flex items-center justify-center shrink-0'>
+            {isGenerating && !batchMode ? <Spin size={16} /> : renderLeadingIcon()}
+          </span>
+        )}
         <FlexFullContainer
           className={classNames(
             'h-24px min-w-0 flex-1 collapsed-hidden',
@@ -139,7 +141,7 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
           >
             <div
               className={classNames(
-                'chat-history__item-name overflow-hidden text-ellipsis block w-full text-14px lh-24px whitespace-nowrap min-w-0 group-hover:text-1',
+                'chat-history__item-name overflow-hidden text-ellipsis block w-full text-13px lh-24px whitespace-nowrap min-w-0 group-hover:text-1',
                 selected && !batchMode ? 'text-1 font-medium' : 'text-2'
               )}
             >

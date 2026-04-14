@@ -10,13 +10,15 @@ import { ASSISTANT_PRESETS } from '@/common/config/presets/assistantPresets';
 import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
 import DirectorySelectionModal from '@/renderer/components/settings/DirectorySelectionModal';
 import { useCronJobsMap } from '@/renderer/pages/cron';
+import { ipcBridge } from '@/common';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '@/renderer/pages/guid/constants';
 import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
+import { emitter } from '@/renderer/utils/emitter';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button, Empty, Input, Modal, Tooltip } from '@arco-design/web-react';
-import { Down, FolderOpen, Plus, Right, Robot } from '@icon-park/react';
+import { Button, Dropdown, Empty, Input, Menu, Message, Modal, Tooltip } from '@arco-design/web-react';
+import { DeleteOne, Down, FolderOpen, Plus, Right, Robot } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +48,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   const navigate = useNavigate();
   const { getJobStatus, markAsRead, setActiveConversation } = useCronJobsMap();
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
+  const [groupMenuVisibleKey, setGroupMenuVisibleKey] = useState<string | null>(null);
   const toggleSection = useCallback((key: string) => {
     setCollapsedSections((prev) => {
       const next = new Set(prev);
@@ -55,6 +58,39 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     });
   }, []);
   const messagesCollapsed = collapsedSections.has('messages');
+
+  const handleDeleteGroup = useCallback(
+    (conversationIds: string[]) => {
+      Modal.confirm({
+        title: t('conversation.history.deleteAgentGroup'),
+        content: t('conversation.history.deleteAgentGroupConfirm', { count: conversationIds.length }),
+        okText: t('conversation.history.confirmDelete'),
+        cancelText: t('conversation.history.cancelDelete'),
+        okButtonProps: { status: 'warning' },
+        onOk: async () => {
+          try {
+            const results = await Promise.all(
+              conversationIds.map((cid) => ipcBridge.conversation.remove.invoke({ id: cid }))
+            );
+            const successCount = results.filter(Boolean).length;
+            emitter.emit('chat.history.refresh');
+            if (successCount > 0) {
+              Message.success(t('conversation.history.deleteAgentGroupSuccess', { count: successCount }));
+            } else {
+              Message.error(t('conversation.history.deleteFailed'));
+            }
+          } catch (err) {
+            console.error('Failed to delete agent group:', err);
+            Message.error(t('conversation.history.deleteFailed'));
+          }
+        },
+        style: { borderRadius: '12px' },
+        alignCenter: true,
+        getPopupContainer: () => document.body,
+      });
+    },
+    [t]
+  );
 
   // Sync active conversation ref when route changes (for URL navigation)
   // This doesn't trigger state update, avoiding double render
@@ -82,17 +118,14 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     const map = new Map<string, { displayName: string; avatarSrc: string | null; avatarEmoji?: string }>();
 
     /** Resolve avatar string to {avatarSrc, avatarEmoji} */
-    const resolveAvatar = (
-      avatarValue: string
-    ): { avatarSrc: string | null; avatarEmoji?: string } => {
+    const resolveAvatar = (avatarValue: string): { avatarSrc: string | null; avatarEmoji?: string } => {
       const v = avatarValue.trim();
       if (!v) return { avatarSrc: null };
       const mapped = CUSTOM_AVATAR_IMAGE_MAP[v];
       if (mapped) return { avatarSrc: mapped };
       const resolved = resolveExtensionAssetUrl(v) || v;
       const isImage =
-        /\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) ||
-        /^(https?:|aion-asset:\/\/|file:\/\/|data:)/i.test(resolved);
+        /\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) || /^(https?:|aion-asset:\/\/|file:\/\/|data:)/i.test(resolved);
       if (isImage) return { avatarSrc: resolved };
       if (v.endsWith('.svg')) return { avatarSrc: null };
       return { avatarSrc: null, avatarEmoji: v };
@@ -133,8 +166,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       }>) {
         if (!agent?.id) continue;
         const key = `custom:${agent.id}`;
-        const displayName =
-          agent.nameI18n?.[locale] || agent.nameI18n?.['en-US'] || agent.name || agent.id;
+        const displayName = agent.nameI18n?.[locale] || agent.nameI18n?.['en-US'] || agent.name || agent.id;
         const { avatarSrc, avatarEmoji } = resolveAvatar(agent.avatar || '');
 
         if (avatarSrc || avatarEmoji) {
@@ -488,103 +520,153 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
         {/* Messages section header — subtle label,退到背景 */}
         {!collapsed && (agentGroups.length > 0 || pinnedConversations.length === 0) && (
           <div
-            className='group flex items-center gap-4px px-12px py-4px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0 mt-4px'
+            className='group h-30px flex items-center gap-4px px-10px cursor-pointer select-none sticky top-0 z-20 bg-fill-2 min-w-0 mt-4px'
             onClick={() => toggleSection('messages')}
           >
             <span className='text-t-tertiary flex items-center mr-2px'>
-              {messagesCollapsed ? <Right theme='outline' size={10} /> : <Down theme='outline' size={10} />}
+              {messagesCollapsed ? (
+                <Right theme='outline' size={14} style={{ lineHeight: 0 }} />
+              ) : (
+                <Down theme='outline' size={14} style={{ lineHeight: 0 }} />
+              )}
             </span>
-            <span className='text-11px text-t-tertiary font-medium uppercase tracking-wide flex-1 min-w-0'>
+            <span className='text-12px text-t-tertiary font-medium flex-1 min-w-0'>
               {t('conversation.history.messagesSection')}
             </span>
             <div
-              className='opacity-0 group-hover:opacity-100 transition-opacity h-16px w-16px rd-4px flex items-center justify-center cursor-pointer hover:bg-fill-3 shrink-0'
+              className='opacity-0 group-hover:opacity-100 transition-opacity h-18px w-18px rd-4px flex items-center justify-center cursor-pointer hover:bg-fill-3 shrink-0'
               onClick={(e) => {
                 e.stopPropagation();
                 void navigate('/guid');
               }}
             >
-              <Plus theme='outline' size='12' fill='var(--color-text-3)' style={{ lineHeight: 0 }} />
+              <Plus theme='outline' size='14' fill='var(--color-text-3)' style={{ lineHeight: 0 }} />
             </div>
           </div>
         )}
 
-        {!messagesCollapsed && agentGroups.map((agentGroup) => {
-          const logoSrc =
-            agentGroup.avatarSrc ??
-            resolveAgentLogo({ backend: agentGroup.agentKey.startsWith('custom:') ? undefined : agentGroup.agentKey });
-          const isCollapsed = collapsedAgentGroups.has(agentGroup.agentKey);
+        {!messagesCollapsed &&
+          agentGroups.map((agentGroup) => {
+            const logoSrc =
+              agentGroup.avatarSrc ??
+              resolveAgentLogo({
+                backend: agentGroup.agentKey.startsWith('custom:') ? undefined : agentGroup.agentKey,
+              });
+            const isCollapsed = collapsedAgentGroups.has(agentGroup.agentKey);
 
-          const headerContent = (
-            <div
-              className='group flex items-center gap-8px px-12px py-8px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0'
-              onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
-            >
-              {/* Agent avatar — 18px, 点击跳转 /guid */}
-              <span
-                className='shrink-0 w-24px h-24px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden cursor-pointer'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
-                }}
+            const isGroupMenuVisible = groupMenuVisibleKey === agentGroup.agentKey;
+            const headerContent = (
+              <div
+                className='group h-30px flex items-center gap-8px px-10px cursor-pointer select-none sticky top-30px z-10 bg-fill-2 hover:bg-fill-3 rd-8px transition-colors min-w-0'
+                onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
               >
-                {agentGroup.avatarEmoji ? (
-                  <span className='text-14px leading-none'>{agentGroup.avatarEmoji}</span>
-                ) : logoSrc ? (
-                  <img src={logoSrc} alt={agentGroup.displayName} width={14} height={14} className='object-contain' />
-                ) : (
-                  <Robot theme='outline' size={14} fill='currentColor' />
-                )}
-              </span>
-              {/* Agent name */}
-              <span
-                className='text-13px text-t-primary font-medium truncate flex-1 min-w-0 hover:text-[rgb(var(--primary-6))] transition-colors'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
-                }}
-              >
-                {agentGroup.displayName}
-              </span>
-              {/* Collapse arrow */}
-              <span className='ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-t-secondary flex items-center shrink-0'>
-                {isCollapsed ? <Right theme='outline' size={12} /> : <Down theme='outline' size={12} />}
-              </span>
-            </div>
-          );
-
-          return (
-            <div key={agentGroup.agentKey} className='mb-8px min-w-0'>
-              {collapsed ? (
-                <Tooltip content={agentGroup.displayName} position='right'>
-                  <div
-                    className='w-full h-36px flex items-center justify-center cursor-pointer'
-                    onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
+                {/* Agent avatar */}
+                <span className='shrink-0 w-18px h-18px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden'>
+                  {agentGroup.avatarEmoji ? (
+                    <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                  ) : logoSrc ? (
+                    <img src={logoSrc} alt={agentGroup.displayName} className='w-full h-full object-cover' />
+                  ) : (
+                    <Robot theme='outline' size={12} fill='currentColor' />
+                  )}
+                </span>
+                {/* Agent name */}
+                <span className='text-13px text-t-primary font-medium truncate flex-1 min-w-0'>
+                  {agentGroup.displayName}
+                </span>
+                {/* Three-dot dropdown menu — shown on hover */}
+                <div
+                  className={classNames(
+                    'ml-auto items-center justify-end',
+                    isGroupMenuVisible ? 'flex' : 'hidden group-hover:flex'
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Dropdown
+                    droplist={
+                      <Menu
+                        onClickMenuItem={(key) => {
+                          setGroupMenuVisibleKey(null);
+                          if (key === 'new-chat') {
+                            void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
+                          } else if (key === 'delete') {
+                            handleDeleteGroup(agentGroup.conversations.map((c) => c.id));
+                          }
+                        }}
+                      >
+                        <Menu.Item key='new-chat'>
+                          <div className='flex items-center gap-8px'>
+                            <Plus theme='outline' size='14' />
+                            <span>{t('conversation.welcome.newConversation')}</span>
+                          </div>
+                        </Menu.Item>
+                        <Menu.Item key='delete'>
+                          <div className='flex items-center gap-8px text-[rgb(var(--warning-6))]'>
+                            <DeleteOne theme='outline' size='14' />
+                            <span>{t('conversation.history.deleteAgentGroup')}</span>
+                          </div>
+                        </Menu.Item>
+                      </Menu>
+                    }
+                    trigger='click'
+                    position='br'
+                    popupVisible={isGroupMenuVisible}
+                    onVisibleChange={(visible) => setGroupMenuVisibleKey(visible ? agentGroup.agentKey : null)}
+                    getPopupContainer={() => document.body}
+                    unmountOnExit={false}
                   >
-                    <span className='w-26px h-26px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden'>
-                      {agentGroup.avatarEmoji ? (
-                        <span className='text-14px leading-none'>{agentGroup.avatarEmoji}</span>
-                      ) : logoSrc ? (
-                        <img src={logoSrc} alt={agentGroup.displayName} width={16} height={16} className='object-contain' />
-                      ) : (
-                        <Robot theme='outline' size={14} fill='currentColor' />
-                      )}
+                    <span
+                      className='flex-center cursor-pointer hover:bg-fill-2 rd-4px p-4px transition-colors text-t-primary'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGroupMenuVisibleKey(agentGroup.agentKey);
+                      }}
+                    >
+                      <div
+                        className='flex flex-col gap-2px items-center justify-center'
+                        style={{ width: 16, height: 16 }}
+                      >
+                        <div className='w-2px h-2px rounded-full bg-current' />
+                        <div className='w-2px h-2px rounded-full bg-current' />
+                        <div className='w-2px h-2px rounded-full bg-current' />
+                      </div>
                     </span>
-                  </div>
-                </Tooltip>
-              ) : (
-                headerContent
-              )}
-              {!isCollapsed && (
-                <div className='min-w-0 pl-12px'>
-                  {agentGroup.conversations.map((conversation) => renderConversation(conversation))}
+                  </Dropdown>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
 
+            return (
+              <div key={agentGroup.agentKey} className='mb-2px min-w-0'>
+                {collapsed ? (
+                  <Tooltip content={agentGroup.displayName} position='right'>
+                    <div
+                      className='w-full h-30px flex items-center justify-center cursor-pointer rd-8px hover:bg-fill-3 transition-colors'
+                      onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
+                    >
+                      <span className='w-18px h-18px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden'>
+                        {agentGroup.avatarEmoji ? (
+                          <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                        ) : logoSrc ? (
+                          <img src={logoSrc} alt={agentGroup.displayName} className='w-full h-full object-cover' />
+                        ) : (
+                          <Robot theme='outline' size={12} fill='currentColor' />
+                        )}
+                      </span>
+                    </div>
+                  </Tooltip>
+                ) : (
+                  headerContent
+                )}
+                {!isCollapsed && (
+                  <div className='min-w-0 pt-2px'>
+                    {agentGroup.conversations.map((conversation) => renderConversation(conversation))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+      </div>
     </>
   );
 };

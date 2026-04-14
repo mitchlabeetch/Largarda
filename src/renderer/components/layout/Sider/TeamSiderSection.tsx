@@ -21,13 +21,14 @@ import { useSiderTeamBadges } from '@renderer/pages/team/hooks/useSiderTeamBadge
 import TeamCreateModal from '@renderer/pages/team/components/TeamCreateModal';
 import { ipcBridge } from '@/common';
 
-const CIRCLE = 'w-18px h-18px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden shrink-0';
-const DASHED = 'w-18px h-18px rounded-full border border-dashed border-[var(--color-border-2)] shrink-0';
+const CIRCLE =
+  'w-18px h-18px rounded-full bg-[var(--color-bg-2)] border border-solid border-[var(--color-border-2)] flex items-center justify-center overflow-hidden shrink-0';
+const DASHED = 'w-18px h-18px rounded-full border border-dashed border-current opacity-20 shrink-0';
 
 /** Single avatar circle */
 const AgentCircle: React.FC<{ src: string; alt?: string }> = ({ src, alt }) => (
   <span className={CIRCLE}>
-    <img src={src} alt={alt} width={11} height={11} className='object-contain' />
+    <img src={src} alt={alt} className='w-full h-full object-cover' />
   </span>
 );
 
@@ -40,17 +41,23 @@ const TeamStackedAvatar: React.FC<{ agents: TeamAgent[] }> = ({ agents }) => {
     .filter((l): l is string => Boolean(l));
 
   if (logos.length === 0) {
+    // No resolvable logos — show placeholder + dashed slot
     return (
-      <span className={CIRCLE}>
-        <Peoples theme='outline' size={11} fill='currentColor' style={{ lineHeight: 0 }} />
-      </span>
+      <div className='flex items-center shrink-0'>
+        <span className={classNames(CIRCLE, 'relative z-1')}>
+          <Peoples theme='outline' size={14} fill='currentColor' style={{ lineHeight: 0 }} />
+        </span>
+        <span className={`${DASHED} -ml-8px`} />
+      </div>
     );
   }
-  if (agents.length <= 1 || logos.length === 1) {
+  if (logos.length === 1) {
     // Single agent — dashed circle hints at empty slot
     return (
       <div className='flex items-center shrink-0'>
-        <AgentCircle src={logos[0]} />
+        <span className='relative z-1'>
+          <AgentCircle src={logos[0]} />
+        </span>
         <span className={`${DASHED} -ml-8px`} />
       </div>
     );
@@ -162,7 +169,7 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                   <div
                     data-testid={`collapsed-team-item-${team.id}`}
                     className={classNames(
-                      'relative w-full h-40px flex items-center justify-center cursor-pointer transition-colors rd-8px',
+                      'relative w-full h-30px flex items-center justify-center cursor-pointer transition-colors rd-8px',
                       isActive ? '!bg-active' : 'hover:bg-fill-3 active:bg-fill-4'
                     )}
                     onClick={() => handleTeamClick(team.id)}
@@ -187,26 +194,29 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
       ) : (
         <div className='shrink-0 flex flex-col gap-2px'>
           <div
-            className='group flex items-center gap-4px px-12px py-4px mt-4px cursor-pointer select-none'
+            className='group h-30px flex items-center gap-4px px-10px mt-4px cursor-pointer select-none sticky top-0 z-20 bg-fill-2'
             onClick={() => setTeamsCollapsed((v) => !v)}
           >
             <span className='text-t-tertiary flex items-center mr-2px'>
-              {teamsCollapsed ? <Right theme='outline' size={10} /> : <Down theme='outline' size={10} />}
+              {teamsCollapsed ? (
+                <Right theme='outline' size={14} style={{ lineHeight: 0 }} />
+              ) : (
+                <Down theme='outline' size={14} style={{ lineHeight: 0 }} />
+              )}
             </span>
-            <span className='text-11px text-t-tertiary font-medium uppercase tracking-wide flex-1 min-w-0'>
-              {t('team.sider.title')}
-            </span>
+            <span className='text-12px text-t-tertiary font-medium flex-1 min-w-0'>{t('team.sider.title')}</span>
             <div
-              className='h-16px w-16px rd-4px flex items-center justify-center cursor-pointer hover:bg-fill-3 transition-all shrink-0'
+              className='opacity-0 group-hover:opacity-100 transition-opacity h-18px w-18px rd-4px flex items-center justify-center cursor-pointer hover:bg-fill-3 shrink-0'
               onClick={(e) => {
                 e.stopPropagation();
                 setCreateTeamVisible(true);
               }}
             >
-              <Plus theme='outline' size='12' fill='var(--color-text-3)' style={{ lineHeight: 0 }} />
+              <Plus theme='outline' size='14' fill='var(--color-text-3)' style={{ lineHeight: 0 }} />
             </div>
           </div>
-          {!teamsCollapsed && sortedTeams.length > 0 &&
+          {!teamsCollapsed &&
+            sortedTeams.length > 0 &&
             sortedTeams.map((team) => {
               const isPinned = pinnedIds.includes(team.id);
               const isActive = pathname.startsWith(`/team/${team.id}`);
@@ -215,19 +225,17 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                 <div
                   key={team.id}
                   className={classNames(
-                    'group flex items-center gap-8px px-12px py-8px cursor-pointer rd-8px transition-colors min-w-0 relative',
+                    'group h-30px flex items-center gap-8px px-10px cursor-pointer rd-8px transition-colors min-w-0 relative',
                     isActive ? '!bg-active' : 'hover:bg-[rgba(var(--primary-6),0.14)]'
                   )}
                   onClick={() => handleTeamClick(team.id)}
                 >
                   {/* Stacked agent avatar */}
-                  <span className='shrink-0 w-20px h-20px flex items-center justify-center'>
+                  <span className='shrink-0 flex items-center justify-center'>
                     <TeamStackedAvatar agents={team.agents} />
                   </span>
                   {/* Team name */}
-                  <span className='text-13px text-t-primary font-medium truncate flex-1 min-w-0'>
-                    {team.name}
-                  </span>
+                  <span className='text-13px text-t-primary font-medium truncate flex-1 min-w-0'>{team.name}</span>
                   {/* Unread badge (hidden on hover, replaced by three-dot) */}
                   {teamBadge > 0 && (
                     <span
@@ -316,7 +324,10 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                         className='flex-center cursor-pointer hover:bg-fill-2 rd-4px p-4px transition-colors text-t-primary'
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className='flex flex-col gap-2px items-center justify-center' style={{ width: 16, height: 16 }}>
+                        <div
+                          className='flex flex-col gap-2px items-center justify-center'
+                          style={{ width: 16, height: 16 }}
+                        >
                           <div className='w-2px h-2px rounded-full bg-current' />
                           <div className='w-2px h-2px rounded-full bg-current' />
                           <div className='w-2px h-2px rounded-full bg-current' />

@@ -68,7 +68,10 @@
     "yesterday": "Yesterday",
     "recent7Days": "Last 7 Days",
     "earlier": "Earlier",
-    "messagesSection": "Messages"
+    "messagesSection": "Messages",
+    "deleteAgentGroup": "Delete All Chats",
+    "deleteAgentGroupConfirm": "Delete all {{count}} conversations under this agent? This cannot be undone.",
+    "deleteAgentGroupSuccess": "{{count}} conversations deleted"
   },
   "historySearch": {
     "tooltip": "Search messages",
