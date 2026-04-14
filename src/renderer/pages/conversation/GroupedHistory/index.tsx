@@ -485,26 +485,26 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           </DragOverlay>
         </DndContext>
 
-        {/* Messages section header */}
+        {/* Messages section header — subtle label,退到背景 */}
         {!collapsed && (agentGroups.length > 0 || pinnedConversations.length === 0) && (
           <div
-            className='group flex items-center gap-4px px-12px py-6px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0'
+            className='group flex items-center gap-4px px-12px py-4px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0 mt-4px'
             onClick={() => toggleSection('messages')}
           >
-            <span className='text-t-secondary flex items-center mr-2px'>
-              {messagesCollapsed ? <Right theme='outline' size={12} /> : <Down theme='outline' size={12} />}
+            <span className='text-t-tertiary flex items-center mr-2px'>
+              {messagesCollapsed ? <Right theme='outline' size={10} /> : <Down theme='outline' size={10} />}
             </span>
-            <span className='text-12px text-t-secondary font-medium flex-1 min-w-0'>
+            <span className='text-11px text-t-tertiary font-medium uppercase tracking-wide flex-1 min-w-0'>
               {t('conversation.history.messagesSection')}
             </span>
             <span
-              className='opacity-0 group-hover:opacity-100 transition-opacity text-t-secondary flex items-center hover:text-t-primary p-2px rd-4px hover:bg-fill-3'
+              className='opacity-0 group-hover:opacity-100 transition-opacity text-t-tertiary flex items-center hover:text-t-primary p-2px rd-4px hover:bg-fill-3'
               onClick={(e) => {
                 e.stopPropagation();
                 void navigate('/guid');
               }}
             >
-              <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
+              <svg width='12' height='12' viewBox='0 0 14 14' fill='none'>
                 <path d='M7 1v12M1 7h12' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' />
               </svg>
             </span>
@@ -519,28 +519,28 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 
           const headerContent = (
             <div
-              className='group flex items-center gap-8px px-12px py-6px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0'
+              className='group flex items-center gap-8px px-12px py-8px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0'
               onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
             >
-              {/* Agent avatar */}
+              {/* Agent avatar — 18px, 点击跳转 /guid */}
               <span
-                className='shrink-0 flex items-center justify-center cursor-pointer'
+                className='shrink-0 w-20px h-20px flex items-center justify-center cursor-pointer'
                 onClick={(e) => {
                   e.stopPropagation();
                   void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
                 }}
               >
                 {agentGroup.avatarEmoji ? (
-                  <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                  <span className='text-18px leading-none'>{agentGroup.avatarEmoji}</span>
                 ) : logoSrc ? (
-                  <img src={logoSrc} alt={agentGroup.displayName} width={16} height={16} className='object-contain' />
+                  <img src={logoSrc} alt={agentGroup.displayName} width={18} height={18} className='object-contain' />
                 ) : (
-                  <Robot theme='outline' size={16} fill='currentColor' />
+                  <Robot theme='outline' size={18} fill='currentColor' />
                 )}
               </span>
-              {/* Agent name — navigates to /guid on click */}
+              {/* Agent name */}
               <span
-                className='text-12px text-t-secondary font-medium truncate flex-1 min-w-0 hover:text-t-primary transition-colors'
+                className='text-13px text-t-primary font-medium truncate flex-1 min-w-0 hover:text-[rgb(var(--primary-6))] transition-colors'
                 onClick={(e) => {
                   e.stopPropagation();
                   void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
@@ -556,25 +556,25 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           );
 
           return (
-            <div key={agentGroup.agentKey} className='mb-8px min-w-0'>
+            <div key={agentGroup.agentKey} className='mb-4px min-w-0'>
               {collapsed ? (
                 <Tooltip content={agentGroup.displayName} position='right'>
                   <div
-                    className='w-full h-32px flex items-center justify-center cursor-pointer'
+                    className='w-full h-36px flex items-center justify-center cursor-pointer'
                     onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
                   >
                     {agentGroup.avatarEmoji ? (
-                      <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                      <span className='text-18px leading-none'>{agentGroup.avatarEmoji}</span>
                     ) : logoSrc ? (
                       <img
                         src={logoSrc}
                         alt={agentGroup.displayName}
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         className='object-contain'
                       />
                     ) : (
-                      <Robot theme='outline' size={16} fill='currentColor' />
+                      <Robot theme='outline' size={20} fill='currentColor' />
                     )}
                   </div>
                 </Tooltip>
@@ -582,7 +582,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                 headerContent
               )}
               {!isCollapsed && (
-                <div className='min-w-0'>
+                <div className='min-w-0 pl-8px'>
                   {agentGroup.conversations.map((conversation) => renderConversation(conversation))}
                 </div>
               )}
