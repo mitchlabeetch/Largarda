@@ -7,7 +7,7 @@ import { useLayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { blurActiveElement } from '@renderer/utils/ui/focus';
 import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
 import { useAllCronJobs } from '@renderer/pages/cron/useCronJobs';
-import { SiderToolbar, SiderSearchEntry, SiderScheduledEntry } from './SiderNav';
+import { SiderToolbar, SiderSearchEntry, SiderScheduledEntry, SiderAssistantsEntry } from './SiderNav';
 import SiderFooter from './SiderFooter';
 import CronJobSiderSection from './CronJobSiderSection';
 import TeamSiderSection from './TeamSiderSection';
@@ -96,6 +96,19 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
     void setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const handleAssistantsClick = () => {
+    cleanupSiderTooltips();
+    blurActiveElement();
+    closePreview();
+    setIsBatchMode(false);
+    Promise.resolve(navigate('/assistants')).catch((error) => {
+      console.error('Navigation failed:', error);
+    });
+    if (onSessionClick) {
+      onSessionClick();
+    }
+  };
+
   const handleCronNavigate = (path: string) => {
     cleanupSiderTooltips();
     blurActiveElement();
@@ -148,6 +161,14 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
               collapsed={collapsed}
               siderTooltipProps={siderTooltipProps}
               onClick={handleScheduledClick}
+            />
+            {/* Assistants nav entry */}
+            <SiderAssistantsEntry
+              isMobile={isMobile}
+              isActive={pathname === '/assistants'}
+              collapsed={collapsed}
+              siderTooltipProps={siderTooltipProps}
+              onClick={handleAssistantsClick}
             />
             {/* Divider between fixed top nav and scrollable content area */}
             <div

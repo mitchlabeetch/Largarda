@@ -6,6 +6,19 @@
 
 import type { TChatConversation } from '@/common/config/storage';
 
+export type AgentGroup = {
+  agentKey: string;
+  displayName: string;
+  avatarSrc: string | null;
+  avatarEmoji?: string;
+  conversations: TChatConversation[];
+};
+
+export type AgentGroupedHistoryResult = {
+  pinnedConversations: TChatConversation[];
+  agentGroups: AgentGroup[];
+};
+
 export type WorkspaceGroup = {
   workspace: string;
   displayName: string;

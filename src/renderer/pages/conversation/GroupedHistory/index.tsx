@@ -5,19 +5,19 @@
  */
 
 import type { TChatConversation } from '@/common/config/storage';
+import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
 import DirectorySelectionModal from '@/renderer/components/settings/DirectorySelectionModal';
-import { CronJobIndicator, useCronJobsMap } from '@/renderer/pages/cron';
+import { useCronJobsMap } from '@/renderer/pages/cron';
+import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button, Empty, Input, Modal } from '@arco-design/web-react';
-import { FolderOpen } from '@icon-park/react';
+import { Button, Empty, Input, Modal, Tooltip } from '@arco-design/web-react';
+import { Down, FolderOpen, Right, Robot } from '@icon-park/react';
 import classNames from 'classnames';
-import { Down, Right } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import WorkspaceCollapse from '../components/WorkspaceCollapse';
 import ConversationRow from './ConversationRow';
 import DragOverlayContent from './DragOverlayContent';
 import SortableConversationRow from './SortableConversationRow';
@@ -26,6 +26,7 @@ import { useConversationActions } from './hooks/useConversationActions';
 import { useConversations } from './hooks/useConversations';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { useExport } from './hooks/useExport';
+import { buildAgentGroupedHistory } from './utils/groupingHelpers';
 import type { ConversationRowProps, WorkspaceGroupedHistoryProps } from './types';
 
 const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
@@ -37,6 +38,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 }) => {
   const { id } = useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { getJobStatus, markAsRead, setActiveConversation } = useCronJobsMap();
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
   const toggleSection = useCallback((key: string) => {
@@ -60,11 +62,33 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     conversations,
     isConversationGenerating,
     hasCompletionUnread,
-    expandedWorkspaces,
     pinnedConversations,
-    timelineSections,
-    handleToggleWorkspace,
+    collapsedAgentGroups,
+    handleToggleAgentGroup,
   } = useConversations();
+
+  // Build agent-grouped history from conversations using static backend metadata
+  const agentDisplayMap = useMemo(() => {
+    const map = new Map<string, { displayName: string; avatarSrc: string | null; avatarEmoji?: string }>();
+    // Populate from ACP_BACKENDS_ALL for known backends
+    for (const [key, config] of Object.entries(ACP_BACKENDS_ALL)) {
+      map.set(key, {
+        displayName: config.name,
+        avatarSrc: resolveAgentLogo({ backend: key }) ?? null,
+      });
+    }
+    // Gemini backend key
+    map.set('gemini', {
+      displayName: 'Gemini',
+      avatarSrc: resolveAgentLogo({ backend: 'gemini' }) ?? null,
+    });
+    return map;
+  }, []);
+
+  const { agentGroups } = useMemo(
+    () => buildAgentGroupedHistory(conversations, agentDisplayMap),
+    [conversations, agentDisplayMap]
+  );
 
   const {
     selectedConversationIds,
@@ -177,7 +201,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   // Collect all sortable IDs for the pinned section
   const pinnedIds = useMemo(() => pinnedConversations.map((c) => c.id), [pinnedConversations]);
 
-  if (timelineSections.length === 0 && pinnedConversations.length === 0) {
+  if (agentGroups.length === 0 && pinnedConversations.length === 0) {
     return (
       <div className='py-48px flex-center'>
         <Empty description={t('conversation.history.noHistory')} />
@@ -394,58 +418,84 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           </DragOverlay>
         </DndContext>
 
-        {timelineSections.map((section) => (
-          <div key={section.timeline} className='mb-8px min-w-0'>
-            {!collapsed && (
-              <div
-                className='group flex items-center px-12px py-6px cursor-pointer select-none sticky top-0 z-10 bg-fill-2'
-                onClick={() => toggleSection(section.timeline)}
+        {agentGroups.map((agentGroup) => {
+          const logoSrc =
+            agentGroup.avatarSrc ??
+            resolveAgentLogo({ backend: agentGroup.agentKey.startsWith('custom:') ? undefined : agentGroup.agentKey });
+          const isCollapsed = collapsedAgentGroups.has(agentGroup.agentKey);
+
+          const headerContent = (
+            <div
+              className='group flex items-center gap-8px px-12px py-6px cursor-pointer select-none sticky top-0 z-10 bg-fill-2 min-w-0'
+              onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
+            >
+              {/* Agent avatar */}
+              <span
+                className='shrink-0 flex items-center justify-center cursor-pointer'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
+                }}
               >
-                <span className='text-12px text-t-secondary font-medium'>{section.timeline}</span>
-                <span className='ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-t-secondary flex items-center'>
-                  {collapsedSections.has(section.timeline) ? (
-                    <Right theme='outline' size={12} />
-                  ) : (
-                    <Down theme='outline' size={12} />
-                  )}
-                </span>
-              </div>
-            )}
+                {agentGroup.avatarEmoji ? (
+                  <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                ) : logoSrc ? (
+                  <img src={logoSrc} alt={agentGroup.displayName} width={16} height={16} className='object-contain' />
+                ) : (
+                  <Robot theme='outline' size={16} fill='currentColor' />
+                )}
+              </span>
+              {/* Agent name — navigates to /guid on click */}
+              <span
+                className='text-12px text-t-secondary font-medium truncate flex-1 min-w-0 hover:text-t-primary transition-colors'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate(`/guid?agent=${encodeURIComponent(agentGroup.agentKey)}`);
+                }}
+              >
+                {agentGroup.displayName}
+              </span>
+              {/* Collapse arrow */}
+              <span className='ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-t-secondary flex items-center shrink-0'>
+                {isCollapsed ? <Right theme='outline' size={12} /> : <Down theme='outline' size={12} />}
+              </span>
+            </div>
+          );
 
-            {!collapsedSections.has(section.timeline) &&
-              section.items.map((item) => {
-                if (item.type === 'workspace' && item.workspaceGroup) {
-                  const group = item.workspaceGroup;
-                  return (
-                    <div key={group.workspace} className='min-w-0'>
-                      <WorkspaceCollapse
-                        expanded={expandedWorkspaces.includes(group.workspace)}
-                        onToggle={() => handleToggleWorkspace(group.workspace)}
-                        siderCollapsed={collapsed}
-                        header={
-                          <div className='flex items-center gap-8px text-14px min-w-0'>
-                            <span className='font-medium truncate flex-1 text-t-primary min-w-0'>
-                              {group.displayName}
-                            </span>
-                          </div>
-                        }
-                      >
-                        <div className={classNames('flex flex-col gap-2px min-w-0', { 'mt-2px': !collapsed })}>
-                          {group.conversations.map((conversation) => renderConversation(conversation))}
-                        </div>
-                      </WorkspaceCollapse>
-                    </div>
-                  );
-                }
-
-                if (item.type === 'conversation' && item.conversation) {
-                  return renderConversation(item.conversation);
-                }
-
-                return null;
-              })}
-          </div>
-        ))}
+          return (
+            <div key={agentGroup.agentKey} className='mb-8px min-w-0'>
+              {collapsed ? (
+                <Tooltip content={agentGroup.displayName} position='right'>
+                  <div
+                    className='w-full h-32px flex items-center justify-center cursor-pointer'
+                    onClick={() => handleToggleAgentGroup(agentGroup.agentKey)}
+                  >
+                    {agentGroup.avatarEmoji ? (
+                      <span className='text-16px leading-none'>{agentGroup.avatarEmoji}</span>
+                    ) : logoSrc ? (
+                      <img
+                        src={logoSrc}
+                        alt={agentGroup.displayName}
+                        width={16}
+                        height={16}
+                        className='object-contain'
+                      />
+                    ) : (
+                      <Robot theme='outline' size={16} fill='currentColor' />
+                    )}
+                  </div>
+                </Tooltip>
+              ) : (
+                headerContent
+              )}
+              {!isCollapsed && (
+                <div className='min-w-0'>
+                  {agentGroup.conversations.map((conversation) => renderConversation(conversation))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </>
   );

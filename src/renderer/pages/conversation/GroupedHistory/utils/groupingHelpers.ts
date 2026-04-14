@@ -9,7 +9,13 @@ import { getActivityTime } from '@/renderer/utils/chat/timeline';
 import { getWorkspaceDisplayName } from '@/renderer/utils/workspace/workspace';
 import { getWorkspaceUpdateTime } from '@/renderer/utils/workspace/workspaceHistory';
 
-import type { GroupedHistoryResult, TimelineItem, TimelineSection } from '../types';
+import type {
+  AgentGroup,
+  AgentGroupedHistoryResult,
+  GroupedHistoryResult,
+  TimelineItem,
+  TimelineSection,
+} from '../types';
 import { getConversationSortOrder } from './sortOrderHelpers';
 
 export const isConversationPinned = (conversation: TChatConversation): boolean => {
@@ -93,6 +99,81 @@ export const groupConversationsByWorkspace = (
 const isTeamConversation = (conversation: TChatConversation): boolean => {
   const extra = conversation.extra as { teamId?: string } | undefined;
   return Boolean(extra?.teamId);
+};
+
+/**
+ * Resolve the agent key for a conversation, matching GuidPage agentKey format.
+ */
+export const resolveAgentKey = (conv: TChatConversation): string => {
+  if (conv.type === 'gemini') {
+    return (conv.extra as { presetAssistantId?: string } | undefined)?.presetAssistantId ?? 'gemini';
+  }
+  if (conv.type === 'acp') {
+    const extra = conv.extra as { customAgentId?: string; backend?: string } | undefined;
+    if (extra?.customAgentId) {
+      return `custom:${extra.customAgentId}`;
+    }
+    return extra?.backend ?? 'acp';
+  }
+  return conv.type;
+};
+
+/**
+ * Build agent-grouped history from conversations.
+ * agentDisplayMap provides display metadata per agentKey.
+ */
+export const buildAgentGroupedHistory = (
+  conversations: TChatConversation[],
+  agentDisplayMap: Map<string, { displayName: string; avatarSrc: string | null; avatarEmoji?: string }>
+): AgentGroupedHistoryResult => {
+  // Filter out team-owned conversations
+  const visibleConversations = conversations.filter((conv) => !isTeamConversation(conv));
+
+  const pinnedConversations = visibleConversations
+    .filter((conversation) => isConversationPinned(conversation))
+    .toSorted((a, b) => {
+      const orderA = getConversationSortOrder(a);
+      const orderB = getConversationSortOrder(b);
+      if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+      if (orderA !== undefined) return -1;
+      if (orderB !== undefined) return 1;
+      return getConversationPinnedAt(b) - getConversationPinnedAt(a);
+    });
+
+  const normalConversations = visibleConversations.filter(
+    (conv) => !isConversationPinned(conv) && !isCronJobConversation(conv)
+  );
+
+  const groupMap = new Map<string, AgentGroup>();
+
+  for (const conv of normalConversations) {
+    const key = resolveAgentKey(conv);
+    if (!groupMap.has(key)) {
+      const meta = agentDisplayMap.get(key);
+      groupMap.set(key, {
+        agentKey: key,
+        displayName: meta?.displayName ?? key,
+        avatarSrc: meta?.avatarSrc ?? null,
+        avatarEmoji: meta?.avatarEmoji,
+        conversations: [],
+      });
+    }
+    groupMap.get(key)!.conversations.push(conv);
+  }
+
+  // Sort each group's conversations by activity time descending
+  for (const group of groupMap.values()) {
+    group.conversations.sort((a, b) => getActivityTime(b) - getActivityTime(a));
+  }
+
+  // Sort groups by their most recent conversation's activity time descending
+  const agentGroups = [...groupMap.values()].toSorted((a, b) => {
+    const timeA = a.conversations[0] ? getActivityTime(a.conversations[0]) : 0;
+    const timeB = b.conversations[0] ? getActivityTime(b.conversations[0]) : 0;
+    return timeB - timeA;
+  });
+
+  return { pinnedConversations, agentGroups };
 };
 
 export const buildGroupedHistory = (
