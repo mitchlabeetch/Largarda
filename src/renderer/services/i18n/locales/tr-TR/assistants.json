@@ -1,0 +1,15 @@
+{
+  "title": "Asistanlar",
+  "searchPlaceholder": "Asistan ara...",
+  "empty": "Asistan bulunamadı",
+  "tab": {
+    "all": "Tümü",
+    "assistant": "Asistanlar",
+    "local": "Yerel Agent",
+    "remote": "Uzak Agent"
+  },
+  "card": {
+    "chat": "Sohbet",
+    "edit": "Düzenle"
+  }
+}

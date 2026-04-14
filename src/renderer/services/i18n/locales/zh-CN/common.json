@@ -83,5 +83,15 @@
   "import": "导入",
   "processing": "处理中...",
   "optional": "（可选）",
-  "clear": "清除"
+  "clear": "清除",
+  "nav.assistants": "助手",
+  "assistants.title": "助手",
+  "assistants.searchPlaceholder": "搜索助手...",
+  "assistants.empty": "未找到助手",
+  "assistants.tab.all": "全部",
+  "assistants.tab.assistant": "助手",
+  "assistants.tab.local": "本地 Agent",
+  "assistants.tab.remote": "远程 Agent",
+  "assistants.card.chat": "对话",
+  "assistants.card.edit": "编辑"
 }

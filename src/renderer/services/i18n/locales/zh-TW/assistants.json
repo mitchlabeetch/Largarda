@@ -1,0 +1,15 @@
+{
+  "title": "助手",
+  "searchPlaceholder": "搜尋助手...",
+  "empty": "未找到助手",
+  "tab": {
+    "all": "全部",
+    "assistant": "助手",
+    "local": "本地 Agent",
+    "remote": "遠端 Agent"
+  },
+  "card": {
+    "chat": "對話",
+    "edit": "編輯"
+  }
+}

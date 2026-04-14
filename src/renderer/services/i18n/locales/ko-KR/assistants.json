@@ -1,0 +1,15 @@
+{
+  "title": "어시스턴트",
+  "searchPlaceholder": "어시스턴트 검색...",
+  "empty": "어시스턴트를 찾을 수 없습니다",
+  "tab": {
+    "all": "전체",
+    "assistant": "어시스턴트",
+    "local": "로컬 Agent",
+    "remote": "원격 Agent"
+  },
+  "card": {
+    "chat": "채팅",
+    "edit": "편집"
+  }
+}

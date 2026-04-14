@@ -1,0 +1,15 @@
+{
+  "title": "Assistants",
+  "searchPlaceholder": "Search assistants...",
+  "empty": "No assistants found",
+  "tab": {
+    "all": "All",
+    "assistant": "Assistants",
+    "local": "Local Agents",
+    "remote": "Remote Agents"
+  },
+  "card": {
+    "chat": "Chat",
+    "edit": "Edit"
+  }
+}

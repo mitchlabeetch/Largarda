@@ -83,5 +83,15 @@
   "import": "匯入",
   "processing": "處理中...",
   "optional": "（選填）",
-  "clear": "清除"
+  "clear": "清除",
+  "nav.assistants": "助手",
+  "assistants.title": "助手",
+  "assistants.searchPlaceholder": "搜尋助手...",
+  "assistants.empty": "找不到助手",
+  "assistants.tab.all": "全部",
+  "assistants.tab.assistant": "助手",
+  "assistants.tab.local": "本地 Agent",
+  "assistants.tab.remote": "遠端 Agent",
+  "assistants.card.chat": "對話",
+  "assistants.card.edit": "編輯"
 }

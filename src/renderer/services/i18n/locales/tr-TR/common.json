@@ -83,5 +83,15 @@
   "import": "İçe Aktar",
   "processing": "İşleniyor...",
   "optional": "(isteğe bağlı)",
-  "clear": "Temizle"
+  "clear": "Temizle",
+  "nav.assistants": "Asistanlar",
+  "assistants.title": "Asistanlar",
+  "assistants.searchPlaceholder": "Asistan ara...",
+  "assistants.empty": "Asistan bulunamadı",
+  "assistants.tab.all": "Tümü",
+  "assistants.tab.assistant": "Asistanlar",
+  "assistants.tab.local": "Yerel Ajanlar",
+  "assistants.tab.remote": "Uzak Ajanlar",
+  "assistants.card.chat": "Sohbet",
+  "assistants.card.edit": "Düzenle"
 }

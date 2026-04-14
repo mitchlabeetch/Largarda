@@ -83,5 +83,15 @@
   "import": "가져오기",
   "processing": "처리 중...",
   "optional": "(선택 사항)",
-  "clear": "지우기"
+  "clear": "지우기",
+  "nav.assistants": "어시스턴트",
+  "assistants.title": "어시스턴트",
+  "assistants.searchPlaceholder": "어시스턴트 검색...",
+  "assistants.empty": "어시스턴트를 찾을 수 없습니다",
+  "assistants.tab.all": "전체",
+  "assistants.tab.assistant": "어시스턴트",
+  "assistants.tab.local": "로컬 에이전트",
+  "assistants.tab.remote": "원격 에이전트",
+  "assistants.card.chat": "채팅",
+  "assistants.card.edit": "편집"
 }

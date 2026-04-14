@@ -81,5 +81,15 @@
   "import": "Импорт",
   "processing": "Обработка...",
   "optional": "(необязательно)",
-  "clear": "Очистить"
+  "clear": "Очистить",
+  "nav.assistants": "Ассистенты",
+  "assistants.title": "Ассистенты",
+  "assistants.searchPlaceholder": "Поиск ассистентов...",
+  "assistants.empty": "Ассистенты не найдены",
+  "assistants.tab.all": "Все",
+  "assistants.tab.assistant": "Ассистенты",
+  "assistants.tab.local": "Локальные агенты",
+  "assistants.tab.remote": "Удалённые агенты",
+  "assistants.card.chat": "Чат",
+  "assistants.card.edit": "Изменить"
 }

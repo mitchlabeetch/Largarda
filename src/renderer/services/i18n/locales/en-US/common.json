@@ -83,5 +83,15 @@
   "import": "Import",
   "processing": "Processing...",
   "optional": "(optional)",
-  "clear": "Clear"
+  "clear": "Clear",
+  "nav.assistants": "Assistants",
+  "assistants.title": "Assistants",
+  "assistants.searchPlaceholder": "Search assistants...",
+  "assistants.empty": "No assistants found",
+  "assistants.tab.all": "All",
+  "assistants.tab.assistant": "Assistants",
+  "assistants.tab.local": "Local Agents",
+  "assistants.tab.remote": "Remote Agents",
+  "assistants.card.chat": "Chat",
+  "assistants.card.edit": "Edit"
 }
