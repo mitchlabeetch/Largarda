@@ -31,6 +31,7 @@ import { ACP_BACKENDS_ALL, type PresetAgentType } from '@/common/types/acpTypes'
 import { getAgentLogo, resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { getAcpBackendConfig } from '@/common/types/acpTypes';
 import { getPresetAvatarBgColor } from '@/common/config/presets/assistantPresets';
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import type { AcpBackend, AcpBackendConfig } from './types';
 import { ConfigProvider, Dropdown, Menu, Message } from '@arco-design/web-react';
 import { Down } from '@icon-park/react';
@@ -285,6 +286,9 @@ const GuidPage: React.FC = () => {
     const strippedId = selectedId?.replace(/^builtin-/, '');
     const candidates = new Set(selectedId && strippedId ? [selectedId, `builtin-${strippedId}`, strippedId] : []);
     const selectedAssistant = agentSelection.customAgents.find((item) => candidates.has(item.id));
+    // Profile portrait takes highest priority
+    const profileImage = selectedId ? getPresetProfile(selectedId) : undefined;
+    if (profileImage) return { kind: 'image' as const, value: profileImage };
     const avatarValue = selectedAssistant?.avatar?.trim() || agentSelection.selectedAgentInfo?.avatar?.trim();
     if (!avatarValue) return { kind: 'icon' as const };
     const mappedAvatar = CUSTOM_AVATAR_IMAGE_MAP[avatarValue];

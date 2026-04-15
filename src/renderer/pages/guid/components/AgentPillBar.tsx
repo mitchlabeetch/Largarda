@@ -15,6 +15,7 @@ import { getAcpBackendConfig, type AcpBackend, type AcpBackendConfig } from '@/c
 import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { getPresetAvatarBgColor } from '@/common/config/presets/assistantPresets';
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '../constants';
 import type { AvailableAgent } from '../types';
 import styles from '../index.module.css';
@@ -166,10 +167,11 @@ const AgentSelectorPopover: React.FC<AgentSelectorPopoverProps> = ({
             <div className={styles.agentSelectorSectionLabel}>{t('conversation.dropdown.presetAssistants')}</div>
             {filteredPresetAssistants.map((assistant) => {
               const key = `custom:${assistant.id}`;
+              const profileImage = getPresetProfile(assistant.id);
               const avatarValue = assistant.avatar?.trim();
               const mappedAvatar = avatarValue ? CUSTOM_AVATAR_IMAGE_MAP[avatarValue] : undefined;
               const resolvedAvatar = avatarValue ? resolveExtensionAssetUrl(avatarValue) : undefined;
-              const avatarImage = mappedAvatar || resolvedAvatar;
+              const avatarImage = profileImage ?? mappedAvatar ?? resolvedAvatar;
               const isImageAvatar = Boolean(
                 avatarImage &&
                 (/\.(svg|png|jpe?g|webp|gif)$/i.test(avatarImage) ||

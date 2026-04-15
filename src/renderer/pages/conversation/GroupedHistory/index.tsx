@@ -13,6 +13,7 @@ import DirectorySelectionModal from '@/renderer/components/settings/DirectorySel
 import { useCronJobsMap } from '@/renderer/pages/cron';
 import { ipcBridge } from '@/common';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '@/renderer/pages/guid/constants';
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { emitter } from '@/renderer/utils/emitter';
@@ -548,7 +549,10 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 
         {!messagesCollapsed &&
           agentGroups.map((agentGroup) => {
+            const presetId = agentGroup.agentKey.startsWith('custom:') ? agentGroup.agentKey.slice(7) : undefined;
+            const presetProfile = presetId ? getPresetProfile(presetId) : undefined;
             const logoSrc =
+              presetProfile ??
               agentGroup.avatarSrc ??
               resolveAgentLogo({
                 backend: agentGroup.agentKey.startsWith('custom:') ? undefined : agentGroup.agentKey,

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '../constants';
 import type { AcpBackendConfig, AvailableAgent } from '../types';
 import { IconClose } from '@arco-design/web-react/icon';
@@ -38,10 +39,11 @@ const PresetAgentTag: React.FC<PresetAgentTagProps> = ({
   agentSwitcherItems,
   onAgentSwitch,
 }) => {
+  const profileImage = agentInfo.customAgentId ? getPresetProfile(agentInfo.customAgentId) : undefined;
   const avatarValue = agentInfo.avatar?.trim();
   const mappedAvatar = avatarValue ? CUSTOM_AVATAR_IMAGE_MAP[avatarValue] : undefined;
   const resolvedAvatar = avatarValue ? resolveExtensionAssetUrl(avatarValue) : undefined;
-  const avatarImage = mappedAvatar || resolvedAvatar;
+  const avatarImage = profileImage ?? mappedAvatar ?? resolvedAvatar;
   const isImageAvatar = Boolean(
     avatarImage &&
     (/\.(svg|png|jpe?g|webp|gif)$/i.test(avatarImage) ||

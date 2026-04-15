@@ -22,6 +22,7 @@ import styles from '../index.module.css';
 import type { AcpBackend, AcpBackendConfig, AvailableAgent } from '../types';
 import { getAcpBackendConfig } from '@/common/types/acpTypes';
 import { getPresetAvatarBgColor } from '@/common/config/presets/assistantPresets';
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { Message } from '@arco-design/web-react';
 import AgentAvatar from '@/renderer/components/AgentAvatar';
@@ -316,10 +317,11 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
         {cards.map((card, idx) => {
           if (card.kind === 'assistant') {
             const { assistant, displayText, clickPrompt } = card;
+            const profileImage = getPresetProfile(assistant.id);
             const avatarValue = assistant.avatar?.trim();
             const mappedAvatar = avatarValue ? CUSTOM_AVATAR_IMAGE_MAP[avatarValue] : undefined;
             const resolvedAvatar = avatarValue ? resolveExtensionAssetUrl(avatarValue) : undefined;
-            const avatarImage = mappedAvatar || resolvedAvatar;
+            const avatarImage = profileImage ?? mappedAvatar ?? resolvedAvatar;
             const isImageAvatar = Boolean(
               avatarImage &&
               (/\.(svg|png|jpe?g|webp|gif)$/i.test(avatarImage) ||
