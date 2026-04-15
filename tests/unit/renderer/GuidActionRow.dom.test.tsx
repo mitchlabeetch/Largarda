@@ -77,7 +77,6 @@ vi.mock('@/renderer/services/FileService', () => ({
   FileService: {
     processDroppedFiles: vi.fn(),
   },
-  MAX_UPLOAD_SIZE_MB: 50,
   getCleanFileNames: (files: string[]) => files,
 }));
 
@@ -88,8 +87,9 @@ vi.mock('@/renderer/styles/colors', () => ({
   },
 }));
 
+const mockIsElectronDesktop = vi.fn(() => true);
 vi.mock('@/renderer/utils/platform', () => ({
-  isElectronDesktop: () => true,
+  isElectronDesktop: () => mockIsElectronDesktop(),
 }));
 
 vi.mock('@/renderer/utils/model/agentModes', () => ({
@@ -107,34 +107,35 @@ vi.mock('@/common', () => ({
   },
 }));
 
+import { fireEvent } from '@testing-library/react';
 import GuidActionRow from '@/renderer/pages/guid/components/GuidActionRow';
+import { FileService } from '@/renderer/services/FileService';
 
 describe('GuidActionRow', () => {
-  it('renders the speech input control next to the send button', () => {
-    render(
-      <GuidActionRow
-        files={[]}
-        onFilesUploaded={vi.fn()}
-        onSelectWorkspace={vi.fn()}
-        modelSelectorNode={<div>ModelSelector</div>}
-        selectedAgent='gemini'
-        selectedMode='default'
-        onModeSelect={vi.fn()}
-        isPresetAgent={false}
-        selectedAgentInfo={undefined}
-        customAgents={[]}
-        localeKey='en-US'
-        onClosePresetTag={vi.fn()}
-        builtinAutoSkills={[]}
-        disabledBuiltinSkills={[]}
-        onToggleBuiltinSkill={vi.fn()}
-        loading={false}
-        isButtonDisabled={false}
-        speechInputNode={<button aria-label='speech-input'>Mic</button>}
-        onSend={vi.fn()}
-      />
-    );
+  const defaultProps = {
+    files: [],
+    onFilesUploaded: vi.fn(),
+    onSelectWorkspace: vi.fn(),
+    modelSelectorNode: <div>ModelSelector</div>,
+    selectedAgent: 'gemini',
+    selectedMode: 'default',
+    onModeSelect: vi.fn(),
+    isPresetAgent: false,
+    selectedAgentInfo: undefined,
+    customAgents: [],
+    localeKey: 'en-US',
+    onClosePresetTag: vi.fn(),
+    builtinAutoSkills: [] as Array<{ name: string; description: string }>,
+    disabledBuiltinSkills: [] as string[],
+    onToggleBuiltinSkill: vi.fn(),
+    loading: false,
+    isButtonDisabled: false,
+    speechInputNode: <button aria-label='speech-input'>Mic</button>,
+    onSend: vi.fn(),
+  };
 
+  it('renders the speech input control next to the send button', () => {
+    render(<GuidActionRow {...defaultProps} />);
     expect(screen.getByLabelText('speech-input')).toBeInTheDocument();
     expect(screen.getByText('ArrowUp')).toBeInTheDocument();
   });
@@ -145,29 +146,7 @@ describe('GuidActionRow', () => {
       { name: 'code-interpreter', description: 'Run code' },
     ];
 
-    render(
-      <GuidActionRow
-        files={[]}
-        onFilesUploaded={vi.fn()}
-        onSelectWorkspace={vi.fn()}
-        modelSelectorNode={<div>ModelSelector</div>}
-        selectedAgent='gemini'
-        selectedMode='default'
-        onModeSelect={vi.fn()}
-        isPresetAgent={false}
-        selectedAgentInfo={undefined}
-        customAgents={[]}
-        localeKey='en-US'
-        onClosePresetTag={vi.fn()}
-        builtinAutoSkills={skills}
-        disabledBuiltinSkills={[]}
-        onToggleBuiltinSkill={vi.fn()}
-        loading={false}
-        isButtonDisabled={false}
-        speechInputNode={null}
-        onSend={vi.fn()}
-      />
-    );
+    render(<GuidActionRow {...defaultProps} builtinAutoSkills={skills} />);
 
     expect(screen.getByText('settings.autoInjectedSkills (2/2)', { exact: false })).toBeInTheDocument();
   });
@@ -179,33 +158,26 @@ describe('GuidActionRow', () => {
     ];
     const onToggle = vi.fn();
 
-    render(
-      <GuidActionRow
-        files={[]}
-        onFilesUploaded={vi.fn()}
-        onSelectWorkspace={vi.fn()}
-        modelSelectorNode={<div>ModelSelector</div>}
-        selectedAgent='gemini'
-        selectedMode='default'
-        onModeSelect={vi.fn()}
-        isPresetAgent={false}
-        selectedAgentInfo={undefined}
-        customAgents={[]}
-        localeKey='en-US'
-        onClosePresetTag={vi.fn()}
-        builtinAutoSkills={skills}
-        disabledBuiltinSkills={[]}
-        onToggleBuiltinSkill={onToggle}
-        loading={false}
-        isButtonDisabled={false}
-        speechInputNode={null}
-        onSend={vi.fn()}
-      />
-    );
+    render(<GuidActionRow {...defaultProps} builtinAutoSkills={skills} onToggleBuiltinSkill={onToggle} />);
 
     const checkboxes = screen.getAllByRole('checkbox');
     fireEvent.click(checkboxes[0]);
 
     expect(onToggle).toHaveBeenCalledWith('web-search');
+  });
+
+  it('shows generic error toast when file upload fails', async () => {
+    mockIsElectronDesktop.mockReturnValueOnce(false); // WebUI mode so file input is rendered
+    const { Message } = await import('@arco-design/web-react');
+    vi.mocked(FileService.processDroppedFiles).mockRejectedValueOnce(new Error('Upload failed'));
+
+    render(<GuidActionRow {...defaultProps} />);
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+    await fireEvent.change(fileInput);
+
+    expect(Message.error).toHaveBeenCalledWith('common.fileAttach.failed');
   });
 });
