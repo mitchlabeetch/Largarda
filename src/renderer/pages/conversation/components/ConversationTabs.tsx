@@ -6,6 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '@/renderer/pages/guid/constants';
+import { getPresetProfile } from '@/renderer/assets/profiles';
 import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 import { emitter } from '@/renderer/utils/emitter';
 import { cleanupSiderTooltips } from '@/renderer/utils/ui/siderTooltip';
@@ -294,13 +295,18 @@ const ConversationTabs: React.FC = () => {
         {presetAssistants.length > 0 && (
           <Menu.ItemGroup title={t('conversation.dropdown.presetAssistants')}>
             {presetAssistants.map((agent) => {
-              const avatarImage = agent.avatar ? CUSTOM_AVATAR_IMAGE_MAP[agent.avatar] : undefined;
-              const isEmoji = agent.avatar && !avatarImage && !agent.avatar.endsWith('.svg');
+              const profileImage = agent.customAgentId ? getPresetProfile(agent.customAgentId) : undefined;
+              const avatarImage = profileImage ?? (agent.avatar ? CUSTOM_AVATAR_IMAGE_MAP[agent.avatar] : undefined);
+              const isEmoji = !avatarImage && agent.avatar && !agent.avatar.endsWith('.svg');
               return (
                 <Menu.Item key={`preset:${agent.customAgentId}`}>
                   <div className='flex items-center gap-8px'>
                     {avatarImage ? (
-                      <img src={avatarImage} alt={agent.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                      <img
+                        src={avatarImage}
+                        alt={agent.name}
+                        style={{ width: 16, height: 16, objectFit: 'cover', borderRadius: '50%' }}
+                      />
                     ) : isEmoji ? (
                       <span style={{ fontSize: 14, lineHeight: '16px' }}>{agent.avatar}</span>
                     ) : (

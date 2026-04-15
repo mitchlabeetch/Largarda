@@ -151,7 +151,10 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     // agentKey can be 'financial-model-creator' or 'builtin-financial-model-creator'
     for (const preset of ASSISTANT_PRESETS) {
       const displayName = preset.nameI18n[locale] || preset.nameI18n['en-US'] || preset.id;
-      const { avatarSrc, avatarEmoji } = resolveAvatar(preset.avatar || '');
+      const profileImage = getPresetProfile(preset.id);
+      const { avatarSrc, avatarEmoji } = profileImage
+        ? { avatarSrc: profileImage, avatarEmoji: undefined }
+        : resolveAvatar(preset.avatar || '');
       const entry = { displayName, avatarSrc, avatarEmoji };
       map.set(preset.id, entry);
       map.set(`builtin-${preset.id}`, entry);
@@ -549,10 +552,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 
         {!messagesCollapsed &&
           agentGroups.map((agentGroup) => {
-            const presetId = agentGroup.agentKey.startsWith('custom:') ? agentGroup.agentKey.slice(7) : undefined;
-            const presetProfile = presetId ? getPresetProfile(presetId) : undefined;
             const logoSrc =
-              presetProfile ??
               agentGroup.avatarSrc ??
               resolveAgentLogo({
                 backend: agentGroup.agentKey.startsWith('custom:') ? undefined : agentGroup.agentKey,
