@@ -55,6 +55,8 @@
   "customCssDesc": "인터페이스 모양을 수정하려면 여기에 사용자 정의 CSS 스타일을 입력하세요. 시스템은 !important를 자동으로 추가하여 가장 높은 우선 순위를 보장합니다. 변경 사항은 즉시 적용됩니다.",
   "assistants": "어시스턴트",
   "agents": "에이전트",
+  "duplicate": "복제",
+  "configure": "설정",
   "assistantsList": "사용 가능한 어시스턴트",
   "assistantsEmpty": "구성된 어시스턴트가 없습니다.",
   "pdfToPptAssistantName": "PDF를 PPT로",
@@ -860,7 +862,11 @@
     "customAgents": "커스텀 에이전트",
     "custom": "사용자 정의",
     "addCustomAgent": "사용자 정의 에이전트 추가",
-    "customEmpty": "구성된 사용자 정의 에이전트가 없습니다. \"사용자 정의 에이전트 추가\"를 클릭하여 생성하세요."
+    "customEmpty": "구성된 사용자 정의 에이전트가 없습니다. \"사용자 정의 에이전트 추가\"를 클릭하여 생성하세요.",
+    "cliCommand": "CLI 명령",
+    "defaultPath": "기본 경로",
+    "backendKey": "백엔드 ID",
+    "agentType": "에이전트 유형"
   },
   "remoteAgent": {
     "title": "원격 에이전트",
@@ -902,7 +908,11 @@
     "pendingApprovalHint": "OpenClaw Gateway에서 이 기기를 승인해주세요",
     "pendingTimeout": "승인 요청이 만료되었습니다 (5분). 다시 시도해주세요.",
     "pendingCancel": "취소",
-    "pendingTimeRemaining": "남은 시간: {{time}}"
+    "pendingTimeRemaining": "남은 시간: {{time}}",
+    "deleteOk": "삭제",
+    "protocol": "프로토콜",
+    "lastConnected": "마지막 연결",
+    "editHint": "연결 세부 정보를 구성하려면 다음 전체 편집기를 사용하세요:"
   },
   "noExternalSources": "외부 스킬 소스를 찾을 수 없습니다",
   "aionrs": {

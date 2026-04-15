@@ -1,21 +1,21 @@
 {
   "sider": {
-    "title": "Teams",
-    "createTeam": "New Team",
+    "title": "채널",
+    "createTeam": "새 채널",
     "pin": "고정",
     "unpin": "고정 해제",
     "rename": "이름 변경",
     "delete": "삭제",
-    "renameTitle": "팀 이름 변경",
-    "renamePlaceholder": "팀 이름",
-    "deleteConfirm": "이 팀을 삭제하시겠습니까?",
+    "renameTitle": "채널 이름 변경",
+    "renamePlaceholder": "채널 이름",
+    "deleteConfirm": "이 채널을 삭제하시겠습니까?",
     "deleteConfirmContent": "이 작업은 되돌릴 수 없습니다.",
     "deleteOk": "삭제",
     "deleteCancel": "취소",
     "renameOk": "저장",
     "renameCancel": "취소",
-    "renameSuccess": "팀 이름이 변경되었습니다",
-    "deleteSuccess": "팀이 삭제되었습니다"
+    "renameSuccess": "채널 이름이 변경되었습니다",
+    "deleteSuccess": "채널이 삭제되었습니다"
   },
   "addAgent": {
     "title": "Add Agent",
@@ -32,7 +32,7 @@
     "placeholder": "디스패치 에이전트에 메시지 보내기..."
   },
   "create": {
-    "title": "Create Team",
+    "title": "채널 만들기",
     "namePlaceholder": "Team name",
     "dispatchAgentPlaceholder": "팀 리더 선택",
     "subAgentsPlaceholder": "Select sub agents",

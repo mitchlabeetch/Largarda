@@ -1,21 +1,21 @@
 {
   "sider": {
-    "title": "Teams",
-    "createTeam": "New Team",
+    "title": "Kanallar",
+    "createTeam": "Yeni Kanal",
     "pin": "Sabitle",
     "unpin": "Sabitlemeyi Kaldır",
     "rename": "Yeniden Adlandır",
     "delete": "Sil",
-    "renameTitle": "Takımı Yeniden Adlandır",
-    "renamePlaceholder": "Takım adı",
-    "deleteConfirm": "Bu takımı silmek istiyor musunuz?",
+    "renameTitle": "Kanalı Yeniden Adlandır",
+    "renamePlaceholder": "Kanal adı",
+    "deleteConfirm": "Bu kanalı silmek istiyor musunuz?",
     "deleteConfirmContent": "Bu işlem geri alınamaz.",
     "deleteOk": "Sil",
     "deleteCancel": "İptal",
     "renameOk": "Kaydet",
     "renameCancel": "İptal",
-    "renameSuccess": "Takım yeniden adlandırıldı",
-    "deleteSuccess": "Takım silindi"
+    "renameSuccess": "Kanal yeniden adlandırıldı",
+    "deleteSuccess": "Kanal silindi"
   },
   "addAgent": {
     "title": "Add Agent",
@@ -32,7 +32,7 @@
     "placeholder": "Dağıtım ajanına mesaj gönder..."
   },
   "create": {
-    "title": "Create Team",
+    "title": "Kanal Oluştur",
     "namePlaceholder": "Team name",
     "dispatchAgentPlaceholder": "Takım liderini seçin",
     "subAgentsPlaceholder": "Select sub agents",

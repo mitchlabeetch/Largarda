@@ -1,21 +1,21 @@
 {
   "sider": {
-    "title": "Teams",
-    "createTeam": "New Team",
+    "title": "Channels",
+    "createTeam": "New Channel",
     "pin": "Pin",
     "unpin": "Unpin",
     "rename": "Rename",
     "delete": "Delete",
-    "renameTitle": "Rename Team",
-    "renamePlaceholder": "Team name",
-    "deleteConfirm": "Delete this team?",
+    "renameTitle": "Rename Channel",
+    "renamePlaceholder": "Channel name",
+    "deleteConfirm": "Delete this channel?",
     "deleteConfirmContent": "This action cannot be undone.",
     "deleteOk": "Delete",
     "deleteCancel": "Cancel",
     "renameOk": "Save",
     "renameCancel": "Cancel",
-    "renameSuccess": "Team renamed",
-    "deleteSuccess": "Team deleted"
+    "renameSuccess": "Channel renamed",
+    "deleteSuccess": "Channel deleted"
   },
   "addAgent": {
     "title": "Add Agent",
@@ -32,12 +32,12 @@
     "placeholder": "Message dispatch agent..."
   },
   "create": {
-    "title": "Create Team",
-    "namePlaceholder": "Team name",
+    "title": "Create Channel",
+    "namePlaceholder": "Channel name",
     "dispatchAgentPlaceholder": "Select team leader",
     "subAgentsPlaceholder": "Select sub agents",
     "workspacePlaceholder": "Workspace path (optional)",
-    "confirm": "Create Team",
+    "confirm": "Create Channel",
     "noSupportedAgents": "No supported agents installed",
     "supportedAgentsHint": "Currently supports Claude and Codex. More agents coming soon.",
     "leaderDesc": "Understands your goals and coordinates agents to complete tasks",

@@ -55,6 +55,8 @@
   "customCssDesc": "Enter custom CSS styles here to modify the interface appearance. The system will automatically add !important to ensure highest priority. Changes will take effect immediately.",
   "assistants": "助理",
   "agents": "Agents",
+  "duplicate": "複製新建",
+  "configure": "設定",
   "assistantsList": "可用助理清單",
   "assistantsEmpty": "目前沒有可用的助理。",
   "pdfToPptAssistantName": "PDF 轉 PPT",
@@ -860,7 +862,11 @@
     "customAgents": "自訂 Agents",
     "custom": "自訂",
     "addCustomAgent": "新增自訂 Agent",
-    "customEmpty": "尚無自訂 Agent，點擊「新增自訂 Agent」建立。"
+    "customEmpty": "尚無自訂 Agent，點擊「新增自訂 Agent」建立。",
+    "cliCommand": "CLI 命令",
+    "defaultPath": "預設路徑",
+    "backendKey": "後端 ID",
+    "agentType": "Agent 類型"
   },
   "remoteAgent": {
     "title": "遠端 Agent",
@@ -902,7 +908,11 @@
     "pendingApprovalHint": "請在 OpenClaw Gateway 上批准此裝置",
     "pendingTimeout": "審批請求已過期（5 分鐘）。請重試。",
     "pendingCancel": "取消",
-    "pendingTimeRemaining": "剩餘時間：{{time}}"
+    "pendingTimeRemaining": "剩餘時間：{{time}}",
+    "deleteOk": "刪除",
+    "protocol": "協議",
+    "lastConnected": "最後連接時間",
+    "editHint": "要設定連線詳情，請在以下位置使用完整編輯器："
   },
   "noExternalSources": "未發現外部技能來源",
   "aionrs": {

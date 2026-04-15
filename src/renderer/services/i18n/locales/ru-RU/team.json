@@ -1,21 +1,21 @@
 {
   "sider": {
-    "title": "Команды",
-    "createTeam": "Новая команда",
+    "title": "Каналы",
+    "createTeam": "Новый канал",
     "pin": "Закрепить",
     "unpin": "Открепить",
     "rename": "Переименовать",
     "delete": "Удалить",
-    "renameTitle": "Переименовать команду",
-    "renamePlaceholder": "Название команды",
-    "deleteConfirm": "Удалить эту команду?",
+    "renameTitle": "Переименовать канал",
+    "renamePlaceholder": "Название канала",
+    "deleteConfirm": "Удалить этот канал?",
     "deleteConfirmContent": "Это действие нельзя отменить.",
     "deleteOk": "Удалить",
     "deleteCancel": "Отмена",
     "renameOk": "Сохранить",
     "renameCancel": "Отмена",
-    "renameSuccess": "Команда переименована",
-    "deleteSuccess": "Команда удалена"
+    "renameSuccess": "Канал переименован",
+    "deleteSuccess": "Канал удалён"
   },
   "addAgent": {
     "title": "Добавить агента",
@@ -32,7 +32,7 @@
     "placeholder": "Сообщение агенту-диспетчеру..."
   },
   "create": {
-    "title": "Создать команду",
+    "title": "Создать канал",
     "namePlaceholder": "Название команды",
     "dispatchAgentPlaceholder": "Выбрать лидера команды",
     "subAgentsPlaceholder": "Выбрать подагентов",

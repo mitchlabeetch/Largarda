@@ -55,6 +55,8 @@
   "customCssDesc": "Arayüz görünümünü değiştirmek için buraya özel CSS stilleri girin. Sistem en yüksek önceliği sağlamak için otomatik olarak !important ekleyecektir. Değişiklikler anında geçerli olur.",
   "assistants": "Asistanlar",
   "agents": "Ajanlar",
+  "duplicate": "Çoğalt",
+  "configure": "Yapılandır",
   "assistantsList": "Mevcut Asistanlar",
   "assistantsEmpty": "Yapılandırılmış asistan yok.",
   "pdfToPptAssistantName": "PDF'den PPT'ye",
@@ -858,7 +860,11 @@
     "customAgents": "Özel Ajanlar",
     "custom": "Özel",
     "addCustomAgent": "Özel Ajan Ekle",
-    "customEmpty": "Yapılandırılmış özel ajan yok. Oluşturmak için \"Özel Ajan Ekle\"ye tıklayın."
+    "customEmpty": "Yapılandırılmış özel ajan yok. Oluşturmak için \"Özel Ajan Ekle\"ye tıklayın.",
+    "cliCommand": "CLI Komutu",
+    "defaultPath": "Varsayılan Yol",
+    "backendKey": "Arka Uç Kimliği",
+    "agentType": "Agent Türü"
   },
   "remoteAgent": {
     "title": "Uzak Ajanlar",
@@ -900,7 +906,11 @@
     "pendingApprovalHint": "Lütfen bu cihazı OpenClaw Gateway üzerinde onaylayın",
     "pendingTimeout": "Onay isteği süresi doldu (5 dakika). Lütfen tekrar deneyin.",
     "pendingCancel": "İptal",
-    "pendingTimeRemaining": "Kalan süre: {{time}}"
+    "pendingTimeRemaining": "Kalan süre: {{time}}",
+    "deleteOk": "Sil",
+    "protocol": "Protokol",
+    "lastConnected": "Son Bağlantı",
+    "editHint": "Bağlantı ayrıntılarını yapılandırmak için tam düzenleyiciyi kullanın:"
   },
   "noExternalSources": "Harici beceri kaynağı bulunamadı",
   "aionrs": {

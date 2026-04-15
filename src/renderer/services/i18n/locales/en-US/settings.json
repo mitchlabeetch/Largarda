@@ -55,6 +55,8 @@
   "customCssDesc": "Enter custom CSS styles here to modify the interface appearance. The system will automatically add !important to ensure highest priority. Changes will take effect immediately.",
   "assistants": "Assistants",
   "agents": "Agents",
+  "duplicate": "Duplicate",
+  "configure": "Settings",
   "assistantsList": "Available assistants",
   "assistantsEmpty": "No assistants configured.",
   "pdfToPptAssistantName": "PDF to PPT",
@@ -858,7 +860,11 @@
     "customAgents": "Custom Agents",
     "custom": "Custom",
     "addCustomAgent": "Add Custom Agent",
-    "customEmpty": "No custom agents configured. Click \"Add Custom Agent\" to create one."
+    "customEmpty": "No custom agents configured. Click \"Add Custom Agent\" to create one.",
+    "cliCommand": "CLI Command",
+    "defaultPath": "Default Path",
+    "backendKey": "Backend ID",
+    "agentType": "Agent Type"
   },
   "remoteAgent": {
     "title": "Remote Agents",
@@ -900,7 +906,11 @@
     "pendingApprovalHint": "Please approve this device on the OpenClaw Gateway",
     "pendingTimeout": "Approval request expired (5 minutes). Please try again.",
     "pendingCancel": "Cancel",
-    "pendingTimeRemaining": "Time remaining: {{time}}"
+    "pendingTimeRemaining": "Time remaining: {{time}}",
+    "deleteOk": "Delete",
+    "protocol": "Protocol",
+    "lastConnected": "Last Connected",
+    "editHint": "To configure connection details, use the full editor in"
   },
   "noExternalSources": "No external skill sources discovered",
   "aionrs": {

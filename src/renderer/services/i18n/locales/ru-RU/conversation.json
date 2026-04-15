@@ -68,7 +68,8 @@
     "yesterday": "Вчера",
     "recent7Days": "Последние 7 дней",
     "earlier": "Ранее",
-    "messagesSection": "Сообщения",
+    "messagesSection": "Личные сообщения",
+    "historyPanel": "История",
     "deleteAgentGroup": "Удалить все чаты",
     "deleteAgentGroupConfirm": "Удалить все {{count}} разговоров этого агента? Это действие нельзя отменить.",
     "deleteAgentGroupSuccess": "Удалено {{count}} разговоров"

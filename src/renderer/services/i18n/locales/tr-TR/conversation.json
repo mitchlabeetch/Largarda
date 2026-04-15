@@ -68,7 +68,8 @@
     "pinnedSection": "Pinned",
     "deleteSuccess": "Başarıyla silindi",
     "deleteFailed": "Silme başarısız oldu",
-    "messagesSection": "Mesajlar",
+    "messagesSection": "Direkt Mesajlar",
+    "historyPanel": "Konuşma Geçmişi",
     "deleteAgentGroup": "Tüm Sohbetleri Sil",
     "deleteAgentGroupConfirm": "Bu ajan altındaki {{count}} konuşmanın tamamını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "deleteAgentGroupSuccess": "{{count}} konuşma silindi"
