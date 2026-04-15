@@ -5,6 +5,7 @@
 import type { AssistantListItem, BuiltinAutoSkill, SkillInfo } from './types';
 import type { AvailableBackend } from '@/renderer/hooks/assistant/useAssistantBackends';
 import { hasBuiltinSkills } from './assistantUtils';
+import { BUILTIN_AGENT_OPTIONS } from '@/renderer/pages/guid/constants';
 import EmojiPicker from '@/renderer/components/chat/EmojiPicker';
 import MarkdownView from '@/renderer/components/Markdown';
 import { Avatar, Button, Checkbox, Collapse, Drawer, Input, Select, Tag, Typography } from '@arco-design/web-react';

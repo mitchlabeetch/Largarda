@@ -227,7 +227,11 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
     headerExtra: (
       <div className='flex items-center gap-8px'>
         <ConversationSkillsIndicator conversation={conversation} />
-        <CronJobManager conversationId={conversation.id} hasCronSkill={hasLoadedSkill(conversation, 'cron')} />
+        <CronJobManager
+          conversationId={conversation.id}
+          cronJobId={conversation.extra?.cronJobId as string | undefined}
+          hasCronSkill={hasLoadedSkill(conversation, 'cron')}
+        />
       </div>
     ),
     workspaceEnabled,

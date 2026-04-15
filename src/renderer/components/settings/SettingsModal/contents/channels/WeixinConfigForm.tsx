@@ -371,7 +371,7 @@ const WeixinConfigForm: React.FC<WeixinConfigFormProps> = ({ pluginStatus, model
     }
   };
 
-  const isGeminiAgent = selectedAgent.backend === 'gemini';
+  const isGeminiAgent = selectedAgent.backend === 'gemini' || selectedAgent.backend === 'aionrs';
   const agentOptions: Array<{
     backend: string;
     name: string;

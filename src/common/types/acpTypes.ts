@@ -14,6 +14,28 @@
  * When adding a new backend, simply add it here.
  */
 
+/**
+ * 预设助手的主 Agent 类型，用于决定创建哪种类型的对话
+ * The primary agent type for preset assistants, used to determine which conversation type to create.
+ */
+export type PresetAgentType = 'gemini' | 'claude' | 'codex' | 'codebuddy' | 'opencode' | 'qwen' | 'kiro' | 'aionrs';
+
+/**
+ * 使用 ACP 协议的预设 Agent 类型（需要通过 ACP 后端路由）
+ * Preset agent types that use ACP protocol (need to be routed through ACP backend)
+ *
+ * 这些类型会在创建对话时使用对应的 ACP 后端，而不是 Gemini 原生对话
+ * These types will use corresponding ACP backend when creating conversation, instead of native Gemini
+ */
+export const ACP_ROUTED_PRESET_TYPES: readonly PresetAgentType[] = [
+  'claude',
+  'codebuddy',
+  'opencode',
+  'codex',
+  'qwen',
+  'kiro',
+] as const;
+
 export const CODEX_ACP_BRIDGE_VERSION = '0.9.5';
 export const CODEX_ACP_NPX_PACKAGE = `@zed-industries/codex-acp@${CODEX_ACP_BRIDGE_VERSION}`;
 
@@ -485,7 +507,7 @@ export const ACP_BACKENDS_ALL: Record<AcpBackendAll, AcpBackendConfig> = {
   },
   snow: {
     id: 'snow',
-    name: 'Snow AI',
+    name: 'Snow CLI',
     cliCommand: 'snow',
     authRequired: false,
     enabled: true,
@@ -962,9 +984,29 @@ export interface AcpSessionModels {
   availableModels?: AcpAvailableModel[];
 }
 
+/** Mode entry in the top-level `modes` object of session/new response */
+export interface AcpAvailableMode {
+  id: string;
+  name?: string;
+  description?: string;
+}
+
+/** Modes info returned by session/new (used by qoder, opencode, etc.) */
+export interface AcpSessionModes {
+  currentModeId?: string;
+  availableModes?: AcpAvailableMode[];
+}
+
 // ===== Unified model info for UI =====
 
 /** Unified model info that abstracts over both stable and unstable APIs */
+export type AcpModelInfoSourceDetail =
+  | 'cc-switch'
+  | 'acp-config-option'
+  | 'acp-models'
+  | 'persisted-model'
+  | 'codex-stream';
+
 export interface AcpModelInfo {
   /** Currently active model ID */
   currentModelId: string | null;
@@ -976,6 +1018,8 @@ export interface AcpModelInfo {
   canSwitch: boolean;
   /** Source of the model info: 'configOption' (stable) or 'models' (unstable) */
   source: 'configOption' | 'models';
+  /** More specific source detail for UI diagnostics */
+  sourceDetail?: AcpModelInfoSourceDetail;
   /** Config option ID (only when source is 'configOption') */
   configOptionId?: string;
 }
