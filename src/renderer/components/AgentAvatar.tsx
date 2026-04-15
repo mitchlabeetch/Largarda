@@ -52,7 +52,7 @@ const AgentAvatar: React.FC<AgentAvatarProps> = ({ size, avatarSrc, avatarEmoji,
       style={{
         width: size,
         height: size,
-        borderRadius: '50%',
+        borderRadius: '20%',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -72,7 +72,7 @@ const AgentAvatar: React.FC<AgentAvatarProps> = ({ size, avatarSrc, avatarEmoji,
             height: '100%',
             objectFit: 'contain',
             display: 'block',
-            borderRadius: '50%',
+            borderRadius: '20%',
           }}
         />
       ) : avatarEmoji ? (
