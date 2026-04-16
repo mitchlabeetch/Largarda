@@ -227,7 +227,8 @@
       "permissionDenied": "Доступ до мікрофона відхилено",
       "recordingUnsupported": "Запис у реальному часі не підтримується. Будь ласка, завантажте аудіофайл",
       "transcriptionFailed": "Не вдалося транскрибувати аудіо",
-      "genericError": "Помилка голосового введення. Спробуйте ще раз"
+      "genericError": "Помилка голосового введення. Спробуйте ще раз",
+      "emptyTranscript": "[EN] No speech was detected"
     }
   },
   "sideQuestion": {
