@@ -1,0 +1,17 @@
+{
+  "desktopPet": "Animal de bureau",
+  "enable": "Activer l'animal de bureau",
+  "size": "Taille de l'animal",
+  "sizeSmall": "Petit ({{px}}px)",
+  "sizeMedium": "Moyen ({{px}}px)",
+  "sizeLarge": "Grand ({{px}}px)",
+  "dnd": "Ne pas déranger",
+  "dndDescription": "L'animal reste inactif, ignore les événements IA",
+  "confirmBubble": "Afficher les autorisations sur l'animal",
+  "confirmBubbleDescription": "Lorsque désactivé, les autorisations d'outils IA restent dans la fenêtre de chat principale",
+  "pat": "Caresser",
+  "resetPosition": "Réinitialiser la position",
+  "hide": "Masquer",
+  "showHide": "Afficher/Masquer",
+  "desktopOnly": "L'animal de bureau n'est disponible que dans l'application de bureau. Il ne peut pas être utilisé en mode navigateur WebUI."
+}

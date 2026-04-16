@@ -1,0 +1,68 @@
+{
+  "sider": {
+    "title": "Équipes",
+    "createTeam": "Nouvelle équipe",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "renameTitle": "Renommer l'équipe",
+    "renamePlaceholder": "Nom de l'équipe",
+    "deleteConfirm": "Supprimer cette équipe ?",
+    "deleteConfirmContent": "Cette action est irréversible.",
+    "deleteOk": "Supprimer",
+    "deleteCancel": "Annuler",
+    "renameOk": "Enregistrer",
+    "renameCancel": "Annuler",
+    "renameSuccess": "Équipe renommée",
+    "deleteSuccess": "Équipe supprimée"
+  },
+  "addAgent": {
+    "title": "Ajouter un agent",
+    "name": "Nom de l'agent",
+    "namePlaceholder": "Saisissez le nom de l'agent",
+    "type": "Type d'agent",
+    "typePlaceholder": "Sélectionnez le type d'agent",
+    "confirm": "Ajouter"
+  },
+  "newAgent": "Nouvel agent",
+  "noMessages": "Aucun message pour le moment.",
+  "agentNotConfigured": "Agent pas encore configuré.",
+  "sendBox": {
+    "placeholder": "Envoyer un message à l'agent coordinateur…"
+  },
+  "create": {
+    "title": "Créer une équipe",
+    "namePlaceholder": "Nom de l'équipe",
+    "dispatchAgentPlaceholder": "Sélectionnez le chef d'équipe",
+    "subAgentsPlaceholder": "Sélectionnez les sous-agents",
+    "workspacePlaceholder": "Chemin de l'espace de travail (facultatif)",
+    "confirm": "Créer l'équipe",
+    "noSupportedAgents": "Aucun agent compatible installé",
+    "supportedAgentsHint": "Prend actuellement en charge Claude et Codex. D'autres agents arrivent bientôt.",
+    "leaderDesc": "Comprend vos objectifs et coordonne les agents pour accomplir les tâches",
+    "step": {
+      "dispatch": "Chef d'équipe",
+      "subAgents": "Sous-agents",
+      "workspace": "Espace de travail"
+    },
+    "nameRequired": "Veuillez saisir un nom d'équipe",
+    "leaderRequired": "Veuillez sélectionner un chef d'équipe",
+    "selectFolder": "Sélectionner un dossier",
+    "recentLabel": "Récents",
+    "chooseDifferentFolder": "Choisir un autre dossier",
+    "error": "Échec de la création de l'équipe"
+  },
+  "removeAgent": {
+    "confirmTitle": "Retirer un membre de l'équipe",
+    "confirmContent": "Ce membre est actuellement actif. Forcer le retrait ?"
+  },
+  "emptyState": {
+    "subtitle": "Décrivez votre objectif et je mettrai l'équipe au travail",
+    "suggestions": {
+      "debate": "Organisez un débat avec des agents défendant différentes positions",
+      "interview": "Planifiez un entretien approfondi entre agents",
+      "expert_review": "Faites analyser le même problème par plusieurs experts"
+    }
+  }
+}

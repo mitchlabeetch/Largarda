@@ -35,6 +35,7 @@ import { ConfigProvider } from '@arco-design/web-react';
 import '@arco-design/web-react/es/_util/react-19-adapter';
 import '@arco-design/web-react/dist/css/arco.css';
 import enUS from '@arco-design/web-react/es/locale/en-US';
+import frFR from '@arco-design/web-react/es/locale/fr-FR';
 import jaJP from '@arco-design/web-react/es/locale/ja-JP';
 import zhCN from '@arco-design/web-react/es/locale/zh-CN';
 import zhTW from '@arco-design/web-react/es/locale/zh-TW';
@@ -58,6 +59,26 @@ import { useAuth } from './hooks/context/AuthContext';
 import { ConversationHistoryProvider } from './hooks/context/ConversationHistoryContext';
 import HOC from './utils/ui/HOC';
 
+// Patch French locale with missing properties from English locale
+const frFRComplete = {
+  ...frFR,
+  Calendar: {
+    ...frFR.Calendar,
+    monthFormat: enUS.Calendar.monthFormat,
+    yearFormat: enUS.Calendar.yearFormat,
+  },
+  DatePicker: {
+    ...frFR.DatePicker,
+    Calendar: {
+      ...frFR.DatePicker.Calendar,
+      monthFormat: enUS.Calendar.monthFormat,
+      yearFormat: enUS.Calendar.yearFormat,
+    },
+  },
+  Form: enUS.Form,
+  ColorPicker: enUS.ColorPicker,
+};
+
 // Patch Korean locale with missing properties from English locale
 const koKRComplete = {
   ...koKR,
@@ -79,6 +100,7 @@ const koKRComplete = {
 };
 
 const arcoLocales: Record<string, typeof enUS> = {
+  'fr-FR': frFRComplete,
   'zh-CN': zhCN,
   'zh-TW': zhTW,
   'ja-JP': jaJP,
@@ -103,7 +125,7 @@ const Config: React.FC<PropsWithChildren> = ({ children }) => {
   } = useTranslation();
   const arcoLocale = arcoLocales[language] ?? enUS;
 
-  return React.createElement(ConfigProvider, { theme: { primaryColor: '#4E5969' }, locale: arcoLocale }, children);
+  return React.createElement(ConfigProvider, { theme: { primaryColor: '#5db8a3' }, locale: arcoLocale }, children);
 };
 
 const Main = () => {
