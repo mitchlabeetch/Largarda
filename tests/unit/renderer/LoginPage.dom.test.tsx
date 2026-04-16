@@ -18,20 +18,8 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock the auth context — both alias and relative path needed for Vitest resolution
 vi.mock('@renderer/hooks/context/AuthContext', () => ({
-  useAuth: () => ({
-    status: mockAuthStatus,
-    login: mockLogin,
-    logout: vi.fn(),
-    refresh: vi.fn(),
-    ready: true,
-    user: null,
-    clearAuthCache: vi.fn(),
-  }),
-}));
-
-// Use relative path matching the actual import in the source
-vi.mock('../../hooks/context/AuthContext', () => ({
   useAuth: () => ({
     status: mockAuthStatus,
     login: mockLogin,
@@ -57,6 +45,10 @@ vi.mock('@renderer/assets/logos/brand/app.png', () => ({
 
 vi.mock('@/renderer/services/i18n', () => ({
   changeLanguage: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/common/config/i18n', () => ({
+  SUPPORTED_LANGUAGES: ['fr-FR', 'zh-CN', 'en-US', 'ja-JP', 'zh-TW', 'ko-KR', 'tr-TR', 'ru-RU', 'uk-UA'],
 }));
 
 // Mock LoginPage.css (plain CSS import)
@@ -118,9 +110,11 @@ describe('LoginPage', () => {
     expect(screen.getByText('login.separator')).toBeTruthy();
   });
 
-  it('renders the forgot password link', () => {
+  it('renders the forgot password link as disabled placeholder', () => {
     render(<LoginPage />);
-    expect(screen.getByText('login.forgotPassword')).toBeTruthy();
+    const btn = screen.getByText('login.forgotPassword');
+    expect(btn).toBeTruthy();
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('renders the footer with taglines', () => {
@@ -377,7 +371,7 @@ describe('LoginPage', () => {
 
   // -- Remember me --
 
-  it('saves credentials when remember me is checked', async () => {
+  it('saves email when remember me is checked', async () => {
     mockLogin.mockResolvedValue({ success: true });
     render(<LoginPage />);
 
@@ -395,15 +389,34 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(localStorage.getItem('rememberMe')).toBe('true');
       expect(localStorage.getItem('rememberedEmail')).toBeTruthy();
-      expect(localStorage.getItem('rememberedPassword')).toBeTruthy();
     });
   });
 
-  it('clears remembered credentials when remember me is unchecked', async () => {
+  it('does not store password in localStorage', async () => {
+    mockLogin.mockResolvedValue({ success: true });
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText('login.emailPlaceholder'), {
+      target: { value: 'memo@test.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('login.passwordPlaceholder'), {
+      target: { value: 'secret123' },
+    });
+    const checkbox = screen.getByLabelText('login.rememberMe');
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByText('login.submit'));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('rememberMe')).toBe('true');
+    });
+    // Password must never be stored
+    expect(localStorage.getItem('rememberedPassword')).toBeNull();
+  });
+
+  it('clears remembered email when remember me is unchecked', async () => {
     // Pre-populate remembered data
     localStorage.setItem('rememberMe', 'true');
     localStorage.setItem('rememberedEmail', 'old');
-    localStorage.setItem('rememberedPassword', 'old');
 
     mockLogin.mockResolvedValue({ success: true });
     render(<LoginPage />);
@@ -423,19 +436,13 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(localStorage.getItem('rememberMe')).toBeNull();
       expect(localStorage.getItem('rememberedEmail')).toBeNull();
-      expect(localStorage.getItem('rememberedPassword')).toBeNull();
     });
   });
 
-  it('restores remembered credentials from localStorage', () => {
-    // Use the same obfuscation the component uses
-    const obfuscate = (text: string): string => {
-      const encoded = btoa(encodeURIComponent(text));
-      return encoded.split('').toReversed().join('');
-    };
+  it('restores remembered email from localStorage', () => {
+    // Use the same base64 encoding the component now uses
     localStorage.setItem('rememberMe', 'true');
-    localStorage.setItem('rememberedEmail', obfuscate('recalled@test.com'));
-    localStorage.setItem('rememberedPassword', obfuscate('mypass'));
+    localStorage.setItem('rememberedEmail', btoa(encodeURIComponent('recalled@test.com')));
 
     render(<LoginPage />);
 
@@ -443,13 +450,13 @@ describe('LoginPage', () => {
     const passwordInput = screen.getByPlaceholderText('login.passwordPlaceholder') as HTMLInputElement;
 
     expect(emailInput.value).toBe('recalled@test.com');
-    expect(passwordInput.value).toBe('mypass');
+    // Password is never stored, so it should remain empty
+    expect(passwordInput.value).toBe('');
   });
 
-  it('handles corrupted remembered credentials gracefully', () => {
+  it('handles corrupted remembered email gracefully', () => {
     localStorage.setItem('rememberMe', 'true');
     localStorage.setItem('rememberedEmail', '!!!invalid-base64!!!');
-    localStorage.setItem('rememberedPassword', '!!!invalid!!!');
 
     // Should not throw
     render(<LoginPage />);

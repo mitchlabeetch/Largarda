@@ -23,10 +23,10 @@ const BinaryGrass: React.FC = () => {
   const measureRef = useRef<HTMLSpanElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const animRef = useRef<number>(0);
-  const lastDrawTimeRef = useRef<number>(0);
   const frameRef = useRef<number>(0);
   const gridRef = useRef<GridState>({ cols: 0, rows: 0, cw: 0, ch: 0 });
   const bladesRef = useRef<Blade[]>([]);
+  const gridBufferRef = useRef<Uint8Array | null>(null);
 
   useEffect(() => {
     const initGrid = (): void => {
@@ -64,15 +64,15 @@ const BinaryGrass: React.FC = () => {
 
       gridRef.current = { cols, rows, cw, ch };
       bladesRef.current = newBlades;
+
+      // Reallocate grid buffer only when dimensions change
+      const requiredSize = cols * rows;
+      if (!gridBufferRef.current || gridBufferRef.current.length !== requiredSize) {
+        gridBufferRef.current = new Uint8Array(requiredSize);
+      }
     };
 
-    const render = (time: number): void => {
-      animRef.current = requestAnimationFrame(render);
-
-      const elapsed = time - lastDrawTimeRef.current;
-      if (elapsed < FPS_INTERVAL) return;
-
-      lastDrawTimeRef.current = time - (elapsed % FPS_INTERVAL);
+    const render = (): void => {
       frameRef.current += 1;
 
       let { cols, rows } = gridRef.current;
@@ -81,11 +81,16 @@ const BinaryGrass: React.FC = () => {
         initGrid();
         cols = gridRef.current.cols;
         rows = gridRef.current.rows;
-        if (!cols || !rows) return;
+        if (!cols || !rows) {
+          // Schedule next frame even if grid isn't ready
+          animRef.current = window.setTimeout(render, FPS_INTERVAL) as unknown as number;
+          return;
+        }
       }
 
       const blades = bladesRef.current;
-      const grid = new Uint8Array(rows * cols);
+      const grid = gridBufferRef.current!;
+      grid.fill(0);
       const t = frameRef.current * 0.25;
       const windBase = t;
 
@@ -161,10 +166,13 @@ const BinaryGrass: React.FC = () => {
       if (preRef.current) {
         preRef.current.innerHTML = html;
       }
+
+      // Schedule next frame only after drawing, at exact FPS_INTERVAL
+      animRef.current = window.setTimeout(render, FPS_INTERVAL) as unknown as number;
     };
 
     initGrid();
-    animRef.current = requestAnimationFrame(render);
+    animRef.current = window.setTimeout(render, FPS_INTERVAL) as unknown as number;
 
     let resizeTimeout: ReturnType<typeof setTimeout>;
     const handleResize = (): void => {
@@ -177,7 +185,7 @@ const BinaryGrass: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animRef.current);
+      clearTimeout(animRef.current);
       clearTimeout(resizeTimeout);
     };
   }, []);

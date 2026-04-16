@@ -2,6 +2,7 @@ import loginLogo from '@renderer/assets/logos/brand/app.png';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '@/renderer/services/i18n';
+import { SUPPORTED_LANGUAGES } from '@/common/config/i18n';
 import { useNavigate } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '../../hooks/context/AuthContext';
@@ -15,20 +16,32 @@ type MessageState = {
 
 const REMEMBER_ME_KEY = 'rememberMe';
 const REMEMBERED_EMAIL_KEY = 'rememberedEmail';
-const REMEMBERED_PASSWORD_KEY = 'rememberedPassword';
 
-/** Simple obfuscation for stored credentials (prevents plain text storage) */
-const obfuscate = (text: string): string => {
-  const encoded = btoa(encodeURIComponent(text));
-  return encoded.split('').toReversed().join('');
+/** Native display name for each supported language code */
+const LANGUAGE_NATIVE_NAMES: Record<string, string> = {
+  'fr-FR': 'Français',
+  'en-US': 'English',
+  'zh-CN': '简体中文',
+  'zh-TW': '繁體中文',
+  'ja-JP': '日本語',
+  'ko-KR': '한국어',
+  'tr-TR': 'Türkçe',
+  'ru-RU': 'Русский',
+  'uk-UA': 'Українська',
 };
 
 const deobfuscate = (text: string): string => {
   try {
-    const reversed = text.split('').toReversed().join('');
-    return decodeURIComponent(atob(reversed));
+    // Try direct base64 decode first (new format)
+    return decodeURIComponent(atob(text));
   } catch {
-    return '';
+    try {
+      // Fall back to reversed base64 (legacy format)
+      const reversed = text.split('').toReversed().join('');
+      return decodeURIComponent(atob(reversed));
+    } catch {
+      return '';
+    }
   }
 };
 
@@ -91,9 +104,7 @@ const LoginPage: React.FC = () => {
     const isRememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
     if (isRememberMe) {
       const storedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
-      const storedPassword = localStorage.getItem(REMEMBERED_PASSWORD_KEY);
       if (storedEmail) setEmail(deobfuscate(storedEmail));
-      if (storedPassword) setPassword(deobfuscate(storedPassword));
       setRememberMe(true);
     }
     window.setTimeout(() => {
@@ -132,18 +143,12 @@ const LoginPage: React.FC = () => {
     [clearMessageLater]
   );
 
-  const supportedLanguages = useMemo<{ code: string; label: string }[]>(
-    () => [
-      { code: 'fr-FR', label: 'Français' },
-      { code: 'en-US', label: 'English' },
-      { code: 'zh-CN', label: '简体中文' },
-      { code: 'zh-TW', label: '繁體中文' },
-      { code: 'ja-JP', label: '日本語' },
-      { code: 'ko-KR', label: '한국어' },
-      { code: 'tr-TR', label: 'Türkçe' },
-      { code: 'ru-RU', label: 'Русский' },
-      { code: 'uk-UA', label: 'Українська' },
-    ],
+  const supportedLanguages = useMemo(
+    () =>
+      SUPPORTED_LANGUAGES.map((code) => ({
+        code,
+        label: LANGUAGE_NATIVE_NAMES[code] ?? code,
+      })),
     []
   );
 
@@ -178,12 +183,10 @@ const LoginPage: React.FC = () => {
       if (result.success) {
         if (rememberMe) {
           localStorage.setItem(REMEMBER_ME_KEY, 'true');
-          localStorage.setItem(REMEMBERED_EMAIL_KEY, obfuscate(trimmedEmail));
-          localStorage.setItem(REMEMBERED_PASSWORD_KEY, obfuscate(password));
+          localStorage.setItem(REMEMBERED_EMAIL_KEY, btoa(encodeURIComponent(trimmedEmail)));
         } else {
           localStorage.removeItem(REMEMBER_ME_KEY);
           localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-          localStorage.removeItem(REMEMBERED_PASSWORD_KEY);
         }
 
         const successText = t('login.success');
@@ -341,7 +344,7 @@ const LoginPage: React.FC = () => {
               />
               <label htmlFor='remember-me'>{t('login.rememberMe')}</label>
             </div>
-            <button type='button' className='login-page__forgot-password' tabIndex={0}>
+            <button type='button' className='login-page__forgot-password' disabled aria-disabled='true' tabIndex={-1}>
               {t('login.forgotPassword')}
             </button>
           </div>

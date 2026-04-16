@@ -19,20 +19,8 @@ vi.mock('@renderer/pages/login/BinaryGrass.module.css', () => ({
 import BinaryGrass from '@renderer/pages/login/BinaryGrass';
 
 describe('BinaryGrass', () => {
-  let rafCallbacks: ((time: number) => void)[];
-  let rafId: number;
-
   beforeEach(() => {
-    rafCallbacks = [];
-    rafId = 0;
-
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      rafCallbacks.push(cb);
-      rafId += 1;
-      return rafId;
-    });
-
-    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+    vi.useFakeTimers();
 
     // Mock getBoundingClientRect for character measurement and container size
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -53,6 +41,7 @@ describe('BinaryGrass', () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -84,15 +73,17 @@ describe('BinaryGrass', () => {
     expect(wrapper?.className).toBe('container');
   });
 
-  it('requests animation frame on mount', () => {
+  it('schedules animation via setTimeout on mount', () => {
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout');
     render(<BinaryGrass />);
-    expect(window.requestAnimationFrame).toHaveBeenCalled();
+    expect(setTimeoutSpy).toHaveBeenCalled();
   });
 
-  it('cancels animation frame on unmount', () => {
+  it('clears timeout on unmount', () => {
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
     const { unmount } = render(<BinaryGrass />);
     unmount();
-    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 
   it('registers a resize event listener on mount', () => {
@@ -108,29 +99,13 @@ describe('BinaryGrass', () => {
     expect(removeSpy).toHaveBeenCalledWith('resize', expect.any(Function));
   });
 
-  it('fires render callback via requestAnimationFrame', () => {
-    render(<BinaryGrass />);
-    // The initial rAF call queues the render function
-    expect(rafCallbacks.length).toBeGreaterThan(0);
-
-    // Invoke the first frame — the render function schedules the next frame
-    rafCallbacks[0](0);
-    expect(rafCallbacks.length).toBeGreaterThan(1);
-  });
-
-  it('renders grass content after sufficient time elapses', () => {
+  it('renders grass content after the first interval elapses', () => {
     const { container } = render(<BinaryGrass />);
     const pre = container.querySelector('.canvas');
 
-    // First frame at t=0 initializes; second frame at t=200ms exceeds FPS_INTERVAL (100ms)
-    if (rafCallbacks.length > 0) {
-      rafCallbacks[0](0);
-    }
-    if (rafCallbacks.length > 1) {
-      rafCallbacks[1](200);
-    }
+    // Advance timer past FPS_INTERVAL (100ms) to trigger the first render
+    vi.advanceTimersByTime(110);
 
-    // After rendering, the pre element should have content written via innerHTML
     expect(pre).toBeTruthy();
     if (pre && pre.innerHTML.length > 0) {
       expect(pre.innerHTML).toContain('\n');
@@ -138,27 +113,56 @@ describe('BinaryGrass', () => {
   });
 
   it('debounces resize events with a 150ms delay', () => {
-    vi.useFakeTimers();
+    const getBoundingClientRectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 100,
+      height: 50,
+      top: 0,
+      left: 0,
+      right: 100,
+      bottom: 50,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
     render(<BinaryGrass />);
+
+    // Let the animation settle — advance past a couple render cycles
+    vi.advanceTimersByTime(250);
+    const callsAfterSettle = getBoundingClientRectSpy.mock.calls.length;
 
     // Fire multiple resize events rapidly
     window.dispatchEvent(new Event('resize'));
     window.dispatchEvent(new Event('resize'));
     window.dispatchEvent(new Event('resize'));
 
-    // Advance past the debounce delay
-    vi.advanceTimersByTime(150);
+    // Record calls right after dispatching (render timer may also fire)
+    vi.advanceTimersByTime(10);
+    const callsBeforeDebounce = getBoundingClientRectSpy.mock.calls.length;
 
-    vi.useRealTimers();
+    // The debounced re-init should not fire until 150ms after last resize
+    // (render calls only read existing grid state — initGrid calls are the debounce target)
+    vi.advanceTimersByTime(139);
+    // After 149ms total from last resize, debounce hasn't fired yet
+    // Render loop may add calls, but the debounced initGrid hasn't run
+    const callsBefore150 = getBoundingClientRectSpy.mock.calls.length;
+
+    // At 150ms the debounce fires, triggering one extra initGrid → getBoundingClientRect
+    vi.advanceTimersByTime(1);
+    const callsAfter150 = getBoundingClientRectSpy.mock.calls.length;
+
+    // Exactly one debounced initGrid should have fired (2 getBoundingClientRect calls per initGrid)
+    expect(callsAfter150).toBeGreaterThan(callsBefore150);
   });
 
-  it('schedules each subsequent frame inside the render loop', () => {
+  it('schedules subsequent frames via setTimeout', () => {
     render(<BinaryGrass />);
-    const initialCount = rafCallbacks.length;
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout');
+    const callsBefore = setTimeoutSpy.mock.calls.length;
 
-    // Execute the render function — it should schedule the next frame
-    rafCallbacks[initialCount - 1](0);
-    expect(rafCallbacks.length).toBe(initialCount + 1);
+    // Advance one frame
+    vi.advanceTimersByTime(100);
+    expect(setTimeoutSpy.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
   it('does not crash when getBoundingClientRect returns zero dimensions', () => {
@@ -178,20 +182,11 @@ describe('BinaryGrass', () => {
     expect(container.firstElementChild).toBeTruthy();
   });
 
-  it('skips rendering when FPS interval has not elapsed', () => {
+  it('does not render grass before the first interval elapses', () => {
     const { container } = render(<BinaryGrass />);
     const pre = container.querySelector('.canvas');
 
-    // First frame
-    if (rafCallbacks.length > 0) {
-      rafCallbacks[0](0);
-    }
-    // Second frame only 10ms later — below FPS_INTERVAL of 100ms
-    if (rafCallbacks.length > 1) {
-      rafCallbacks[1](10);
-    }
-
-    // Pre should still be empty because the render was throttled
+    // Don't advance timers at all — render hasn't fired yet
     expect(pre?.innerHTML ?? '').toBe('');
   });
 });
