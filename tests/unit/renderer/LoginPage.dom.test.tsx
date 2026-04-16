@@ -468,7 +468,7 @@ describe('LoginPage', () => {
       () =>
         new Promise<{ success: boolean }>((resolve) => {
           resolveLogin = resolve;
-        }),
+        })
     );
 
     render(<LoginPage />);
@@ -503,9 +503,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByText('login.submit'));
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith(
-        expect.objectContaining({ username: 'user@test.com' }),
-      );
+      expect(mockLogin).toHaveBeenCalledWith(expect.objectContaining({ username: 'user@test.com' }));
     });
   });
 
