@@ -174,6 +174,101 @@ body,
   }
 }
 
+/* ================================================================
+   ACCESSIBILITY UTILITIES
+   ================================================================ */
+
+/* Screen-reader only — visually hidden, accessible to assistive tech */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip navigation link — visible only on focus */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary-6, #0fbf7f);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+  outline: 2px solid var(--color-primary-6, #0fbf7f);
+  outline-offset: 2px;
+}
+
+/* Focus-visible — keyboard-only focus indicator */
+:focus-visible {
+  outline: 2px solid var(--color-primary-6, #0fbf7f);
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring for mouse/pointer users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion — respect user OS preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast / forced-colors support (Windows High Contrast) */
+@media (forced-colors: active) {
+  .skip-link {
+    border: 2px solid ButtonText;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: ButtonText;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: Highlight;
+  }
+}
+
+/* Increased contrast mode */
+@media (prefers-contrast: more) {
+  :root {
+    --radius: 0.5rem;
+    --radius-sm: 0.25rem;
+  }
+
+  :focus-visible {
+    outline-width: 3px;
+  }
+}
+
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;
