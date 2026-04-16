@@ -1,13 +1,13 @@
 {
-  "name": "AionUi",
-  "short_name": "AionUi",
-  "description": "AionUi WebUI for mobile and desktop browsers.",
+  "name": "Largo",
+  "short_name": "Largo",
+  "description": "Largo — Votre partenaire M&A intelligent.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#4E5969",
+  "background_color": "#f8f6f0",
+  "theme_color": "#5db8a3",
   "icons": [
     {
       "src": "./pwa/icon-192.png",
