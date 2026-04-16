@@ -1,0 +1,52 @@
+.container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.measure {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.canvas {
+  display: block;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.1;
+  margin: 0;
+  padding: 0;
+  color: transparent;
+  white-space: pre;
+  overflow: hidden;
+}
+
+/* Teal-based grass color levels (light to dark, bottom to top) */
+.g1 {
+  color: rgba(45, 148, 130, 0.25);
+}
+
+.g2 {
+  color: rgba(50, 160, 140, 0.35);
+}
+
+.g3 {
+  color: rgba(55, 170, 148, 0.50);
+}
+
+.g4 {
+  color: rgba(60, 180, 155, 0.65);
+}
+
+.g5 {
+  color: rgba(65, 190, 162, 0.80);
+}
