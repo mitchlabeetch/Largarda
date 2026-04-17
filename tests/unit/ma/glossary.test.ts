@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  getGlossaryEntry,
-  GLOSSARY_ENTRIES,
-  listGlossaryEntries,
-  searchGlossary,
-} from '@/common/ma/glossary';
+import { getGlossaryEntry, GLOSSARY_ENTRIES, listGlossaryEntries, searchGlossary } from '@/common/ma/glossary';
 
 describe('GLOSSARY_ENTRIES', () => {
   it('ships at least 50 curated entries', () => {

@@ -17,13 +17,7 @@
  *     `source + fetchedAt`.
  */
 
-import type {
-  CompanyProfile,
-  PappersPayload,
-  SirenePayload,
-  SourceAttribution,
-  SourcedValue,
-} from './types';
+import type { CompanyProfile, PappersPayload, SirenePayload, SourceAttribution, SourcedValue } from './types';
 
 export class CompanyProfileMergeError extends Error {
   constructor(message: string) {
@@ -139,15 +133,10 @@ export function mergeCompanyProfile({ sirene, pappers }: MergeInputs): CompanyPr
     workforce: pick(sirene?.workforce, undefined, true),
     incorporationYear: pick(sirene?.incorporationYear, undefined, true),
     shareCapital: pappers?.shareCapital && pappersAttr ? sourced(pappers.shareCapital, pappersAttr) : undefined,
-    directors: (pappers?.directors ?? []).map((d) =>
-      sourced(d, pappersAttr as SourceAttribution)
-    ),
-    beneficialOwners: (pappers?.beneficialOwners ?? []).map((o) =>
-      sourced(o, pappersAttr as SourceAttribution)
-    ),
-    latestFinancials: pappers?.latestFinancials && pappersAttr
-      ? sourced(pappers.latestFinancials, pappersAttr)
-      : undefined,
+    directors: (pappers?.directors ?? []).map((d) => sourced(d, pappersAttr as SourceAttribution)),
+    beneficialOwners: (pappers?.beneficialOwners ?? []).map((o) => sourced(o, pappersAttr as SourceAttribution)),
+    latestFinancials:
+      pappers?.latestFinancials && pappersAttr ? sourced(pappers.latestFinancials, pappersAttr) : undefined,
     inCollectiveProceeding:
       pappers?.inCollectiveProceeding !== undefined && pappersAttr
         ? sourced(pappers.inCollectiveProceeding, pappersAttr)

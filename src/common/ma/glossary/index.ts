@@ -6,10 +6,5 @@
 
 export * from './types';
 export { GLOSSARY_ENTRIES } from './entries';
-export {
-  getGlossaryEntry,
-  listGlossaryEntries,
-  searchGlossary,
-  GlossaryError,
-} from './lookup';
+export { getGlossaryEntry, listGlossaryEntries, searchGlossary, GlossaryError } from './lookup';
 export type { GlossaryLanguage, GlossarySearchOptions } from './lookup';
