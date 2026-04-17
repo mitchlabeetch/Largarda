@@ -1,105 +1,128 @@
 {
   "valuation": {
     "methods": {
-      "dcf": "Discounted Cash Flow",
-      "multiples": "Comparable Multiples",
-      "anr": "Adjusted Net Assets",
-      "ruleOfThumb": "Rule of Thumb"
+      "dcf": "현금흐름할인법 (DCF)",
+      "multiples": "비교 기업 배수법",
+      "anr": "수정 순자산가치",
+      "ruleOfThumb": "경험칙 (Rule of Thumb)"
     },
     "fields": {
-      "wacc": "Weighted Average Cost of Capital",
-      "growthRate": "Growth rate",
-      "terminalGrowthRate": "Terminal growth rate",
-      "projectionYears": "Projection years",
-      "baseFreeCashFlow": "Base free cash flow",
-      "netDebt": "Net debt",
-      "revenue": "Revenue",
+      "wacc": "가중평균자본비용",
+      "growthRate": "성장률",
+      "terminalGrowthRate": "영구 성장률",
+      "projectionYears": "추정 연수",
+      "baseFreeCashFlow": "초기 잉여현금흐름",
+      "netDebt": "순차입금",
+      "revenue": "매출액",
       "ebitda": "EBITDA",
-      "netIncome": "Net income",
-      "totalAssets": "Total assets",
-      "totalLiabilities": "Total liabilities"
+      "netIncome": "당기순이익",
+      "totalAssets": "자산 총계",
+      "totalLiabilities": "부채 총계"
     },
     "results": {
-      "enterpriseValue": "Enterprise value",
-      "equityValue": "Equity value",
-      "terminalValue": "Terminal value",
-      "projectedCashFlows": "Projected cash flows",
-      "discountedCashFlows": "Discounted cash flows",
-      "range": "Valuation range",
-      "central": "Central",
-      "low": "Low",
-      "high": "High"
+      "enterpriseValue": "기업가치",
+      "equityValue": "주주가치",
+      "terminalValue": "종료가치",
+      "projectedCashFlows": "추정 현금흐름",
+      "discountedCashFlows": "할인된 현금흐름",
+      "range": "밸류에이션 레인지",
+      "central": "중앙값",
+      "low": "하한",
+      "high": "상한"
     },
     "sensitivity": {
-      "title": "Sensitivity analysis",
-      "axis": "Axis",
+      "title": "민감도 분석",
+      "axis": "축",
       "wacc": "WACC",
-      "growthRate": "Growth",
-      "terminalGrowthRate": "Terminal growth"
+      "growthRate": "성장률",
+      "terminalGrowthRate": "영구 성장률"
     },
     "footballField": {
-      "title": "Football field",
-      "overall": "Overall range"
+      "title": "풋볼 필드 차트",
+      "overall": "전체 레인지"
     },
     "errors": {
-      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
-      "invalidProjectionYears": "Projection years must be a positive integer.",
-      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
-      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
-      "missingBasis": "Sector {{sector}} requires {{basis}}.",
-      "currencyMismatch": "All ranges must use the same currency.",
-      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+      "invalidWacc": "WACC는 영구 성장률보다 엄밀히 커야 합니다.",
+      "invalidProjectionYears": "추정 연수는 양의 정수여야 합니다.",
+      "invalidBenchmark": "배수는 하한 ≤ 중간값 ≤ 상한을 만족해야 합니다.",
+      "missingMetric": "사용 가능한 지표가 없습니다 — 매출액, EBITDA 또는 당기순이익 중 최소 하나를 제공하세요.",
+      "missingBasis": "{{sector}} 섹터에는 {{basis}} 값이 필요합니다.",
+      "currencyMismatch": "모든 레인지는 동일한 통화를 사용해야 합니다.",
+      "invalidRange": "모든 레인지는 하한 ≤ 중앙값 ≤ 상한을 만족해야 합니다."
     }
   },
   "sectors": {
-    "pharmacie": "Pharmacy",
-    "restaurant": "Restaurant",
-    "boulangerie": "Bakery",
-    "cabinet_expertise_comptable": "Accounting firm",
-    "agence_immobiliere": "Real estate agency",
-    "salon_coiffure": "Hair salon",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS"
+    "agriculture": "농업·수산업",
+    "food_production": "식품 제조업",
+    "boulangerie": "제과·제빵",
+    "chemicals_pharma": "화학·제약",
+    "industrial_manufacturing": "산업 제조업",
+    "automotive": "자동차",
+    "energy_utilities": "에너지·공익사업",
+    "construction": "건설",
+    "wholesale_retail": "도매·소매",
+    "pharmacie": "약국",
+    "ecommerce": "전자상거래",
+    "transport_logistics": "운송·물류",
+    "hospitality": "호텔업",
+    "restaurant": "외식업",
+    "media_publishing": "미디어·출판",
+    "telecom": "통신",
+    "software_saas": "소프트웨어·SaaS",
+    "it_services": "IT 서비스",
+    "financial_services": "금융 서비스",
+    "insurance": "보험",
+    "real_estate": "부동산",
+    "agence_immobiliere": "부동산 중개업",
+    "legal_services": "법률 서비스",
+    "cabinet_expertise_comptable": "회계법인",
+    "consulting": "컨설팅",
+    "professional_services": "전문 서비스",
+    "education": "교육·훈련",
+    "healthcare": "의료·사회복지",
+    "beauty_wellness": "뷰티·웰니스",
+    "salon_coiffure": "미용실",
+    "other": "기타 섹터"
   },
   "company": {
-    "profile": "Company profile",
+    "profile": "회사 프로필",
     "sirene": "SIRENE",
     "pappers": "Pappers",
     "siren": "SIREN",
     "siret": "SIRET",
-    "legalForm": "Legal form",
-    "shareCapital": "Share capital",
-    "nafCode": "NAF code",
-    "workforce": "Workforce",
-    "dirigeants": "Officers",
-    "beneficialOwners": "Beneficial owners"
+    "legalForm": "법적 형태",
+    "shareCapital": "자본금",
+    "nafCode": "NAF 코드",
+    "workforce": "임직원 수",
+    "dirigeants": "임원",
+    "beneficialOwners": "실질 소유자"
   },
   "deal": {
     "stages": {
-      "origination": "Origination",
-      "teaser": "Teaser",
+      "origination": "딜 소싱",
+      "teaser": "티저",
       "nda": "NDA",
-      "im": "Information Memorandum",
-      "loi": "Letter of Intent",
-      "dueDiligence": "Due diligence",
+      "im": "정보 각서",
+      "loi": "의향서",
+      "dueDiligence": "실사",
       "spa": "SPA",
-      "closing": "Closing"
+      "closing": "클로징"
     }
   },
   "glossary": {
-    "title": "M&A glossary",
-    "searchPlaceholder": "Search a term…",
-    "empty": "No term matches your search.",
-    "relatedTitle": "Related terms",
+    "title": "M&A 용어집",
+    "searchPlaceholder": "용어 검색…",
+    "empty": "검색 조건에 일치하는 용어가 없습니다.",
+    "relatedTitle": "관련 용어",
     "categories": {
-      "process": "Process",
-      "documents": "Documents",
-      "valuation": "Valuation",
-      "legal": "Legal",
-      "finance": "Finance",
-      "governance": "Governance",
-      "deal_structure": "Deal structure",
-      "due_diligence": "Due diligence"
+      "process": "프로세스",
+      "documents": "문서",
+      "valuation": "밸류에이션",
+      "legal": "법률",
+      "finance": "재무",
+      "governance": "거버넌스",
+      "deal_structure": "딜 구조",
+      "due_diligence": "실사"
     }
   }
 }

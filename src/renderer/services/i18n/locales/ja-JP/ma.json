@@ -1,105 +1,128 @@
 {
   "valuation": {
     "methods": {
-      "dcf": "Discounted Cash Flow",
-      "multiples": "Comparable Multiples",
-      "anr": "Adjusted Net Assets",
-      "ruleOfThumb": "Rule of Thumb"
+      "dcf": "ディスカウント・キャッシュフロー (DCF)",
+      "multiples": "類似企業倍率法",
+      "anr": "修正純資産",
+      "ruleOfThumb": "経験則 (ルール・オブ・サム)"
     },
     "fields": {
-      "wacc": "Weighted Average Cost of Capital",
-      "growthRate": "Growth rate",
-      "terminalGrowthRate": "Terminal growth rate",
-      "projectionYears": "Projection years",
-      "baseFreeCashFlow": "Base free cash flow",
-      "netDebt": "Net debt",
-      "revenue": "Revenue",
+      "wacc": "加重平均資本コスト",
+      "growthRate": "成長率",
+      "terminalGrowthRate": "永続成長率",
+      "projectionYears": "予測年数",
+      "baseFreeCashFlow": "初期フリーキャッシュフロー",
+      "netDebt": "純有利子負債",
+      "revenue": "売上高",
       "ebitda": "EBITDA",
-      "netIncome": "Net income",
-      "totalAssets": "Total assets",
-      "totalLiabilities": "Total liabilities"
+      "netIncome": "当期純利益",
+      "totalAssets": "総資産",
+      "totalLiabilities": "総負債"
     },
     "results": {
-      "enterpriseValue": "Enterprise value",
-      "equityValue": "Equity value",
-      "terminalValue": "Terminal value",
-      "projectedCashFlows": "Projected cash flows",
-      "discountedCashFlows": "Discounted cash flows",
-      "range": "Valuation range",
-      "central": "Central",
-      "low": "Low",
-      "high": "High"
+      "enterpriseValue": "事業価値",
+      "equityValue": "株主価値",
+      "terminalValue": "ターミナルバリュー",
+      "projectedCashFlows": "予測キャッシュフロー",
+      "discountedCashFlows": "現在価値キャッシュフロー",
+      "range": "バリュエーションレンジ",
+      "central": "中央値",
+      "low": "下限",
+      "high": "上限"
     },
     "sensitivity": {
-      "title": "Sensitivity analysis",
-      "axis": "Axis",
+      "title": "感応度分析",
+      "axis": "軸",
       "wacc": "WACC",
-      "growthRate": "Growth",
-      "terminalGrowthRate": "Terminal growth"
+      "growthRate": "成長率",
+      "terminalGrowthRate": "永続成長率"
     },
     "footballField": {
-      "title": "Football field",
-      "overall": "Overall range"
+      "title": "フットボールフィールド",
+      "overall": "総合レンジ"
     },
     "errors": {
-      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
-      "invalidProjectionYears": "Projection years must be a positive integer.",
-      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
-      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
-      "missingBasis": "Sector {{sector}} requires {{basis}}.",
-      "currencyMismatch": "All ranges must use the same currency.",
-      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+      "invalidWacc": "WACC は永続成長率を厳密に上回る必要があります。",
+      "invalidProjectionYears": "予測年数は正の整数でなければなりません。",
+      "invalidBenchmark": "倍率は 下限 ≤ 中央値 ≤ 上限 を満たす必要があります。",
+      "missingMetric": "有効な指標がありません——売上高・EBITDA・当期純利益の少なくとも 1 つを指定してください。",
+      "missingBasis": "セクター {{sector}} には {{basis}} の値が必要です。",
+      "currencyMismatch": "すべてのレンジは同一通貨である必要があります。",
+      "invalidRange": "各レンジは 下限 ≤ 中央値 ≤ 上限 を満たす必要があります。"
     }
   },
   "sectors": {
-    "pharmacie": "Pharmacy",
-    "restaurant": "Restaurant",
-    "boulangerie": "Bakery",
-    "cabinet_expertise_comptable": "Accounting firm",
-    "agence_immobiliere": "Real estate agency",
-    "salon_coiffure": "Hair salon",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS"
+    "agriculture": "農業・漁業",
+    "food_production": "食品製造業",
+    "boulangerie": "ベーカリー・製菓",
+    "chemicals_pharma": "化学・医薬",
+    "industrial_manufacturing": "産業機械・製造",
+    "automotive": "自動車",
+    "energy_utilities": "エネルギー・公益事業",
+    "construction": "建設・土木",
+    "wholesale_retail": "卸売・小売",
+    "pharmacie": "薬局",
+    "ecommerce": "Eコマース",
+    "transport_logistics": "運輸・物流",
+    "hospitality": "ホテル業",
+    "restaurant": "外食・レストラン",
+    "media_publishing": "メディア・出版",
+    "telecom": "通信",
+    "software_saas": "ソフトウェア・SaaS",
+    "it_services": "ITサービス",
+    "financial_services": "金融サービス",
+    "insurance": "保険",
+    "real_estate": "不動産",
+    "agence_immobiliere": "不動産仲介",
+    "legal_services": "法律サービス",
+    "cabinet_expertise_comptable": "会計事務所",
+    "consulting": "コンサルティング",
+    "professional_services": "専門サービス",
+    "education": "教育・人材育成",
+    "healthcare": "医療・福祉",
+    "beauty_wellness": "美容・ウェルネス",
+    "salon_coiffure": "美容室",
+    "other": "その他のセクター"
   },
   "company": {
-    "profile": "Company profile",
+    "profile": "企業プロファイル",
     "sirene": "SIRENE",
     "pappers": "Pappers",
     "siren": "SIREN",
     "siret": "SIRET",
-    "legalForm": "Legal form",
-    "shareCapital": "Share capital",
-    "nafCode": "NAF code",
-    "workforce": "Workforce",
-    "dirigeants": "Officers",
-    "beneficialOwners": "Beneficial owners"
+    "legalForm": "法人形態",
+    "shareCapital": "資本金",
+    "nafCode": "NAFコード",
+    "workforce": "従業員数",
+    "dirigeants": "役員",
+    "beneficialOwners": "実質的支配者"
   },
   "deal": {
     "stages": {
-      "origination": "Origination",
-      "teaser": "Teaser",
+      "origination": "ソーシング",
+      "teaser": "ティーザー",
       "nda": "NDA",
-      "im": "Information Memorandum",
-      "loi": "Letter of Intent",
-      "dueDiligence": "Due diligence",
+      "im": "インフォメーション・メモランダム",
+      "loi": "基本合意書",
+      "dueDiligence": "デューデリジェンス",
       "spa": "SPA",
-      "closing": "Closing"
+      "closing": "クロージング"
     }
   },
   "glossary": {
-    "title": "M&A glossary",
-    "searchPlaceholder": "Search a term…",
-    "empty": "No term matches your search.",
-    "relatedTitle": "Related terms",
+    "title": "M&A 用語集",
+    "searchPlaceholder": "用語を検索…",
+    "empty": "条件に一致する用語はありません。",
+    "relatedTitle": "関連用語",
     "categories": {
-      "process": "Process",
-      "documents": "Documents",
-      "valuation": "Valuation",
-      "legal": "Legal",
-      "finance": "Finance",
-      "governance": "Governance",
-      "deal_structure": "Deal structure",
-      "due_diligence": "Due diligence"
+      "process": "プロセス",
+      "documents": "ドキュメント",
+      "valuation": "バリュエーション",
+      "legal": "法務",
+      "finance": "財務",
+      "governance": "ガバナンス",
+      "deal_structure": "ディール構造",
+      "due_diligence": "デューデリジェンス"
     }
   }
 }

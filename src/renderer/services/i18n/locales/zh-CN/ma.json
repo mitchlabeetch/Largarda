@@ -1,105 +1,128 @@
 {
   "valuation": {
     "methods": {
-      "dcf": "Discounted Cash Flow",
-      "multiples": "Comparable Multiples",
-      "anr": "Adjusted Net Assets",
-      "ruleOfThumb": "Rule of Thumb"
+      "dcf": "现金流折现",
+      "multiples": "可比公司倍数",
+      "anr": "重估净资产",
+      "ruleOfThumb": "经验法则"
     },
     "fields": {
-      "wacc": "Weighted Average Cost of Capital",
-      "growthRate": "Growth rate",
-      "terminalGrowthRate": "Terminal growth rate",
-      "projectionYears": "Projection years",
-      "baseFreeCashFlow": "Base free cash flow",
-      "netDebt": "Net debt",
-      "revenue": "Revenue",
-      "ebitda": "EBITDA",
-      "netIncome": "Net income",
-      "totalAssets": "Total assets",
-      "totalLiabilities": "Total liabilities"
+      "wacc": "加权平均资本成本",
+      "growthRate": "增长率",
+      "terminalGrowthRate": "永续增长率",
+      "projectionYears": "预测年数",
+      "baseFreeCashFlow": "初始自由现金流",
+      "netDebt": "净债务",
+      "revenue": "营业收入",
+      "ebitda": "息税折旧摊销前利润",
+      "netIncome": "净利润",
+      "totalAssets": "资产总额",
+      "totalLiabilities": "负债总额"
     },
     "results": {
-      "enterpriseValue": "Enterprise value",
-      "equityValue": "Equity value",
-      "terminalValue": "Terminal value",
-      "projectedCashFlows": "Projected cash flows",
-      "discountedCashFlows": "Discounted cash flows",
-      "range": "Valuation range",
-      "central": "Central",
-      "low": "Low",
-      "high": "High"
+      "enterpriseValue": "企业价值",
+      "equityValue": "股权价值",
+      "terminalValue": "终值",
+      "projectedCashFlows": "预测现金流",
+      "discountedCashFlows": "折现现金流",
+      "range": "估值区间",
+      "central": "中值",
+      "low": "下限",
+      "high": "上限"
     },
     "sensitivity": {
-      "title": "Sensitivity analysis",
-      "axis": "Axis",
+      "title": "敏感性分析",
+      "axis": "坐标轴",
       "wacc": "WACC",
-      "growthRate": "Growth",
-      "terminalGrowthRate": "Terminal growth"
+      "growthRate": "增长率",
+      "terminalGrowthRate": "永续增长率"
     },
     "footballField": {
-      "title": "Football field",
-      "overall": "Overall range"
+      "title": "橄榄球场图",
+      "overall": "综合区间"
     },
     "errors": {
-      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
-      "invalidProjectionYears": "Projection years must be a positive integer.",
-      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
-      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
-      "missingBasis": "Sector {{sector}} requires {{basis}}.",
-      "currencyMismatch": "All ranges must use the same currency.",
-      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+      "invalidWacc": "WACC 必须严格大于永续增长率。",
+      "invalidProjectionYears": "预测年数必须为正整数。",
+      "invalidBenchmark": "倍数必须满足 下限 ≤ 中位数 ≤ 上限。",
+      "missingMetric": "缺少可用指标——请至少提供营业收入、EBITDA 或净利润之一。",
+      "missingBasis": "行业 {{sector}} 需要 {{basis}} 数据。",
+      "currencyMismatch": "所有区间必须使用相同货币。",
+      "invalidRange": "每个区间必须满足 下限 ≤ 中值 ≤ 上限。"
     }
   },
   "sectors": {
-    "pharmacie": "Pharmacy",
-    "restaurant": "Restaurant",
-    "boulangerie": "Bakery",
-    "cabinet_expertise_comptable": "Accounting firm",
-    "agence_immobiliere": "Real estate agency",
-    "salon_coiffure": "Hair salon",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS"
+    "agriculture": "农业与渔业",
+    "food_production": "食品工业",
+    "boulangerie": "面包糕点",
+    "chemicals_pharma": "化工与制药",
+    "industrial_manufacturing": "工业制造",
+    "automotive": "汽车",
+    "energy_utilities": "能源与公用事业",
+    "construction": "建筑与工程",
+    "wholesale_retail": "批发与零售",
+    "pharmacie": "药房",
+    "ecommerce": "电子商务",
+    "transport_logistics": "运输与物流",
+    "hospitality": "酒店业",
+    "restaurant": "餐饮",
+    "media_publishing": "媒体与出版",
+    "telecom": "电信",
+    "software_saas": "软件与 SaaS",
+    "it_services": "IT 服务",
+    "financial_services": "金融服务",
+    "insurance": "保险",
+    "real_estate": "房地产",
+    "agence_immobiliere": "房地产中介",
+    "legal_services": "法律服务",
+    "cabinet_expertise_comptable": "会计师事务所",
+    "consulting": "咨询",
+    "professional_services": "专业服务",
+    "education": "教育与培训",
+    "healthcare": "医疗与社会服务",
+    "beauty_wellness": "美容与健康",
+    "salon_coiffure": "美发沙龙",
+    "other": "其他行业"
   },
   "company": {
-    "profile": "Company profile",
+    "profile": "公司信息",
     "sirene": "SIRENE",
     "pappers": "Pappers",
     "siren": "SIREN",
     "siret": "SIRET",
-    "legalForm": "Legal form",
-    "shareCapital": "Share capital",
-    "nafCode": "NAF code",
-    "workforce": "Workforce",
-    "dirigeants": "Officers",
-    "beneficialOwners": "Beneficial owners"
+    "legalForm": "法律形式",
+    "shareCapital": "股本",
+    "nafCode": "NAF 代码",
+    "workforce": "员工人数",
+    "dirigeants": "管理层",
+    "beneficialOwners": "最终受益人"
   },
   "deal": {
     "stages": {
-      "origination": "Origination",
-      "teaser": "Teaser",
+      "origination": "项目开发",
+      "teaser": "简要介绍",
       "nda": "NDA",
-      "im": "Information Memorandum",
-      "loi": "Letter of Intent",
-      "dueDiligence": "Due diligence",
+      "im": "信息备忘录",
+      "loi": "意向书",
+      "dueDiligence": "尽职调查",
       "spa": "SPA",
-      "closing": "Closing"
+      "closing": "交割"
     }
   },
   "glossary": {
-    "title": "M&A glossary",
-    "searchPlaceholder": "Search a term…",
-    "empty": "No term matches your search.",
-    "relatedTitle": "Related terms",
+    "title": "并购术语表",
+    "searchPlaceholder": "搜索术语…",
+    "empty": "没有符合搜索条件的术语。",
+    "relatedTitle": "相关术语",
     "categories": {
-      "process": "Process",
-      "documents": "Documents",
-      "valuation": "Valuation",
-      "legal": "Legal",
-      "finance": "Finance",
-      "governance": "Governance",
-      "deal_structure": "Deal structure",
-      "due_diligence": "Due diligence"
+      "process": "流程",
+      "documents": "文件",
+      "valuation": "估值",
+      "legal": "法律",
+      "finance": "财务",
+      "governance": "公司治理",
+      "deal_structure": "交易结构",
+      "due_diligence": "尽职调查"
     }
   }
 }
