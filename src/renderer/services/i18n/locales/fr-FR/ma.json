@@ -1,0 +1,89 @@
+{
+  "valuation": {
+    "methods": {
+      "dcf": "Flux de trésorerie actualisés",
+      "multiples": "Multiples de comparables",
+      "anr": "Actif net réévalué",
+      "ruleOfThumb": "Règle du pouce"
+    },
+    "fields": {
+      "wacc": "Coût moyen pondéré du capital",
+      "growthRate": "Taux de croissance",
+      "terminalGrowthRate": "Taux de croissance perpétuel",
+      "projectionYears": "Années projetées",
+      "baseFreeCashFlow": "Flux de trésorerie de départ",
+      "netDebt": "Dette nette",
+      "revenue": "Chiffre d'affaires",
+      "ebitda": "EBE",
+      "netIncome": "Résultat net",
+      "totalAssets": "Total de l'actif",
+      "totalLiabilities": "Total des dettes"
+    },
+    "results": {
+      "enterpriseValue": "Valeur d'entreprise",
+      "equityValue": "Valeur des capitaux propres",
+      "terminalValue": "Valeur terminale",
+      "projectedCashFlows": "Flux projetés",
+      "discountedCashFlows": "Flux actualisés",
+      "range": "Fourchette de valorisation",
+      "central": "Valeur centrale",
+      "low": "Basse",
+      "high": "Haute"
+    },
+    "sensitivity": {
+      "title": "Analyse de sensibilité",
+      "axis": "Axe",
+      "wacc": "WACC",
+      "growthRate": "Croissance",
+      "terminalGrowthRate": "Croissance perpétuelle"
+    },
+    "footballField": {
+      "title": "Football field",
+      "overall": "Fourchette globale"
+    },
+    "errors": {
+      "invalidWacc": "Le WACC doit être strictement supérieur au taux de croissance perpétuel.",
+      "invalidProjectionYears": "Le nombre d'années projetées doit être un entier positif.",
+      "invalidBenchmark": "Les multiples doivent respecter l'ordre bas ≤ médian ≤ haut.",
+      "missingMetric": "Aucune métrique exploitable — indiquez au moins un des éléments : chiffre d'affaires, EBE, résultat net.",
+      "missingBasis": "Le secteur {{sector}} nécessite la valeur {{basis}}.",
+      "currencyMismatch": "Toutes les fourchettes doivent utiliser la même devise.",
+      "invalidRange": "Chaque fourchette doit vérifier bas ≤ central ≤ haut."
+    }
+  },
+  "sectors": {
+    "pharmacie": "Pharmacie",
+    "restaurant": "Restaurant",
+    "boulangerie": "Boulangerie",
+    "cabinet_expertise_comptable": "Cabinet d'expertise comptable",
+    "agence_immobiliere": "Agence immobilière",
+    "salon_coiffure": "Salon de coiffure",
+    "ecommerce": "E-commerce",
+    "saas": "SaaS"
+  },
+  "company": {
+    "profile": "Fiche société",
+    "sirene": "SIRENE",
+    "pappers": "Pappers",
+    "siren": "SIREN",
+    "siret": "SIRET",
+    "legalForm": "Forme juridique",
+    "shareCapital": "Capital social",
+    "nafCode": "Code NAF",
+    "workforce": "Effectif",
+    "dirigeants": "Dirigeants",
+    "beneficialOwners": "Bénéficiaires effectifs"
+  },
+  "deal": {
+    "stages": {
+      "origination": "Origination",
+      "teaser": "Teaser",
+      "nda": "NDA",
+      "im": "Mémorandum d'information",
+      "loi": "Lettre d'intention",
+      "dueDiligence": "Due diligence",
+      "spa": "SPA",
+      "closing": "Closing"
+    }
+  }
+}
