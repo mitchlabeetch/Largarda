@@ -106,12 +106,13 @@ export type RuleOfThumbRule = {
   readonly highMultiplier: number;
 };
 
-export type RuleOfThumbInputs = {
+export interface RuleOfThumbInputs {
   readonly sector: RuleOfThumbSector;
   readonly revenue?: number;
   readonly ebitda?: number;
   readonly grossMargin?: number;
-};
+  readonly netDebt?: number;
+}
 
 export type SensitivityAxis = 'wacc' | 'growthRate' | 'terminalGrowthRate';
 
