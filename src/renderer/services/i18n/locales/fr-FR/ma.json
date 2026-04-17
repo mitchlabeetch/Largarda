@@ -85,5 +85,21 @@
       "spa": "SPA",
       "closing": "Closing"
     }
+  },
+  "glossary": {
+    "title": "Glossaire M&A",
+    "searchPlaceholder": "Rechercher un terme…",
+    "empty": "Aucun terme ne correspond à votre recherche.",
+    "relatedTitle": "Termes liés",
+    "categories": {
+      "process": "Processus",
+      "documents": "Documents",
+      "valuation": "Valorisation",
+      "legal": "Juridique",
+      "finance": "Finance",
+      "governance": "Gouvernance",
+      "deal_structure": "Structuration",
+      "due_diligence": "Due diligence"
+    }
   }
 }

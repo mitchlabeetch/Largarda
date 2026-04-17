@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  getSectorById,
-  resolveRuleOfThumbSector,
-  resolveSectorFromNaf,
-  SECTORS,
-} from '@/common/ma/sector';
+import { getSectorById, resolveRuleOfThumbSector, resolveSectorFromNaf, SECTORS } from '@/common/ma/sector';
 
 describe('resolveSectorFromNaf', () => {
   it('picks the most specific prefix when several match', () => {
