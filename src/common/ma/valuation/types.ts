@@ -11,13 +11,13 @@
 
 export type ValuationMethod = 'dcf' | 'multiples' | 'anr' | 'rule-of-thumb';
 
-export type ValuationRange = {
+export interface ValuationRange {
   readonly method: ValuationMethod;
   readonly low: number;
   readonly central: number;
   readonly high: number;
   readonly currency: string;
-};
+}
 
 export type DcfInputs = {
   /** Latest known free cash flow for year 0 (in currency units). */
