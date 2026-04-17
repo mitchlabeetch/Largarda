@@ -1,105 +1,128 @@
 {
   "valuation": {
     "methods": {
-      "dcf": "Discounted Cash Flow",
-      "multiples": "Comparable Multiples",
-      "anr": "Adjusted Net Assets",
-      "ruleOfThumb": "Rule of Thumb"
+      "dcf": "İndirgenmiş Nakit Akışı",
+      "multiples": "Karşılaştırılabilir Çarpanlar",
+      "anr": "Düzeltilmiş Net Varlık Değeri",
+      "ruleOfThumb": "Pratik Kural"
     },
     "fields": {
-      "wacc": "Weighted Average Cost of Capital",
-      "growthRate": "Growth rate",
-      "terminalGrowthRate": "Terminal growth rate",
-      "projectionYears": "Projection years",
-      "baseFreeCashFlow": "Base free cash flow",
-      "netDebt": "Net debt",
-      "revenue": "Revenue",
-      "ebitda": "EBITDA",
-      "netIncome": "Net income",
-      "totalAssets": "Total assets",
-      "totalLiabilities": "Total liabilities"
+      "wacc": "Ağırlıklı Ortalama Sermaye Maliyeti",
+      "growthRate": "Büyüme oranı",
+      "terminalGrowthRate": "Sonsuz büyüme oranı",
+      "projectionYears": "Projeksiyon yılları",
+      "baseFreeCashFlow": "Başlangıç serbest nakit akışı",
+      "netDebt": "Net borç",
+      "revenue": "Gelir",
+      "ebitda": "FAVÖK",
+      "netIncome": "Net kâr",
+      "totalAssets": "Toplam varlıklar",
+      "totalLiabilities": "Toplam yükümlülükler"
     },
     "results": {
-      "enterpriseValue": "Enterprise value",
-      "equityValue": "Equity value",
-      "terminalValue": "Terminal value",
-      "projectedCashFlows": "Projected cash flows",
-      "discountedCashFlows": "Discounted cash flows",
-      "range": "Valuation range",
-      "central": "Central",
-      "low": "Low",
-      "high": "High"
+      "enterpriseValue": "Firma değeri",
+      "equityValue": "Özsermaye değeri",
+      "terminalValue": "Terminal değer",
+      "projectedCashFlows": "Projeksiyon nakit akışları",
+      "discountedCashFlows": "İndirgenmiş nakit akışları",
+      "range": "Değerleme aralığı",
+      "central": "Merkezi değer",
+      "low": "Alt",
+      "high": "Üst"
     },
     "sensitivity": {
-      "title": "Sensitivity analysis",
-      "axis": "Axis",
+      "title": "Duyarlılık analizi",
+      "axis": "Eksen",
       "wacc": "WACC",
-      "growthRate": "Growth",
-      "terminalGrowthRate": "Terminal growth"
+      "growthRate": "Büyüme",
+      "terminalGrowthRate": "Sonsuz büyüme"
     },
     "footballField": {
-      "title": "Football field",
-      "overall": "Overall range"
+      "title": "Futbol sahası grafiği",
+      "overall": "Genel aralık"
     },
     "errors": {
-      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
-      "invalidProjectionYears": "Projection years must be a positive integer.",
-      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
-      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
-      "missingBasis": "Sector {{sector}} requires {{basis}}.",
-      "currencyMismatch": "All ranges must use the same currency.",
-      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+      "invalidWacc": "WACC, sonsuz büyüme oranından kesinlikle büyük olmalıdır.",
+      "invalidProjectionYears": "Projeksiyon yılı sayısı pozitif tam sayı olmalıdır.",
+      "invalidBenchmark": "Çarpanlar alt ≤ medyan ≤ üst koşulunu sağlamalıdır.",
+      "missingMetric": "Kullanılabilir metrik yok — en az gelir, FAVÖK veya net kârdan birini sağlayın.",
+      "missingBasis": "{{sector}} sektörü {{basis}} değerini gerektirir.",
+      "currencyMismatch": "Tüm aralıklar aynı para birimini kullanmalıdır.",
+      "invalidRange": "Her aralık alt ≤ merkezi değer ≤ üst koşulunu sağlamalıdır."
     }
   },
   "sectors": {
-    "pharmacie": "Pharmacy",
-    "restaurant": "Restaurant",
-    "boulangerie": "Bakery",
-    "cabinet_expertise_comptable": "Accounting firm",
-    "agence_immobiliere": "Real estate agency",
-    "salon_coiffure": "Hair salon",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS"
+    "agriculture": "Tarım ve balıkçılık",
+    "food_production": "Gıda üretimi",
+    "boulangerie": "Fırın ve pastane",
+    "chemicals_pharma": "Kimya ve ilaç",
+    "industrial_manufacturing": "Endüstriyel üretim",
+    "automotive": "Otomotiv",
+    "energy_utilities": "Enerji ve altyapı hizmetleri",
+    "construction": "İnşaat",
+    "wholesale_retail": "Toptan ve perakende",
+    "pharmacie": "Eczane",
+    "ecommerce": "E-ticaret",
+    "transport_logistics": "Taşımacılık ve lojistik",
+    "hospitality": "Otelcilik",
+    "restaurant": "Restoran",
+    "media_publishing": "Medya ve yayıncılık",
+    "telecom": "Telekomünikasyon",
+    "software_saas": "Yazılım ve SaaS",
+    "it_services": "BT hizmetleri",
+    "financial_services": "Finansal hizmetler",
+    "insurance": "Sigorta",
+    "real_estate": "Gayrimenkul",
+    "agence_immobiliere": "Emlak ajansı",
+    "legal_services": "Hukuk hizmetleri",
+    "cabinet_expertise_comptable": "Muhasebe firması",
+    "consulting": "Danışmanlık",
+    "professional_services": "Profesyonel hizmetler",
+    "education": "Eğitim ve öğretim",
+    "healthcare": "Sağlık ve sosyal hizmetler",
+    "beauty_wellness": "Güzellik ve sağlıklı yaşam",
+    "salon_coiffure": "Kuaför salonu",
+    "other": "Diğer sektörler"
   },
   "company": {
-    "profile": "Company profile",
+    "profile": "Şirket profili",
     "sirene": "SIRENE",
     "pappers": "Pappers",
     "siren": "SIREN",
     "siret": "SIRET",
-    "legalForm": "Legal form",
-    "shareCapital": "Share capital",
-    "nafCode": "NAF code",
-    "workforce": "Workforce",
-    "dirigeants": "Officers",
-    "beneficialOwners": "Beneficial owners"
+    "legalForm": "Hukuki yapı",
+    "shareCapital": "Sermaye",
+    "nafCode": "NAF kodu",
+    "workforce": "Çalışan sayısı",
+    "dirigeants": "Yöneticiler",
+    "beneficialOwners": "Nihai lehdarlar"
   },
   "deal": {
     "stages": {
-      "origination": "Origination",
+      "origination": "Fırsat geliştirme",
       "teaser": "Teaser",
       "nda": "NDA",
-      "im": "Information Memorandum",
-      "loi": "Letter of Intent",
-      "dueDiligence": "Due diligence",
+      "im": "Bilgi Memorandumu",
+      "loi": "Niyet Mektubu",
+      "dueDiligence": "Özen incelemesi",
       "spa": "SPA",
-      "closing": "Closing"
+      "closing": "Kapanış"
     }
   },
   "glossary": {
-    "title": "M&A glossary",
-    "searchPlaceholder": "Search a term…",
-    "empty": "No term matches your search.",
-    "relatedTitle": "Related terms",
+    "title": "M&A sözlüğü",
+    "searchPlaceholder": "Terim ara…",
+    "empty": "Aramanızla eşleşen terim yok.",
+    "relatedTitle": "İlgili terimler",
     "categories": {
-      "process": "Process",
-      "documents": "Documents",
-      "valuation": "Valuation",
-      "legal": "Legal",
-      "finance": "Finance",
-      "governance": "Governance",
-      "deal_structure": "Deal structure",
-      "due_diligence": "Due diligence"
+      "process": "Süreç",
+      "documents": "Belgeler",
+      "valuation": "Değerleme",
+      "legal": "Hukuk",
+      "finance": "Finans",
+      "governance": "Kurumsal yönetim",
+      "deal_structure": "İşlem yapısı",
+      "due_diligence": "Özen incelemesi"
     }
   }
 }

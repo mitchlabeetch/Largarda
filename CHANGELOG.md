@@ -59,3 +59,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Additional unit tests under `tests/unit/ma/` covering the company↔sector
   bridge (`companyProfileSector.test.ts`, 5 tests), bringing the `ma` Vitest
   count to 354+ assertions across 8 files.
+
+### Added (Completer pass 3)
+
+- **Full `ma` i18n coverage** — machine-translated the `ma.json` module into
+  the 7 stub locales (`zh-CN`, `zh-TW`, `ja-JP`, `ko-KR`, `tr-TR`, `ru-RU`,
+  `uk-UA`), replacing the English placeholders left by pass 1. All 9 locales
+  now report "translations are complete" under `node scripts/check-i18n.js`.
+- **Complete sector i18n set** — `ma.sectors.*` grew from 8 to 31 entries
+  across every locale, matching the curated sector catalogue end-to-end.
+- **Sector i18n contract test** — `tests/unit/ma/sectorI18n.test.ts` asserts,
+  for every supported locale, that each sector id in the catalogue has a
+  non-empty translation and that the JSON does not ship stray ids. Prevents
+  silent i18n drift whenever the catalogue changes.
+- **Security CI workflow** (`.github/workflows/security.yml`) running
+  Gitleaks, Semgrep (OWASP Top 10 + TS/JS + secrets rulesets) and
+  `bun audit --audit-level=high`, triggered on pushes, PRs, and a weekly
+  Monday cron.
+- **Dependabot configuration** (`.github/dependabot.yml`) scheduling weekly
+  updates for `npm` (grouped minor+patch), `github-actions`, and `docker`
+  ecosystems, all with dedicated Conventional Commit prefixes.
+- **ADR 0006** documenting the security CI pipeline decisions, deferred
+  alternatives (CodeQL, Snyk/Socket), and escalation path for `bun audit`.

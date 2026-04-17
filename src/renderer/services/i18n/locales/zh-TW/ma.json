@@ -1,105 +1,128 @@
 {
   "valuation": {
     "methods": {
-      "dcf": "Discounted Cash Flow",
-      "multiples": "Comparable Multiples",
-      "anr": "Adjusted Net Assets",
-      "ruleOfThumb": "Rule of Thumb"
+      "dcf": "現金流折現",
+      "multiples": "可比公司倍數",
+      "anr": "重估淨資產",
+      "ruleOfThumb": "經驗法則"
     },
     "fields": {
-      "wacc": "Weighted Average Cost of Capital",
-      "growthRate": "Growth rate",
-      "terminalGrowthRate": "Terminal growth rate",
-      "projectionYears": "Projection years",
-      "baseFreeCashFlow": "Base free cash flow",
-      "netDebt": "Net debt",
-      "revenue": "Revenue",
-      "ebitda": "EBITDA",
-      "netIncome": "Net income",
-      "totalAssets": "Total assets",
-      "totalLiabilities": "Total liabilities"
+      "wacc": "加權平均資金成本",
+      "growthRate": "成長率",
+      "terminalGrowthRate": "永續成長率",
+      "projectionYears": "預測年數",
+      "baseFreeCashFlow": "基期自由現金流",
+      "netDebt": "淨負債",
+      "revenue": "營業收入",
+      "ebitda": "息稅折舊攤銷前利潤",
+      "netIncome": "淨利",
+      "totalAssets": "資產總額",
+      "totalLiabilities": "負債總額"
     },
     "results": {
-      "enterpriseValue": "Enterprise value",
-      "equityValue": "Equity value",
-      "terminalValue": "Terminal value",
-      "projectedCashFlows": "Projected cash flows",
-      "discountedCashFlows": "Discounted cash flows",
-      "range": "Valuation range",
-      "central": "Central",
-      "low": "Low",
-      "high": "High"
+      "enterpriseValue": "企業價值",
+      "equityValue": "股東權益價值",
+      "terminalValue": "終值",
+      "projectedCashFlows": "預測現金流",
+      "discountedCashFlows": "折現現金流",
+      "range": "估值區間",
+      "central": "中值",
+      "low": "下限",
+      "high": "上限"
     },
     "sensitivity": {
-      "title": "Sensitivity analysis",
-      "axis": "Axis",
+      "title": "敏感度分析",
+      "axis": "軸",
       "wacc": "WACC",
-      "growthRate": "Growth",
-      "terminalGrowthRate": "Terminal growth"
+      "growthRate": "成長率",
+      "terminalGrowthRate": "永續成長率"
     },
     "footballField": {
-      "title": "Football field",
-      "overall": "Overall range"
+      "title": "橄欖球場圖",
+      "overall": "整體區間"
     },
     "errors": {
-      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
-      "invalidProjectionYears": "Projection years must be a positive integer.",
-      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
-      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
-      "missingBasis": "Sector {{sector}} requires {{basis}}.",
-      "currencyMismatch": "All ranges must use the same currency.",
-      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+      "invalidWacc": "WACC 必須嚴格大於永續成長率。",
+      "invalidProjectionYears": "預測年數必須為正整數。",
+      "invalidBenchmark": "倍數必須符合 下限 ≤ 中位數 ≤ 上限。",
+      "missingMetric": "缺少可用指標——請至少提供營業收入、EBITDA 或淨利其中之一。",
+      "missingBasis": "行業 {{sector}} 需要 {{basis}} 資料。",
+      "currencyMismatch": "所有區間必須使用相同幣別。",
+      "invalidRange": "每個區間必須符合 下限 ≤ 中值 ≤ 上限。"
     }
   },
   "sectors": {
-    "pharmacie": "Pharmacy",
-    "restaurant": "Restaurant",
-    "boulangerie": "Bakery",
-    "cabinet_expertise_comptable": "Accounting firm",
-    "agence_immobiliere": "Real estate agency",
-    "salon_coiffure": "Hair salon",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS"
+    "agriculture": "農業與漁業",
+    "food_production": "食品工業",
+    "boulangerie": "麵包糕點",
+    "chemicals_pharma": "化工與製藥",
+    "industrial_manufacturing": "工業製造",
+    "automotive": "汽車",
+    "energy_utilities": "能源與公用事業",
+    "construction": "建築與工程",
+    "wholesale_retail": "批發與零售",
+    "pharmacie": "藥局",
+    "ecommerce": "電子商務",
+    "transport_logistics": "運輸與物流",
+    "hospitality": "旅館業",
+    "restaurant": "餐飲",
+    "media_publishing": "媒體與出版",
+    "telecom": "電信",
+    "software_saas": "軟體與 SaaS",
+    "it_services": "IT 服務",
+    "financial_services": "金融服務",
+    "insurance": "保險",
+    "real_estate": "不動產",
+    "agence_immobiliere": "不動產仲介",
+    "legal_services": "法律服務",
+    "cabinet_expertise_comptable": "會計師事務所",
+    "consulting": "顧問業",
+    "professional_services": "專業服務",
+    "education": "教育與培訓",
+    "healthcare": "醫療與社會服務",
+    "beauty_wellness": "美容與健康",
+    "salon_coiffure": "美髮沙龍",
+    "other": "其他行業"
   },
   "company": {
-    "profile": "Company profile",
+    "profile": "公司資料",
     "sirene": "SIRENE",
     "pappers": "Pappers",
     "siren": "SIREN",
     "siret": "SIRET",
-    "legalForm": "Legal form",
-    "shareCapital": "Share capital",
-    "nafCode": "NAF code",
-    "workforce": "Workforce",
-    "dirigeants": "Officers",
-    "beneficialOwners": "Beneficial owners"
+    "legalForm": "法律形式",
+    "shareCapital": "股本",
+    "nafCode": "NAF 代碼",
+    "workforce": "員工人數",
+    "dirigeants": "管理層",
+    "beneficialOwners": "最終受益人"
   },
   "deal": {
     "stages": {
-      "origination": "Origination",
-      "teaser": "Teaser",
+      "origination": "案源開發",
+      "teaser": "簡介",
       "nda": "NDA",
-      "im": "Information Memorandum",
-      "loi": "Letter of Intent",
-      "dueDiligence": "Due diligence",
+      "im": "資訊備忘錄",
+      "loi": "意向書",
+      "dueDiligence": "盡職調查",
       "spa": "SPA",
-      "closing": "Closing"
+      "closing": "交割"
     }
   },
   "glossary": {
-    "title": "M&A glossary",
-    "searchPlaceholder": "Search a term…",
-    "empty": "No term matches your search.",
-    "relatedTitle": "Related terms",
+    "title": "併購詞彙表",
+    "searchPlaceholder": "搜尋詞彙…",
+    "empty": "沒有符合搜尋條件的詞彙。",
+    "relatedTitle": "相關詞彙",
     "categories": {
-      "process": "Process",
-      "documents": "Documents",
-      "valuation": "Valuation",
-      "legal": "Legal",
-      "finance": "Finance",
-      "governance": "Governance",
-      "deal_structure": "Deal structure",
-      "due_diligence": "Due diligence"
+      "process": "流程",
+      "documents": "文件",
+      "valuation": "估值",
+      "legal": "法律",
+      "finance": "財務",
+      "governance": "公司治理",
+      "deal_structure": "交易架構",
+      "due_diligence": "盡職調查"
     }
   }
 }
