@@ -1,0 +1,89 @@
+{
+  "valuation": {
+    "methods": {
+      "dcf": "Discounted Cash Flow",
+      "multiples": "Comparable Multiples",
+      "anr": "Adjusted Net Assets",
+      "ruleOfThumb": "Rule of Thumb"
+    },
+    "fields": {
+      "wacc": "Weighted Average Cost of Capital",
+      "growthRate": "Growth rate",
+      "terminalGrowthRate": "Terminal growth rate",
+      "projectionYears": "Projection years",
+      "baseFreeCashFlow": "Base free cash flow",
+      "netDebt": "Net debt",
+      "revenue": "Revenue",
+      "ebitda": "EBITDA",
+      "netIncome": "Net income",
+      "totalAssets": "Total assets",
+      "totalLiabilities": "Total liabilities"
+    },
+    "results": {
+      "enterpriseValue": "Enterprise value",
+      "equityValue": "Equity value",
+      "terminalValue": "Terminal value",
+      "projectedCashFlows": "Projected cash flows",
+      "discountedCashFlows": "Discounted cash flows",
+      "range": "Valuation range",
+      "central": "Central",
+      "low": "Low",
+      "high": "High"
+    },
+    "sensitivity": {
+      "title": "Sensitivity analysis",
+      "axis": "Axis",
+      "wacc": "WACC",
+      "growthRate": "Growth",
+      "terminalGrowthRate": "Terminal growth"
+    },
+    "footballField": {
+      "title": "Football field",
+      "overall": "Overall range"
+    },
+    "errors": {
+      "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
+      "invalidProjectionYears": "Projection years must be a positive integer.",
+      "invalidBenchmark": "Multiples must satisfy low ≤ median ≤ high.",
+      "missingMetric": "No usable metric — provide at least one of revenue, EBITDA, net income.",
+      "missingBasis": "Sector {{sector}} requires {{basis}}.",
+      "currencyMismatch": "All ranges must use the same currency.",
+      "invalidRange": "Every range must satisfy low ≤ central ≤ high."
+    }
+  },
+  "sectors": {
+    "pharmacie": "Pharmacy",
+    "restaurant": "Restaurant",
+    "boulangerie": "Bakery",
+    "cabinet_expertise_comptable": "Accounting firm",
+    "agence_immobiliere": "Real estate agency",
+    "salon_coiffure": "Hair salon",
+    "ecommerce": "E-commerce",
+    "saas": "SaaS"
+  },
+  "company": {
+    "profile": "Company profile",
+    "sirene": "SIRENE",
+    "pappers": "Pappers",
+    "siren": "SIREN",
+    "siret": "SIRET",
+    "legalForm": "Legal form",
+    "shareCapital": "Share capital",
+    "nafCode": "NAF code",
+    "workforce": "Workforce",
+    "dirigeants": "Officers",
+    "beneficialOwners": "Beneficial owners"
+  },
+  "deal": {
+    "stages": {
+      "origination": "Origination",
+      "teaser": "Teaser",
+      "nda": "NDA",
+      "im": "Information Memorandum",
+      "loi": "Letter of Intent",
+      "dueDiligence": "Due diligence",
+      "spa": "SPA",
+      "closing": "Closing"
+    }
+  }
+}
