@@ -85,5 +85,21 @@
       "spa": "SPA",
       "closing": "Closing"
     }
+  },
+  "glossary": {
+    "title": "M&A glossary",
+    "searchPlaceholder": "Search a term…",
+    "empty": "No term matches your search.",
+    "relatedTitle": "Related terms",
+    "categories": {
+      "process": "Process",
+      "documents": "Documents",
+      "valuation": "Valuation",
+      "legal": "Legal",
+      "finance": "Finance",
+      "governance": "Governance",
+      "deal_structure": "Deal structure",
+      "due_diligence": "Due diligence"
+    }
   }
 }

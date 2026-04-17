@@ -11,13 +11,13 @@
 
 export type ValuationMethod = 'dcf' | 'multiples' | 'anr' | 'rule-of-thumb';
 
-export interface ValuationRange {
+export type ValuationRange = {
   readonly method: ValuationMethod;
   readonly low: number;
   readonly central: number;
   readonly high: number;
   readonly currency: string;
-}
+};
 
 export type DcfInputs = {
   /** Latest known free cash flow for year 0 (in currency units). */
@@ -106,13 +106,13 @@ export type RuleOfThumbRule = {
   readonly highMultiplier: number;
 };
 
-export interface RuleOfThumbInputs {
+export type RuleOfThumbInputs = {
   readonly sector: RuleOfThumbSector;
   readonly revenue?: number;
   readonly ebitda?: number;
   readonly grossMargin?: number;
   readonly netDebt?: number;
-}
+};
 
 export type SensitivityAxis = 'wacc' | 'growthRate' | 'terminalGrowthRate';
 

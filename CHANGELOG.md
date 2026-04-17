@@ -33,3 +33,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - All 9 locale `index.ts` files register the `ma` module.
 - `src/renderer/services/i18n/i18n-keys.d.ts` regenerated to include `ma.*`
   keys.
+
+### Added (Completer pass 2)
+
+- **Unified company profile** (`src/common/ma/company/`): pure `CompanyProfile`
+  shape merging SIRENE and Pappers payloads with per-field source attribution,
+  SIREN/SIRET validation, deterministic field ownership rules, and a
+  `resolveProfileSector` bridge helper that connects a profile to the sector
+  taxonomy without coupling the modules.
+- **Sector taxonomy** (`src/common/ma/sector/`): 31-entry curated M&A taxonomy
+  with NAF rev. 2 prefix mapping (`resolveSectorFromNaf`), longest-prefix
+  resolution, always-returns-a-value contract, and links to the valuation
+  engine's rule-of-thumb defaults.
+- **M&A glossary** (`src/common/ma/glossary/`): bilingual (FR/EN) term
+  dictionary, now 80 entries covering process, documents, valuation, legal,
+  finance, governance, deal structure, and due diligence categories; pure
+  search helper (`searchGlossary`) with accent-insensitive scoring and
+  category filtering.
+- **`ma.glossary.*` i18n scaffolding** across the 9 locales so the upcoming
+  glossary UI can display localised category labels and placeholders.
+- **ADR 0004** documenting the company profile merge semantics and field
+  ownership.
+- **ADR 0005** documenting the sector taxonomy and NAF prefix resolution
+  rules.
+- Additional unit tests under `tests/unit/ma/` covering the company↔sector
+  bridge (`companyProfileSector.test.ts`, 5 tests), bringing the `ma` Vitest
+  count to 354+ assertions across 8 files.
