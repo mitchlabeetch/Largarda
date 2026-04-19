@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import useSWR from 'swr';
+import { ipcBridge } from '@/common';
 import type { MaDocument, DocumentStatus } from '@/common/ma/types';
 
 interface UseDocumentsOptions {
@@ -53,7 +54,7 @@ export function useDocuments(options: UseDocumentsOptions): UseDocumentsReturn {
   } = useSWR<MaDocument[]>(dealId ? `ma.documents.${dealId}` : null, () => fetcher(dealId), {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    refreshInterval: autoRefresh ? refreshInterval : false,
+    refreshInterval: autoRefresh ? refreshInterval : undefined,
   });
 
   const refresh = useCallback(() => {

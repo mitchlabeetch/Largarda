@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import useSWR from 'swr';
+import { ipcBridge } from '@/common';
 import type { DealContext, CreateDealInput, UpdateDealInput, DealStatus } from '@/common/ma/types';
 
 interface UseDealContextOptions {
@@ -67,7 +68,7 @@ export function useDealContext(options: UseDealContextOptions = {}): UseDealCont
   } = useSWR<DealContext[]>('ma.deals', () => fetcher(), {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    refreshInterval: autoRefresh ? refreshInterval : false,
+    refreshInterval: autoRefresh ? refreshInterval : undefined,
   });
 
   // Fetch active deal
@@ -77,7 +78,7 @@ export function useDealContext(options: UseDealContextOptions = {}): UseDealCont
   } = useSWR<DealContext | null>('ma.activeDeal', () => activeDealFetcher(), {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
-    refreshInterval: autoRefresh ? refreshInterval : false,
+    refreshInterval: autoRefresh ? refreshInterval : undefined,
   });
 
   // Sync active deal from fetched data

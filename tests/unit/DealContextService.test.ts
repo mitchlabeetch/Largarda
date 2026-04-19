@@ -14,9 +14,9 @@ import { DealContextService } from '@/process/services/ma/DealContextService';
 import type { DealContext, CreateDealInput, DealStatus } from '@/common/ma/types';
 
 // Mock the DealRepository
-vi.mock('@process/services/database/repositories/ma/DealRepository', () => {
-  const mockDeals: Map<string, DealContext> = new Map();
+const mockDeals: Map<string, DealContext> = new Map();
 
+vi.mock('@process/services/database/repositories/ma/DealRepository', () => {
   return {
     DealRepository: class MockDealRepository {
       async create(input: CreateDealInput) {
@@ -115,6 +115,8 @@ describe('DealContextService', () => {
     service = new DealContextService();
     mockActiveDealId = null;
     (global as any).__maActiveDealId = null;
+    // Clear the mock deals map between tests
+    mockDeals.clear();
   });
 
   afterEach(() => {

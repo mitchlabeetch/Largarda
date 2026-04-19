@@ -40,6 +40,7 @@ function normalize(input: string): string {
   return input
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
+    .replace(/['']/g, '') // Remove apostrophes (straight, curly left, curly right)
     .toLowerCase()
     .trim();
 }

@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button, Dropdown, Menu, Modal, Message, Popconfirm } from '@arco-design/web-react';
 import { IconClose, IconEdit, IconRefresh } from '@arco-design/web-react/icon';
-import { Plus, More, Edit, FolderOpen, Close, Refresh } from '@icon-park/react';
+import { Plus, More, Edit, FolderOpen, Close, Refresh, Folder } from '@icon-park/react';
 import { DealSelector, DealForm } from '@/renderer/components/ma/DealSelector';
 import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
 import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
@@ -167,7 +167,7 @@ export function DealContextPage() {
       if (deal.status === 'active') {
         items.push({
           key: 'archive',
-          icon: <File />,
+          icon: <Folder />,
           onClick: () => handleArchive(deal),
         });
         items.push({

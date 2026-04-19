@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { Dropdown, Button, Empty, Spin } from '@arco-design/web-react';
-import { IconDown, IconAdd, IconCheck } from '@icon-park/react';
+import { Down, Plus, Check } from '@icon-park/react';
 import type { DealContext, DealStatus } from '@/common/ma/types';
 import styles from './DealSelector.module.css';
 
@@ -64,7 +64,7 @@ export function DealSelector({
         >
           <div className={styles.dealInfo}>
             <span className={styles.dealName}>
-              {isActive && <IconCheck className={styles.activeIndicator} />}
+              {isActive && <Check className={styles.activeIndicator} />}
               {deal.name}
             </span>
             <span className={styles.dealMeta}>
@@ -95,7 +95,7 @@ export function DealSelector({
             }
           />
           {showCreateButton && onCreateNew && (
-            <Button type="primary" size="small" icon={<IconAdd />} onClick={onCreateNew}>
+            <Button type="primary" size="small" icon={<Plus />} onClick={onCreateNew}>
               Create First Deal
             </Button>
           )}
@@ -112,7 +112,7 @@ export function DealSelector({
     <div className={`${styles.container} ${className || ''}`}>
       <div className={styles.selector}>
         <Dropdown
-          dropdown={() => dropdownContent}
+          droplist={dropdownContent}
           trigger="click"
           position="bl"
           onVisibleChange={(visible) => setIsDropdownVisible(visible)}
@@ -120,8 +120,7 @@ export function DealSelector({
         >
           <Button
             className={styles.selectorButton}
-            icon={<IconDown />}
-            iconPosition="end"
+            icon={<Down />}
             loading={isLoading}
           >
             {activeDeal ? activeDeal.name : 'Select a deal'}
@@ -129,7 +128,7 @@ export function DealSelector({
         </Dropdown>
         {activeDeal && (
           <span className={styles.activeIndicator}>
-            <IconCheck /> Active
+            <Check /> Active
           </span>
         )}
       </div>

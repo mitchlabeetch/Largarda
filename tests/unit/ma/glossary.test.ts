@@ -57,7 +57,7 @@ describe('listGlossaryEntries', () => {
 
 describe('searchGlossary', () => {
   it('ignores diacritics when matching', () => {
-    const results = searchGlossary('garantie d actif');
+    const results = searchGlossary("garantie d'actif");
     expect(results[0]?.id).toBe('garantie_passif');
   });
 

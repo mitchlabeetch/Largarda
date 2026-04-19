@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, Space } from '@arco-design/web-react';
-import { IconAdd, IconClose } from '@icon-park/react';
+import { Plus, Close } from '@icon-park/react';
 import type { DealContext, DealParty, TransactionType, CompanyInfo, CreateDealInput } from '@/common/ma/types';
 import styles from './DealForm.module.css';
 
@@ -274,7 +274,7 @@ export function DealForm({
                   {formData.parties.length > 1 && (
                     <Button
                       type="text"
-                      icon={<IconClose />}
+                      icon={<Close />}
                       onClick={() => handleRemoveParty(index)}
                       className={styles.removePartyButton}
                     />
@@ -283,7 +283,7 @@ export function DealForm({
               ))}
               <Button
                 type="secondary"
-                icon={<IconAdd />}
+                icon={<Plus />}
                 onClick={handleAddParty}
                 className={styles.addPartyButton}
               >

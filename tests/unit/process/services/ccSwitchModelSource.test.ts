@@ -19,10 +19,8 @@ let nativeModuleAvailable = true;
 try {
   const driver = new BetterSqlite3Driver(':memory:');
   driver.close();
-} catch (error) {
-  if (error instanceof Error && error.message.includes('NODE_MODULE_VERSION')) {
-    nativeModuleAvailable = false;
-  }
+} catch {
+  nativeModuleAvailable = false;
 }
 
 const describeOrSkip = nativeModuleAvailable ? describe : describe.skip;

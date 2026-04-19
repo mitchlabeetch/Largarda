@@ -1335,7 +1335,16 @@ export const ma = {
     delete: bridge.buildProvider<boolean, { id: string }>('ma.deal.delete'),
     list: bridge.buildProvider<DealContext[], { status?: string }>('ma.deal.list'),
     listActive: bridge.buildProvider<DealContext[], void>('ma.deal.list-active'),
+    setActive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.set-active'),
+    getActive: bridge.buildProvider<DealContext | null, void>('ma.deal.get-active'),
     archive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.archive'),
+    close: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.close'),
+    reactivate: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.reactivate'),
+    getContextForAI: bridge.buildProvider<
+      { hasContext: boolean; deal?: DealContext; contextString?: string },
+      void
+    >('ma.deal.get-context-for-ai'),
+    validate: bridge.buildProvider<{ valid: boolean; errors: string[] }, CreateDealInput>('ma.deal.validate'),
   },
   document: {
     create: bridge.buildProvider<MaDocument, CreateDocumentInput>('ma.document.create'),

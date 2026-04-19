@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { Upload, Progress, Button } from '@arco-design/web-react';
-import { IconUpload, IconClose, IconFile } from '@icon-park/react';
+import { Upload as UploadIcon, Close, FileText } from '@icon-park/react';
 import { ipcBridge } from '@/common';
 import type { DocumentFormat } from '@/common/ma/types';
 import styles from './DocumentUpload.module.css';
@@ -199,7 +199,7 @@ export function DocumentUpload({
         {items.map((item) => (
           <div key={item.uid} className={styles.uploadItem}>
             <div className={styles.fileInfo}>
-              <IconFile className={styles.fileIcon} />
+              <FileText className={styles.fileIcon} />
               <span className={styles.fileName}>{item.filename}</span>
               {item.status === 'error' && (
                 <span className={styles.errorText}>{item.error}</span>
@@ -222,7 +222,7 @@ export function DocumentUpload({
               <Button
                 type="text"
                 size="mini"
-                icon={<IconClose />}
+                icon={<Close />}
                 onClick={() => handleRemove(item.uid)}
                 className={styles.removeButton}
               />
@@ -258,7 +258,7 @@ export function DocumentUpload({
       >
         <div className={styles.dropzone}>
           <div className={styles.dropzoneContent}>
-            <IconUpload className={styles.uploadIcon} />
+            <UploadIcon className={styles.uploadIcon} />
             <div className={styles.dropzoneText}>
               <span className={styles.primaryText}>Click or drag files to upload</span>
               <span className={styles.secondaryText}>

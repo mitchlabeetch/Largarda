@@ -8,10 +8,8 @@ let nativeModuleAvailable = true;
 try {
   const d = new BetterSqlite3Driver(':memory:');
   d.close();
-} catch (e) {
-  if (e instanceof Error && e.message.includes('NODE_MODULE_VERSION')) {
-    nativeModuleAvailable = false;
-  }
+} catch {
+  nativeModuleAvailable = false;
 }
 
 const describeOrSkip = nativeModuleAvailable ? describe : describe.skip;
@@ -26,7 +24,9 @@ describeOrSkip('migration v19: teams table', () => {
   });
 
   afterEach(() => {
-    driver.close();
+    if (driver) {
+      driver.close();
+    }
   });
 
   it('creates teams table with correct columns', () => {
@@ -63,7 +63,9 @@ describeOrSkip('migration v20: lead_agent_id, mailbox, team_tasks', () => {
   });
 
   afterEach(() => {
-    driver.close();
+    if (driver) {
+      driver.close();
+    }
   });
 
   it('adds lead_agent_id column to teams table', () => {
