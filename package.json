@@ -121,7 +121,7 @@
     "mammoth": "^1.11.0",
     "mermaid": "^11.13.0",
     "multer": "^2.1.1",
-    "officeparser": "^5.2.2",
+    "officeparser": "^6.1.0",
     "openai": "^5.12.2",
     "pdf-parse": "^2.4.5",
     "pptx2json": "^0.0.10",
