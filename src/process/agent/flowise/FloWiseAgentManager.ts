@@ -13,7 +13,8 @@ import BaseAgentManager from '@process/task/BaseAgentManager';
 import type { IAgentEventEmitter } from '@process/task/IAgentEventEmitter';
 import type { IConfirmation } from '@/common/chat/chatLib';
 import type { DealContext, FlowInput, FlowResult, FlowEvent } from '@/common/ma/types';
-import { FloWiseConnection, FloWiseError, createFloWiseConnection } from './FloWiseConnection';
+import type { FloWiseConnection } from './FloWiseConnection';
+import { FloWiseError, createFloWiseConnection } from './FloWiseConnection';
 
 export type FloWiseAgentType = 'flowise';
 

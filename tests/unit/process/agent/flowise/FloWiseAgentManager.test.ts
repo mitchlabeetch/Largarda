@@ -85,10 +85,7 @@ describe('FloWiseAgentManager', () => {
         updatedAt: Date.now(),
       };
 
-      const manager = new FloWiseAgentManager(
-        { ...testData, dealContext },
-        mockEmitter
-      );
+      const manager = new FloWiseAgentManager({ ...testData, dealContext }, mockEmitter);
 
       expect(manager.getDealContext()).toEqual(dealContext);
     });
@@ -157,10 +154,7 @@ describe('FloWiseAgentManager', () => {
     });
 
     it('should clear deal context when set to null', () => {
-      const manager = new FloWiseAgentManager(
-        { ...testData, dealContext: {} as DealContext },
-        mockEmitter
-      );
+      const manager = new FloWiseAgentManager({ ...testData, dealContext: {} as DealContext }, mockEmitter);
 
       manager.setDealContext(null);
 

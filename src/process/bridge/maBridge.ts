@@ -28,11 +28,13 @@ import type {
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
+import { DealContextService } from '@process/services/ma/DealContextService';
 
 // Repository instances
 let dealRepo: DealRepository | null = null;
 let documentRepo: DocumentRepository | null = null;
 let analysisRepo: AnalysisRepository | null = null;
+let dealContextService: DealContextService | null = null;
 
 function getDealRepo(): DealRepository {
   if (!dealRepo) {
@@ -53,6 +55,13 @@ function getAnalysisRepo(): AnalysisRepository {
     analysisRepo = new AnalysisRepository();
   }
   return analysisRepo;
+}
+
+function getDealContextServiceInstance(): DealContextService {
+  if (!dealContextService) {
+    dealContextService = new DealContextService();
+  }
+  return dealContextService;
 }
 
 /**
@@ -122,11 +131,65 @@ export function initMaBridge(): void {
   // Archive a deal
   ipcBridge.ma.deal.archive.provider(async (params): Promise<DealContext | null> => {
     const { id } = params as { id: string };
-    const result = await getDealRepo().archive(id);
+    const result = await getDealContextServiceInstance().archiveDeal(id);
     if (!result.success) {
       throw new Error(result.error ?? 'Failed to archive deal');
     }
     return result.data ?? null;
+  });
+
+  // Set active deal
+  ipcBridge.ma.deal.setActive.provider(async (params): Promise<DealContext | null> => {
+    const { id } = params as { id: string };
+    const result = await getDealContextServiceInstance().setActiveDeal(id);
+    if (!result.success) {
+      throw new Error(result.error ?? 'Failed to set active deal');
+    }
+    return result.data ?? null;
+  });
+
+  // Get active deal
+  ipcBridge.ma.deal.getActive.provider(async (): Promise<DealContext | null> => {
+    const result = await getDealContextServiceInstance().getActiveDeal();
+    if (!result.success) {
+      throw new Error(result.error ?? 'Failed to get active deal');
+    }
+    return result.data;
+  });
+
+  // Get deal context for AI
+  ipcBridge.ma.deal.getContextForAI.provider(async (): Promise<{
+    hasContext: boolean;
+    deal?: DealContext;
+    contextString?: string;
+  }> => {
+    return getDealContextServiceInstance().getDealContextForAI();
+  });
+
+  // Close a deal
+  ipcBridge.ma.deal.close.provider(async (params): Promise<DealContext | null> => {
+    const { id } = params as { id: string };
+    const result = await getDealContextServiceInstance().closeDeal(id);
+    if (!result.success) {
+      throw new Error(result.error ?? 'Failed to close deal');
+    }
+    return result.data ?? null;
+  });
+
+  // Reactivate a deal
+  ipcBridge.ma.deal.reactivate.provider(async (params): Promise<DealContext | null> => {
+    const { id } = params as { id: string };
+    const result = await getDealContextServiceInstance().reactivateDeal(id);
+    if (!result.success) {
+      throw new Error(result.error ?? 'Failed to reactivate deal');
+    }
+    return result.data ?? null;
+  });
+
+  // Validate deal input
+  ipcBridge.ma.deal.validate.provider(async (params): Promise<{ valid: boolean; errors: string[] }> => {
+    const input = params as CreateDealInput;
+    return getDealContextServiceInstance().validateDealInput(input);
   });
 
   // ============================================================================

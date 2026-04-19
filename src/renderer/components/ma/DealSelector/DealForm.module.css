@@ -1,0 +1,95 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.required {
+  color: rgb(var(--red-6));
+  margin-left: 2px;
+}
+
+.partiesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.partyItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--color-fill-1);
+  border-radius: 6px;
+}
+
+.partyName {
+  flex: 1;
+}
+
+.partyRole {
+  width: 120px;
+}
+
+.removePartyButton {
+  color: rgb(var(--red-6));
+}
+
+.addPartyButton {
+  align-self: flex-start;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.errorMessage {
+  color: rgb(var(--red-6));
+  font-size: 12px;
+  padding: 8px;
+  background-color: rgb(var(--red-1));
+  border-radius: 4px;
+}
+
+.validationErrors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background-color: rgb(var(--red-1));
+  border-radius: 4px;
+}
+
+.validationError {
+  color: rgb(var(--red-6));
+  font-size: 12px;
+}
