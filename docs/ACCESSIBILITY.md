@@ -20,12 +20,12 @@ Largo targets **WCAG 2.1 Level AA** compliance across the Electron desktop app a
 
 ## Compliance Goals
 
-| Criterion | Target | Status |
-| --------- | ------ | ------ |
-| WCAG 2.1 Level A | Full compliance | 🔄 In progress |
-| WCAG 2.1 Level AA | Full compliance | 🔄 In progress |
-| WCAG 2.1 Level AAA | Best-effort (not required) | ⏳ Planned |
-| Section 508 | Informational | — |
+| Criterion          | Target                     | Status         |
+| ------------------ | -------------------------- | -------------- |
+| WCAG 2.1 Level A   | Full compliance            | 🔄 In progress |
+| WCAG 2.1 Level AA  | Full compliance            | 🔄 In progress |
+| WCAG 2.1 Level AAA | Best-effort (not required) | ⏳ Planned     |
+| Section 508        | Informational              | —              |
 
 ### Core Principles (POUR)
 
@@ -49,12 +49,12 @@ Largo targets **WCAG 2.1 Level AA** compliance across the Electron desktop app a
 
 ### Shortcuts
 
-| Action | Key(s) |
-| ------ | ------ |
-| Focus main content | `Skip link → Enter` |
-| Close modal/overlay | `Escape` |
-| Navigate sidebar | `Arrow Up / Down` |
-| Submit message | `Enter` (configurable) |
+| Action              | Key(s)                 |
+| ------------------- | ---------------------- |
+| Focus main content  | `Skip link → Enter`    |
+| Close modal/overlay | `Escape`               |
+| Navigate sidebar    | `Arrow Up / Down`      |
+| Submit message      | `Enter` (configurable) |
 
 ---
 
@@ -70,12 +70,12 @@ Largo targets **WCAG 2.1 Level AA** compliance across the Electron desktop app a
 
 ### Live Region Strategy
 
-| Content Type | `aria-live` | `aria-atomic` | Notes |
-| ------------ | ----------- | ------------- | ----- |
-| New chat messages | `polite` | `false` | Don't interrupt current speech |
-| Error alerts | `assertive` | `true` | Immediate notification |
-| Status updates | `polite` | `true` | e.g., "Connecting…", "Ready" |
-| Toast notifications | `polite` | `true` | Auto-dismiss after timeout |
+| Content Type        | `aria-live` | `aria-atomic` | Notes                          |
+| ------------------- | ----------- | ------------- | ------------------------------ |
+| New chat messages   | `polite`    | `false`       | Don't interrupt current speech |
+| Error alerts        | `assertive` | `true`        | Immediate notification         |
+| Status updates      | `polite`    | `true`        | e.g., "Connecting…", "Ready"   |
+| Toast notifications | `polite`    | `true`        | Auto-dismiss after timeout     |
 
 ---
 
@@ -85,12 +85,12 @@ Largo targets **WCAG 2.1 Level AA** compliance across the Electron desktop app a
 
 Largo's "Mint Whisper" design system uses mint-teal colors on cream backgrounds. All token pairings must meet WCAG AA contrast ratios:
 
-| Usage | Minimum Ratio | Standard |
-| ----- | ------------- | -------- |
-| Normal text (< 18pt) | 4.5:1 | AA |
-| Large text (≥ 18pt / 14pt bold) | 3:1 | AA |
-| UI components & graphical objects | 3:1 | AA |
-| Focus indicators | 3:1 | AA |
+| Usage                             | Minimum Ratio | Standard |
+| --------------------------------- | ------------- | -------- |
+| Normal text (< 18pt)              | 4.5:1         | AA       |
+| Large text (≥ 18pt / 14pt bold)   | 3:1           | AA       |
+| UI components & graphical objects | 3:1           | AA       |
+| Focus indicators                  | 3:1           | AA       |
 
 ### Token Pairings to Verify
 
@@ -144,12 +144,12 @@ The main chat area is a live log of messages.
 </div>
 ```
 
-| Attribute | Value | Purpose |
-| --------- | ----- | ------- |
-| `role` | `log` | Identifies as a sequential log |
-| `aria-live` | `polite` | Announces new messages without interrupting |
-| `aria-relevant` | `additions` | Only announce new messages, not removals |
-| `aria-label` | `"Chat messages"` | Names the region |
+| Attribute       | Value             | Purpose                                     |
+| --------------- | ----------------- | ------------------------------------------- |
+| `role`          | `log`             | Identifies as a sequential log              |
+| `aria-live`     | `polite`          | Announces new messages without interrupting |
+| `aria-relevant` | `additions`       | Only announce new messages, not removals    |
+| `aria-label`    | `"Chat messages"` | Names the region                            |
 
 ### Sidebar Navigation
 
@@ -187,7 +187,9 @@ The main chat area is a live log of messages.
   <fieldset>
     <legend>Appearance</legend>
     <label for="theme-select">Theme</label>
-    <select id="theme-select">...</select>
+    <select id="theme-select">
+      ...
+    </select>
   </fieldset>
 </form>
 ```
@@ -200,9 +202,7 @@ The main chat area is a live log of messages.
 ### Status Messages
 
 ```html
-<div role="status" aria-live="polite" aria-atomic="true">
-  Connecting to server…
-</div>
+<div role="status" aria-live="polite" aria-atomic="true">Connecting to server…</div>
 ```
 
 - Announced by screen readers without interrupting.
@@ -211,9 +211,7 @@ The main chat area is a live log of messages.
 ### Alert Messages
 
 ```html
-<div role="alert" aria-live="assertive" aria-atomic="true">
-  Error: Failed to send message. Please try again.
-</div>
+<div role="alert" aria-live="assertive" aria-atomic="true">Error: Failed to send message. Please try again.</div>
 ```
 
 - **Immediately** announced by screen readers.
@@ -230,7 +228,9 @@ Users who prefer reduced motion (via OS settings) must not see animations. The `
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -257,11 +257,11 @@ See `base.css` for the full implementation.
 
 ### Automated Testing
 
-| Tool | Purpose | When to Run |
-| ---- | ------- | ----------- |
-| axe-core / @axe-core/react | Runtime a11y violation detection | Development |
-| eslint-plugin-jsx-a11y | Static analysis of JSX | `bun run lint` |
-| Lighthouse (Accessibility audit) | Scoring and recommendations | Before release |
+| Tool                             | Purpose                          | When to Run    |
+| -------------------------------- | -------------------------------- | -------------- |
+| axe-core / @axe-core/react       | Runtime a11y violation detection | Development    |
+| eslint-plugin-jsx-a11y           | Static analysis of JSX           | `bun run lint` |
+| Lighthouse (Accessibility audit) | Scoring and recommendations      | Before release |
 
 ### Manual Testing Checklist
 
@@ -280,12 +280,12 @@ Run through these checks before each release:
 
 ### Screen Reader Test Matrix
 
-| Platform | Screen Reader | Browser/Runtime |
-| -------- | ------------- | --------------- |
-| macOS | VoiceOver | Electron / Safari |
-| Windows | NVDA | Electron / Chrome |
-| Windows | JAWS | Chrome |
-| Linux | Orca | Electron / Firefox |
+| Platform | Screen Reader | Browser/Runtime    |
+| -------- | ------------- | ------------------ |
+| macOS    | VoiceOver     | Electron / Safari  |
+| Windows  | NVDA          | Electron / Chrome  |
+| Windows  | JAWS          | Chrome             |
+| Linux    | Orca          | Electron / Firefox |
 
 ---
 
@@ -300,15 +300,15 @@ Run through these checks before each release:
 
 ### Planned Improvements
 
-| Priority | Improvement | Target |
-| -------- | ----------- | ------ |
-| P0 | Skip navigation link in main layout | Next release |
-| P0 | Audit all icon-only buttons for `aria-label` | Next release |
-| P1 | Add `aria-live` regions to chat message list | v2.x |
-| P1 | Keyboard shortcuts overlay / help dialog | v2.x |
-| P2 | Full NVDA + JAWS test pass | v2.x |
-| P2 | axe-core integration in CI pipeline | v2.x |
-| P3 | WCAG 2.1 AAA best-effort pass | v3.x |
+| Priority | Improvement                                  | Target       |
+| -------- | -------------------------------------------- | ------------ |
+| P0       | Skip navigation link in main layout          | Next release |
+| P0       | Audit all icon-only buttons for `aria-label` | Next release |
+| P1       | Add `aria-live` regions to chat message list | v2.x         |
+| P1       | Keyboard shortcuts overlay / help dialog     | v2.x         |
+| P2       | Full NVDA + JAWS test pass                   | v2.x         |
+| P2       | axe-core integration in CI pipeline          | v2.x         |
+| P3       | WCAG 2.1 AAA best-effort pass                | v3.x         |
 
 ---
 

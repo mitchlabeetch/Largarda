@@ -41,14 +41,14 @@ Pour chaque entreprise analysée, fournir :
 
 ### Scoring M&A
 
-| Critère | Poids | Évaluation |
-|---------|-------|-----------|
-| Croissance CA | 20% | > 10% = excellent |
-| Marge EBE | 25% | > 15% = solide |
-| Endettement | 15% | Gearing < 50% = sain |
-| Concentration client | 15% | < 20% top client = diversifié |
-| Management | 15% | Équipe stable, succession prévue |
-| Secteur | 10% | Tendance, multiples |
+| Critère              | Poids | Évaluation                       |
+| -------------------- | ----- | -------------------------------- |
+| Croissance CA        | 20%   | > 10% = excellent                |
+| Marge EBE            | 25%   | > 15% = solide                   |
+| Endettement          | 15%   | Gearing < 50% = sain             |
+| Concentration client | 15%   | < 20% top client = diversifié    |
+| Management           | 15%   | Équipe stable, succession prévue |
+| Secteur              | 10%   | Tendance, multiples              |
 
 ## Règles
 

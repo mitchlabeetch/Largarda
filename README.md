@@ -27,13 +27,13 @@ Largo is an AI-powered M&A (Mergers & Acquisitions) assistant purpose-built for 
 
 ### 🎯 M&A Intelligence
 
-| Capability | Details |
-|---|---|
-| **Assistant Presets** | M&A Partner (analysis & advice), Research (French company data via SIRENE, Pappers, Infogreffe), Valuation (sector multiples, DCF, adjusted net assets) |
-| **French Market Expertise** | Native French M&A terminology (EBE, CA, capitaux propres), small & mid-cap sector multiples |
-| **4-Phase M&A Framework** | Approche → LOI → Due Diligence → Closing |
-| **10 Golden Rules** | Built-in M&A best practices for deal execution |
-| **Target Scoring** | Attractiveness scoring for acquisition targets |
+| Capability                  | Details                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Assistant Presets**       | M&A Partner (analysis & advice), Research (French company data via SIRENE, Pappers, Infogreffe), Valuation (sector multiples, DCF, adjusted net assets) |
+| **French Market Expertise** | Native French M&A terminology (EBE, CA, capitaux propres), small & mid-cap sector multiples                                                             |
+| **4-Phase M&A Framework**   | Approche → LOI → Due Diligence → Closing                                                                                                                |
+| **10 Golden Rules**         | Built-in M&A best practices for deal execution                                                                                                          |
+| **Target Scoring**          | Attractiveness scoring for acquisition targets                                                                                                          |
 
 ### 📊 Document Automation
 
@@ -46,11 +46,11 @@ Create professional deliverables directly from conversations:
 
 ### 🤖 AI Providers
 
-| Provider | Models |
-|---|---|
-| **Anthropic** | Claude (Sonnet, Opus, Haiku) |
-| **OpenAI** | GPT-4o, GPT-4, o1, o3 |
-| **Google** | Gemini Pro, Gemini Flash |
+| Provider        | Models                          |
+| --------------- | ------------------------------- |
+| **Anthropic**   | Claude (Sonnet, Opus, Haiku)    |
+| **OpenAI**      | GPT-4o, GPT-4, o1, o3           |
+| **Google**      | Gemini Pro, Gemini Flash        |
 | **AWS Bedrock** | Claude, Titan, and more via AWS |
 
 ### 🧠 Agent System
@@ -69,27 +69,27 @@ Create professional deliverables directly from conversations:
 
 ### 💻 Multi-Platform
 
-| Platform | Technology |
-|---|---|
-| **Desktop** | macOS, Windows, Linux (Electron) |
-| **WebUI** | Browser-based access (standalone server) |
-| **Mobile** | React Native (iOS & Android) |
+| Platform    | Technology                               |
+| ----------- | ---------------------------------------- |
+| **Desktop** | macOS, Windows, Linux (Electron)         |
+| **WebUI**   | Browser-based access (standalone server) |
+| **Mobile**  | React Native (iOS & Android)             |
 
 ### 🌍 Internationalization / Internationalisation
 
 9 languages supported — French is the primary language:
 
-| | Language | Code |
-|---|---|---|
-| 🇫🇷 | Français *(primary)* | `fr-FR` |
-| 🇺🇸 | English | `en-US` |
-| 🇨🇳 | 简体中文 | `zh-CN` |
-| 🇯🇵 | 日本語 | `ja-JP` |
-| 🇹🇼 | 繁體中文 | `zh-TW` |
-| 🇰🇷 | 한국어 | `ko-KR` |
-| 🇹🇷 | Türkçe | `tr-TR` |
-| 🇷🇺 | Русский | `ru-RU` |
-| 🇺🇦 | Українська | `uk-UA` |
+|     | Language             | Code    |
+| --- | -------------------- | ------- |
+| 🇫🇷  | Français _(primary)_ | `fr-FR` |
+| 🇺🇸  | English              | `en-US` |
+| 🇨🇳  | 简体中文             | `zh-CN` |
+| 🇯🇵  | 日本語               | `ja-JP` |
+| 🇹🇼  | 繁體中文             | `zh-TW` |
+| 🇰🇷  | 한국어               | `ko-KR` |
+| 🇹🇷  | Türkçe               | `tr-TR` |
+| 🇷🇺  | Русский              | `ru-RU` |
+| 🇺🇦  | Українська           | `uk-UA` |
 
 ---
 
@@ -97,9 +97,9 @@ Create professional deliverables directly from conversations:
 
 > **TODO:** Add screenshots of the Largo interface.
 
-| Light Mode | Dark Mode |
-|---|---|
-| *Screenshot coming soon* | *Screenshot coming soon* |
+| Light Mode               | Dark Mode                |
+| ------------------------ | ------------------------ |
+| _Screenshot coming soon_ | _Screenshot coming soon_ |
 
 ---
 
@@ -165,12 +165,12 @@ Largo follows a **3-process model** inherited from AionUi, ensuring strict separ
 
 Largo's visual identity is built on the **Mint Whisper** theme — a fresh, airy aesthetic with mint-teal accents and warm cream backgrounds.
 
-| Pillar | Description |
-|---|---|
-| **Breathing** | Generous spacing and soft contrasts |
-| **Freshness** | Mint-teal accents that energize without overwhelming |
-| **Warmth** | Inviting cream backgrounds, never clinical |
-| **Refinement** | Subtle gradients and smooth transitions |
+| Pillar         | Description                                          |
+| -------------- | ---------------------------------------------------- |
+| **Breathing**  | Generous spacing and soft contrasts                  |
+| **Freshness**  | Mint-teal accents that energize without overwhelming |
+| **Warmth**     | Inviting cream backgrounds, never clinical           |
+| **Refinement** | Subtle gradients and smooth transitions              |
 
 **Typography:** Plus Jakarta Sans (body) · Cormorant Garamond (headings) · JetBrains Mono (code)
 
@@ -180,17 +180,17 @@ Largo's visual identity is built on the **Mint Whisper** theme — a fresh, airy
 
 ## 📚 Documentation
 
-| Document | Description |
-|---|---|
-| [Architecture](docs/ARCHITECTURE.md) | 3-process model, IPC bridge, module layout |
-| [Design System](docs/DESIGN_SYSTEM.md) | Mint Whisper theme, typography, color tokens |
-| [Security](docs/SECURITY.md) | Auth, encryption, threat model, privacy |
-| [Roadmap](ROADMAP.md) | Planned features and milestones |
-| [Contributing](CONTRIBUTING.md) | Development workflow, PR guidelines |
-| [Contributing (中文)](CONTRIBUTING.zh.md) | Contribution guide in Chinese |
-| [Code Style](docs/CODE_STYLE.md) | Naming, linting, formatting rules |
-| [WebUI Guide](docs/WEBUI_GUIDE.md) | Browser-based deployment and usage |
-| [Server Deploy](docs/SERVER_DEPLOY_GUIDE.md) | Production server deployment |
+| Document                                     | Description                                  |
+| -------------------------------------------- | -------------------------------------------- |
+| [Architecture](docs/ARCHITECTURE.md)         | 3-process model, IPC bridge, module layout   |
+| [Design System](docs/DESIGN_SYSTEM.md)       | Mint Whisper theme, typography, color tokens |
+| [Security](docs/SECURITY.md)                 | Auth, encryption, threat model, privacy      |
+| [Roadmap](ROADMAP.md)                        | Planned features and milestones              |
+| [Contributing](CONTRIBUTING.md)              | Development workflow, PR guidelines          |
+| [Contributing (中文)](CONTRIBUTING.zh.md)    | Contribution guide in Chinese                |
+| [Code Style](docs/CODE_STYLE.md)             | Naming, linting, formatting rules            |
+| [WebUI Guide](docs/WEBUI_GUIDE.md)           | Browser-based deployment and usage           |
+| [Server Deploy](docs/SERVER_DEPLOY_GUIDE.md) | Production server deployment                 |
 
 ---
 
@@ -249,7 +249,7 @@ See [ROADMAP.md](ROADMAP.md) for planned features, upcoming milestones, and the 
 
 Built with 🌿 by the Largo team
 
-*Largo — Partner, not tool. Adaptive, not static.*\
-*Largo — Partenaire, pas outil. Évolutif, pas statique.*
+_Largo — Partner, not tool. Adaptive, not static._\
+_Largo — Partenaire, pas outil. Évolutif, pas statique._
 
 </div>

@@ -1179,6 +1179,116 @@ const migration_v25: IMigration = {
 };
 
 /**
+ * Migration v25 -> v26: Add M&A Assistant tables
+ * Tables for deal management, document processing, due diligence analysis, and Flowise sessions.
+ */
+const migration_v26: IMigration = {
+  version: 26,
+  name: 'Add M&A Assistant tables',
+  up: (db) => {
+    // Deals table - stores M&A deal context
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_deals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      parties TEXT NOT NULL,
+      transaction_type TEXT NOT NULL,
+      target_company TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      extra TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_deals_status ON ma_deals(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_deals_created_at ON ma_deals(created_at)');
+
+    // Documents table - stores uploaded M&A documents
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_documents (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      original_path TEXT NOT NULL,
+      format TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      text_content TEXT,
+      chunks TEXT,
+      metadata TEXT,
+      status TEXT DEFAULT 'pending',
+      error TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_documents_deal_id ON ma_documents(deal_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_documents_status ON ma_documents(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_documents_format ON ma_documents(format)');
+
+    // Analyses table - stores due diligence and other analysis results
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_analyses (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      flow_id TEXT,
+      input TEXT NOT NULL,
+      result TEXT,
+      status TEXT DEFAULT 'pending',
+      error TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      completed_at INTEGER,
+      FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_analyses_deal_id ON ma_analyses(deal_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_analyses_type ON ma_analyses(type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_analyses_status ON ma_analyses(status)');
+
+    // Risk findings table - stores individual risk findings from analyses
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_risk_findings (
+      id TEXT PRIMARY KEY,
+      analysis_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      evidence TEXT,
+      recommendation TEXT,
+      source_document_id TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      FOREIGN KEY (analysis_id) REFERENCES ma_analyses(id) ON DELETE CASCADE,
+      FOREIGN KEY (source_document_id) REFERENCES ma_documents(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_risk_findings_analysis_id ON ma_risk_findings(analysis_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_risk_findings_category ON ma_risk_findings(category)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_risk_findings_severity ON ma_risk_findings(severity)');
+
+    // Flowise sessions table - stores Flowise conversation sessions
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_flowise_sessions (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      flow_id TEXT NOT NULL,
+      deal_id TEXT,
+      session_key TEXT,
+      config TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE SET NULL
+    )`);
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_ma_flowise_sessions_conversation_id ON ma_flowise_sessions(conversation_id)'
+    );
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_flowise_sessions_flow_id ON ma_flowise_sessions(flow_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_flowise_sessions_deal_id ON ma_flowise_sessions(deal_id)');
+
+    console.log('[Migration v26] Added M&A Assistant tables');
+  },
+  down: (db) => {
+    db.exec('DROP TABLE IF EXISTS ma_flowise_sessions');
+    db.exec('DROP TABLE IF EXISTS ma_risk_findings');
+    db.exec('DROP TABLE IF EXISTS ma_analyses');
+    db.exec('DROP TABLE IF EXISTS ma_documents');
+    db.exec('DROP TABLE IF EXISTS ma_deals');
+    console.log('[Migration v26] Rolled back: Removed M&A Assistant tables');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1187,7 +1297,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
-  migration_v25,
+  migration_v25, migration_v26,
 ];
 
 /**

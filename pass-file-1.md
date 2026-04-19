@@ -36,7 +36,7 @@ Located at `src/common/ma/valuation/` with a single public API surface via
 - `multiples.ts` — EV/EBITDA, EV/Revenue, P/E with caller-supplied benchmarks.
   Net-debt bridge applied only on EV-side metrics; P/E stays equity-side.
   Aggregate range (envelope of lows & highs across usable metrics).
-- `anr.ts` — *Actif net réévalué* from book equity plus a list of revaluation
+- `anr.ts` — _Actif net réévalué_ from book equity plus a list of revaluation
   adjustments.
 - `ruleOfThumb.ts` — ships 8 default sector rules (`pharmacie`, `restaurant`,
   `boulangerie`, `cabinet_expertise_comptable`, `agence_immobiliere`,
@@ -90,8 +90,7 @@ test cases" — achieved with 40.
   `build-webui` (builds `out/renderer` + `dist-server` and uploads them).
   Concurrency groups cancel superseded runs.
 - `.github/workflows/docker.yml` builds the `largo-webapp:ci` image from the
-  existing `Dockerfile` and performs a 30-second `curl` boot smoke on port
-  3000.
+  existing `Dockerfile` and performs a 30-second `curl` boot smoke on port 3000.
 - Jobs use `oven-sh/setup-bun@v2` + `actions/setup-node@v4`.
 - Release workflow deliberately omitted for now — see ADR 0003's "Not yet in
   scope" section for the queue (release signing, Playwright in CI, perf-delta,
@@ -114,14 +113,14 @@ test cases" — achieved with 40.
 
 ## Gate results on this branch
 
-| Gate                                     | Result |
-| ---------------------------------------- | ------ |
-| `bunx oxlint src/common/ma tests/unit/ma` | 0 warnings, 0 errors |
-| `bunx oxfmt --check` on changed files     | clean |
-| `bunx tsc --noEmit`                      | clean |
-| `node scripts/generate-i18n-types.js`    | clean (types unchanged after regen on a clean apply) |
-| `node scripts/check-i18n.js`             | PASS (pre-existing `settings.wecom.*` warnings only) |
-| `bunx vitest run tests/unit/ma`          | 47/47 (40 valuation + 7 incidentally matched) |
+| Gate                                      | Result                                               |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `bunx oxlint src/common/ma tests/unit/ma` | 0 warnings, 0 errors                                 |
+| `bunx oxfmt --check` on changed files     | clean                                                |
+| `bunx tsc --noEmit`                       | clean                                                |
+| `node scripts/generate-i18n-types.js`     | clean (types unchanged after regen on a clean apply) |
+| `node scripts/check-i18n.js`              | PASS (pre-existing `settings.wecom.*` warnings only) |
+| `bunx vitest run tests/unit/ma`           | 47/47 (40 valuation + 7 incidentally matched)        |
 
 Note: the full `vitest run` over the 267-file suite was not attempted in this
 pass because many existing tests depend on Electron/node-pty/sqlite native

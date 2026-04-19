@@ -43,6 +43,7 @@ import { initWorkspaceSnapshotBridge } from './workspaceSnapshotBridge';
 import { initRemoteAgentBridge } from './remoteAgentBridge';
 import { initHubBridge } from './hubBridge';
 import { initTeamBridge } from './teamBridge';
+import { initMaBridge } from './maBridge';
 import type { TeamSessionService } from '@process/team/TeamSessionService';
 
 export interface BridgeDependencies {
@@ -92,6 +93,7 @@ export function initAllBridges(deps: BridgeDependencies): void {
   initRemoteAgentBridge();
   initHubBridge();
   initTeamBridge(deps.teamSessionService);
+  initMaBridge();
 }
 
 /**
@@ -141,6 +143,7 @@ export {
   initWindowControlsBridge,
   initWeixinLoginBridge,
   initWorkspaceSnapshotBridge,
+  initMaBridge,
 };
 export { disposeAllSnapshots } from './workspaceSnapshotBridge';
 export { disposeAllTeamSessions } from './teamBridge';

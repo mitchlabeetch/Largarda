@@ -1309,3 +1309,63 @@ export const team = {
   listChanged: bridge.buildEmitter<import('@/common/types/teamTypes').ITeamListChangedEvent>('team.list-changed'),
   mcpStatus: bridge.buildEmitter<import('@/common/types/teamTypes').ITeamMcpStatusEvent>('team.mcp.status'),
 };
+
+// ==================== M&A Assistant API ====================
+import type {
+  DealContext,
+  CreateDealInput,
+  UpdateDealInput,
+  MaDocument,
+  CreateDocumentInput,
+  UpdateDocumentInput,
+  MaAnalysis,
+  CreateAnalysisInput,
+  UpdateAnalysisInput,
+  RiskFinding,
+  CreateRiskFindingInput,
+  FlowiseSession,
+  CreateFlowiseSessionInput,
+} from '@/common/ma/types';
+
+export const ma = {
+  deal: {
+    create: bridge.buildProvider<DealContext, CreateDealInput>('ma.deal.create'),
+    get: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.get'),
+    update: bridge.buildProvider<DealContext | null, { id: string; updates: UpdateDealInput }>('ma.deal.update'),
+    delete: bridge.buildProvider<boolean, { id: string }>('ma.deal.delete'),
+    list: bridge.buildProvider<DealContext[], { status?: string }>('ma.deal.list'),
+    listActive: bridge.buildProvider<DealContext[], void>('ma.deal.list-active'),
+    archive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.archive'),
+  },
+  document: {
+    create: bridge.buildProvider<MaDocument, CreateDocumentInput>('ma.document.create'),
+    get: bridge.buildProvider<MaDocument | null, { id: string }>('ma.document.get'),
+    update: bridge.buildProvider<MaDocument | null, { id: string; updates: UpdateDocumentInput }>('ma.document.update'),
+    delete: bridge.buildProvider<boolean, { id: string }>('ma.document.delete'),
+    listByDeal: bridge.buildProvider<MaDocument[], { dealId: string }>('ma.document.list-by-deal'),
+    updateStatus: bridge.buildProvider<MaDocument | null, { id: string; status: string; error?: string }>(
+      'ma.document.update-status'
+    ),
+  },
+  analysis: {
+    create: bridge.buildProvider<MaAnalysis, CreateAnalysisInput>('ma.analysis.create'),
+    get: bridge.buildProvider<MaAnalysis | null, { id: string }>('ma.analysis.get'),
+    update: bridge.buildProvider<MaAnalysis | null, { id: string; updates: UpdateAnalysisInput }>('ma.analysis.update'),
+    delete: bridge.buildProvider<boolean, { id: string }>('ma.analysis.delete'),
+    listByDeal: bridge.buildProvider<MaAnalysis[], { dealId: string }>('ma.analysis.list-by-deal'),
+    updateStatus: bridge.buildProvider<MaAnalysis | null, { id: string; status: string; error?: string }>(
+      'ma.analysis.update-status'
+    ),
+  },
+  riskFinding: {
+    create: bridge.buildProvider<RiskFinding, CreateRiskFindingInput>('ma.risk-finding.create'),
+    listByAnalysis: bridge.buildProvider<RiskFinding[], { analysisId: string }>('ma.risk-finding.list-by-analysis'),
+    delete: bridge.buildProvider<boolean, { id: string }>('ma.risk-finding.delete'),
+  },
+  flowiseSession: {
+    create: bridge.buildProvider<FlowiseSession, CreateFlowiseSessionInput>('ma.flowise-session.create'),
+    getByConversation: bridge.buildProvider<FlowiseSession | null, { conversationId: string }>(
+      'ma.flowise-session.get-by-conversation'
+    ),
+  },
+};

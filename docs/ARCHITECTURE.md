@@ -77,12 +77,12 @@ a mobile companion app.
 Largo enforces strict process isolation. Mixing APIs across boundaries is
 **prohibited**.
 
-| Process | Location | Allowed APIs | Forbidden |
-|---------|----------|-------------|-----------|
-| **Main** | `src/process/` | Node.js, Electron Main, `fs`, `child_process` | DOM, `window`, `document` |
-| **Renderer** | `src/renderer/` | DOM, React, Browser APIs | `require()`, `fs`, Node.js |
-| **Worker** | `src/process/worker/` | Node.js (forked child) | Electron APIs, DOM |
-| **Preload** | `src/preload.ts` | `contextBridge`, limited Node.js | Direct main-process access |
+| Process      | Location              | Allowed APIs                                  | Forbidden                  |
+| ------------ | --------------------- | --------------------------------------------- | -------------------------- |
+| **Main**     | `src/process/`        | Node.js, Electron Main, `fs`, `child_process` | DOM, `window`, `document`  |
+| **Renderer** | `src/renderer/`       | DOM, React, Browser APIs                      | `require()`, `fs`, Node.js |
+| **Worker**   | `src/process/worker/` | Node.js (forked child)                        | Electron APIs, DOM         |
+| **Preload**  | `src/preload.ts`      | `contextBridge`, limited Node.js              | Direct main-process access |
 
 ```
 ┌─────────────┐        ┌─────────────┐        ┌─────────────┐
@@ -360,14 +360,14 @@ ACP (Agent Communication Protocol) is the primary integration layer:
 
 ### Provider Comparison
 
-| Provider | Transport | Stateful | Use Case |
-|----------|-----------|----------|----------|
-| **ACP** | stdio (child process) | Yes | Primary — Claude, Codex, Codebuddy, Qwen, Iflow |
-| **Gemini** | @office-ai/aioncli-core | Yes | Google Gemini models |
-| **Aionrs** | Rust binary (stdio) | Yes (session resume) | High-performance Rust agent |
-| **OpenClaw** | TCP socket to gateway | Yes | Gateway-routed agents |
-| **Nanobot** | CLI spawn per message | No | Lightweight stateless tasks |
-| **Remote** | HTTP / WebSocket | Varies | External agent services |
+| Provider     | Transport               | Stateful             | Use Case                                        |
+| ------------ | ----------------------- | -------------------- | ----------------------------------------------- |
+| **ACP**      | stdio (child process)   | Yes                  | Primary — Claude, Codex, Codebuddy, Qwen, Iflow |
+| **Gemini**   | @office-ai/aioncli-core | Yes                  | Google Gemini models                            |
+| **Aionrs**   | Rust binary (stdio)     | Yes (session resume) | High-performance Rust agent                     |
+| **OpenClaw** | TCP socket to gateway   | Yes                  | Gateway-routed agents                           |
+| **Nanobot**  | CLI spawn per message   | No                   | Lightweight stateless tasks                     |
+| **Remote**   | HTTP / WebSocket        | Varies               | External agent services                         |
 
 ---
 
@@ -426,13 +426,13 @@ for safety. Hooks can be defined as:
 ```jsonc
 {
   "lifecycle": {
-    "onActivate": "scripts/activate.js",            // Simple path
+    "onActivate": "scripts/activate.js", // Simple path
     "onInstall": { "script": "setup.js", "timeout": 90 },
     "onDeactivate": {
       "shell": { "cliCommand": "cleanup", "args": ["--all"] },
-      "timeout": 15
-    }
-  }
+      "timeout": 15,
+    },
+  },
 }
 ```
 
@@ -440,19 +440,19 @@ for safety. Hooks can be defined as:
 
 Extensions declare capabilities via a typed `contributes` manifest:
 
-| Contribution | Resolver | Purpose |
-|-------------|----------|---------|
-| `acpAdapters` | AcpAdapterResolver | Custom ACP backend adapters |
-| `mcpServers` | McpServerResolver | MCP server definitions |
-| `assistants` | AssistantResolver | Assistant presets |
-| `agents` | AssistantResolver | Agent definitions |
-| `skills` | SkillResolver | Skill / tool definitions |
-| `themes` | ThemeResolver | CSS themes |
-| `channelPlugins` | ChannelPluginResolver | Messaging channel plugins |
-| `webui` | WebuiResolver | WebUI routes, WS handlers, middleware |
-| `settingsTabs` | SettingsTabResolver | Custom settings panels |
-| `modelProviders` | ModelProviderResolver | Additional model providers |
-| `i18n` | I18nResolver | Translation bundles |
+| Contribution     | Resolver              | Purpose                               |
+| ---------------- | --------------------- | ------------------------------------- |
+| `acpAdapters`    | AcpAdapterResolver    | Custom ACP backend adapters           |
+| `mcpServers`     | McpServerResolver     | MCP server definitions                |
+| `assistants`     | AssistantResolver     | Assistant presets                     |
+| `agents`         | AssistantResolver     | Agent definitions                     |
+| `skills`         | SkillResolver         | Skill / tool definitions              |
+| `themes`         | ThemeResolver         | CSS themes                            |
+| `channelPlugins` | ChannelPluginResolver | Messaging channel plugins             |
+| `webui`          | WebuiResolver         | WebUI routes, WS handlers, middleware |
+| `settingsTabs`   | SettingsTabResolver   | Custom settings panels                |
+| `modelProviders` | ModelProviderResolver | Additional model providers            |
+| `i18n`           | I18nResolver          | Translation bundles                   |
 
 ### Permission System
 
@@ -548,10 +548,10 @@ sequenceDiagram
 
 ```typescript
 type McpTransport =
-  | { type: 'stdio';           command: string; args?: string[]; env?: Record<string, string> }
-  | { type: 'sse';             url: string; headers?: Record<string, string> }
-  | { type: 'http';            url: string; headers?: Record<string, string> }
-  | { type: 'streamable_http'; url: string; headers?: Record<string, string> }
+  | { type: 'stdio'; command: string; args?: string[]; env?: Record<string, string> }
+  | { type: 'sse'; url: string; headers?: Record<string, string> }
+  | { type: 'http'; url: string; headers?: Record<string, string> }
+  | { type: 'streamable_http'; url: string; headers?: Record<string, string> };
 ```
 
 ### Backend-Specific MCP Agents
@@ -559,16 +559,16 @@ type McpTransport =
 Each AI backend has a dedicated MCP agent wrapper that handles protocol
 translation:
 
-| Agent | Backend | Notes |
-|-------|---------|-------|
-| ClaudeMcpAgent | Claude (Anthropic) | Native MCP support |
-| GeminiMcpAgent | Gemini (Google) | Tool format conversion |
-| CodexMcpAgent | Codex | OpenAI function-calling bridge |
-| CodebuddyMcpAgent | Codebuddy | Custom adapter |
-| QwenMcpAgent | Qwen | Alibaba Cloud integration |
-| IflowMcpAgent | Iflow | Workflow engine |
-| AionrsMcpAgent | Aionrs | Rust agent MCP relay |
-| AionuiMcpAgent | AionUI native | @office-ai/aioncli-core |
+| Agent             | Backend            | Notes                          |
+| ----------------- | ------------------ | ------------------------------ |
+| ClaudeMcpAgent    | Claude (Anthropic) | Native MCP support             |
+| GeminiMcpAgent    | Gemini (Google)    | Tool format conversion         |
+| CodexMcpAgent     | Codex              | OpenAI function-calling bridge |
+| CodebuddyMcpAgent | Codebuddy          | Custom adapter                 |
+| QwenMcpAgent      | Qwen               | Alibaba Cloud integration      |
+| IflowMcpAgent     | Iflow              | Workflow engine                |
+| AionrsMcpAgent    | Aionrs             | Rust agent MCP relay           |
+| AionuiMcpAgent    | AionUI native      | @office-ai/aioncli-core        |
 
 ### Built-in MCP Servers
 
@@ -618,13 +618,13 @@ Each channel plugin implements `BasePlugin`:
 
 ### Supported Platforms
 
-| Platform | Plugin | Features |
-|----------|--------|----------|
-| Telegram | `TelegramPlugin` | Inline keyboards, markdown, file upload |
-| Lark (Feishu) | `LarkPlugin` | Interactive cards, rich text |
-| DingTalk | `DingTalkPlugin` | Action cards, @mentions |
-| WeChat | `WeixinPlugin` | QR login, typing indicators |
-| WeCom | `WecomPlugin` | Crypto, streaming state |
+| Platform      | Plugin           | Features                                |
+| ------------- | ---------------- | --------------------------------------- |
+| Telegram      | `TelegramPlugin` | Inline keyboards, markdown, file upload |
+| Lark (Feishu) | `LarkPlugin`     | Interactive cards, rich text            |
+| DingTalk      | `DingTalkPlugin` | Action cards, @mentions                 |
+| WeChat        | `WeixinPlugin`   | QR login, typing indicators             |
+| WeCom         | `WecomPlugin`    | Crypto, streaming state                 |
 
 ---
 
@@ -694,13 +694,13 @@ sequenceDiagram
 
 Team prompts (in `src/process/team/prompts/`) define agent behavior:
 
-| Prompt | Purpose |
-|--------|---------|
-| `leadPrompt.ts` | Lead agent: task decomposition, delegation, synthesis |
-| `teammatePrompt.ts` | Teammate: focused execution, status reporting |
-| `teamGuidePrompt.ts` | Team advisor: best practices, suggestions |
-| `buildRolePrompt.ts` | Dynamic role construction from agent config |
-| `toolDescriptions.ts` | MCP tool documentation for agents |
+| Prompt                | Purpose                                               |
+| --------------------- | ----------------------------------------------------- |
+| `leadPrompt.ts`       | Lead agent: task decomposition, delegation, synthesis |
+| `teammatePrompt.ts`   | Teammate: focused execution, status reporting         |
+| `teamGuidePrompt.ts`  | Team advisor: best practices, suggestions             |
+| `buildRolePrompt.ts`  | Dynamic role construction from agent config           |
+| `toolDescriptions.ts` | MCP tool documentation for agents                     |
 
 ---
 
@@ -751,22 +751,22 @@ driver) in **WAL mode** for concurrent read/write performance.
 
 ### Index Strategy
 
-| Table | Indices | Purpose |
-|-------|---------|---------|
-| `conversations` | `(user_id, updated_at DESC)` | Efficient conversation list |
-| `messages` | `(conversation_id, created_at)` | Message history retrieval |
-| `teams` | `(user_id, updated_at)` | Team list per user |
-| `mailbox` | `(team_id, to_agent_id, read)` | Unread message queries |
-| `team_tasks` | `(team_id, status)` | Task filtering by status |
+| Table           | Indices                         | Purpose                     |
+| --------------- | ------------------------------- | --------------------------- |
+| `conversations` | `(user_id, updated_at DESC)`    | Efficient conversation list |
+| `messages`      | `(conversation_id, created_at)` | Message history retrieval   |
+| `teams`         | `(user_id, updated_at)`         | Team list per user          |
+| `mailbox`       | `(team_id, to_agent_id, read)`  | Unread message queries      |
+| `team_tasks`    | `(team_id, status)`             | Task filtering by status    |
 
 ### Driver Abstraction
 
 ```typescript
 interface ISqliteDriver {
-  prepare(sql: string): Statement
-  exec(sql: string): void
-  transaction(fn: () => void): void
-  close(): void
+  prepare(sql: string): Statement;
+  exec(sql: string): void;
+  transaction(fn: () => void): void;
+  close(): void;
 }
 
 // Implementations:
@@ -895,18 +895,18 @@ Largo supports three deployment modes sharing the same codebase:
 
 ### Security Controls
 
-| Layer | Mechanism | Implementation |
-|-------|-----------|----------------|
-| **Authentication** | JWT tokens | `webserver/auth/AuthService` — bcrypt-hashed passwords |
-| **Session** | HTTP-only cookies | Secure, SameSite=Strict in production |
-| **CSRF** | Token validation | `tiny-csrf` middleware |
-| **Rate Limiting** | Request throttling | `express-rate-limit` per route |
-| **API Keys** | Local encrypted storage | Keys never leave the device; per-provider isolation |
-| **Extensions** | Permission system | Declared permissions analyzed for risk level |
-| **Extension Isolation** | Forked processes | Lifecycle hooks run in `child_process.fork()` |
-| **Renderer** | Context isolation | `contextBridge` — no direct Node.js access |
-| **Database** | Encrypted storage | SQLite with application-level encryption |
-| **Telemetry** | None | No third-party telemetry or analytics |
+| Layer                   | Mechanism               | Implementation                                         |
+| ----------------------- | ----------------------- | ------------------------------------------------------ |
+| **Authentication**      | JWT tokens              | `webserver/auth/AuthService` — bcrypt-hashed passwords |
+| **Session**             | HTTP-only cookies       | Secure, SameSite=Strict in production                  |
+| **CSRF**                | Token validation        | `tiny-csrf` middleware                                 |
+| **Rate Limiting**       | Request throttling      | `express-rate-limit` per route                         |
+| **API Keys**            | Local encrypted storage | Keys never leave the device; per-provider isolation    |
+| **Extensions**          | Permission system       | Declared permissions analyzed for risk level           |
+| **Extension Isolation** | Forked processes        | Lifecycle hooks run in `child_process.fork()`          |
+| **Renderer**            | Context isolation       | `contextBridge` — no direct Node.js access             |
+| **Database**            | Encrypted storage       | SQLite with application-level encryption               |
+| **Telemetry**           | None                    | No third-party telemetry or analytics                  |
 
 ### Data Flow Security
 
@@ -925,58 +925,58 @@ Largo supports three deployment modes sharing the same codebase:
 
 ### Core Runtime
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Desktop Shell | Electron | 37 |
-| JavaScript Runtime | Node.js | 22+ |
-| Package Manager | Bun | latest |
-| Language | TypeScript | strict mode |
+| Component          | Technology | Version     |
+| ------------------ | ---------- | ----------- |
+| Desktop Shell      | Electron   | 37          |
+| JavaScript Runtime | Node.js    | 22+         |
+| Package Manager    | Bun        | latest      |
+| Language           | TypeScript | strict mode |
 
 ### Frontend
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| UI Framework | React | 19 |
-| Component Library | Arco Design | 2.66 |
-| Icons | Icon Park React | latest |
-| Styling | UnoCSS + CSS Modules | latest |
-| Data Fetching | SWR | latest |
-| i18n | i18next + react-i18next | 9 languages, 20 modules |
+| Component         | Technology              | Version                 |
+| ----------------- | ----------------------- | ----------------------- |
+| UI Framework      | React                   | 19                      |
+| Component Library | Arco Design             | 2.66                    |
+| Icons             | Icon Park React         | latest                  |
+| Styling           | UnoCSS + CSS Modules    | latest                  |
+| Data Fetching     | SWR                     | latest                  |
+| i18n              | i18next + react-i18next | 9 languages, 20 modules |
 
 ### Backend / Main Process
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Database | SQLite (better-sqlite3) | 12.4 |
-| Web Framework | Express | 5.1 |
-| WebSocket | ws | 8.18 |
-| Auth | JWT (jsonwebtoken) + bcrypt | — |
-| MCP SDK | @modelcontextprotocol/sdk | 1.20 |
+| Component     | Technology                  | Version |
+| ------------- | --------------------------- | ------- |
+| Database      | SQLite (better-sqlite3)     | 12.4    |
+| Web Framework | Express                     | 5.1     |
+| WebSocket     | ws                          | 8.18    |
+| Auth          | JWT (jsonwebtoken) + bcrypt | —       |
+| MCP SDK       | @modelcontextprotocol/sdk   | 1.20    |
 
 ### AI Integrations
 
-| Provider | SDK | Version |
-|----------|-----|---------|
-| Anthropic (Claude) | @anthropic-ai/sdk | 0.71 |
-| Google (Gemini) | @google/genai | 1.16 |
-| OpenAI | openai | 5.12 |
-| AWS Bedrock | @aws-sdk/client-bedrock-runtime | latest |
-| AionUI Core | @office-ai/aioncli-core | 0.30 |
+| Provider           | SDK                             | Version |
+| ------------------ | ------------------------------- | ------- |
+| Anthropic (Claude) | @anthropic-ai/sdk               | 0.71    |
+| Google (Gemini)    | @google/genai                   | 1.16    |
+| OpenAI             | openai                          | 5.12    |
+| AWS Bedrock        | @aws-sdk/client-bedrock-runtime | latest  |
+| AionUI Core        | @office-ai/aioncli-core         | 0.30    |
 
 ### Build & Quality
 
-| Component | Technology |
-|-----------|-----------|
-| Bundler | electron-vite 5 + Vite 6 |
-| Transpiler | esbuild |
-| Unit Testing | Vitest 4 |
-| E2E Testing | Playwright |
-| Linter | oxlint |
-| Formatter | oxfmt |
+| Component    | Technology                                      |
+| ------------ | ----------------------------------------------- |
+| Bundler      | electron-vite 5 + Vite 6                        |
+| Transpiler   | esbuild                                         |
+| Unit Testing | Vitest 4                                        |
+| E2E Testing  | Playwright                                      |
+| Linter       | oxlint                                          |
+| Formatter    | oxfmt                                           |
 | Path Aliases | `@/*`, `@process/*`, `@renderer/*`, `@worker/*` |
 
 ---
 
-*This document is auto-maintained. For contribution guidelines, see
+_This document is auto-maintained. For contribution guidelines, see
 [CONTRIBUTING.md](../CONTRIBUTING.md). For file structure conventions, see
-[docs/conventions/file-structure.md](conventions/file-structure.md).*
+[docs/conventions/file-structure.md](conventions/file-structure.md)._

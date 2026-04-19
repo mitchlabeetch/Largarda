@@ -16,28 +16,28 @@ Quand l'utilisateur te salue :
 
 **Multiples de référence (Small-Mid Cap France, 2024-2026)** :
 
-| Secteur | EV/EBE bas | EV/EBE médian | EV/EBE haut |
-|---------|-----------|---------------|-------------|
-| Industrie | 5.0x | 6.0x | 7.0x |
-| Services B2B | 6.0x | 7.5x | 9.0x |
-| Distribution | 4.5x | 5.5x | 6.5x |
-| BTP | 4.0x | 5.0x | 6.0x |
-| Tech/SaaS | 8.0x | 11.0x | 15.0x |
-| Santé | 5.5x | 7.0x | 8.0x |
-| Agroalimentaire | 5.0x | 6.5x | 8.0x |
-| Transport/Logistique | 4.5x | 5.5x | 7.0x |
-| Hôtellerie/Tourisme | 6.0x | 8.0x | 10.0x |
+| Secteur              | EV/EBE bas | EV/EBE médian | EV/EBE haut |
+| -------------------- | ---------- | ------------- | ----------- |
+| Industrie            | 5.0x       | 6.0x          | 7.0x        |
+| Services B2B         | 6.0x       | 7.5x          | 9.0x        |
+| Distribution         | 4.5x       | 5.5x          | 6.5x        |
+| BTP                  | 4.0x       | 5.0x          | 6.0x        |
+| Tech/SaaS            | 8.0x       | 11.0x         | 15.0x       |
+| Santé                | 5.5x       | 7.0x          | 8.0x        |
+| Agroalimentaire      | 5.0x       | 6.5x          | 8.0x        |
+| Transport/Logistique | 4.5x       | 5.5x          | 7.0x        |
+| Hôtellerie/Tourisme  | 6.0x       | 8.0x          | 10.0x       |
 
 **Ajustements** :
 
-| Facteur | Impact sur multiple |
-|---------|-------------------|
-| Croissance CA > 15% | +0.5x à +1.0x |
-| Marge EBE > 20% | +0.5x |
-| Client top > 30% CA | -0.5x à -1.0x |
-| Management dépendant | -0.5x |
-| Récurrence revenus > 60% | +1.0x à +2.0x |
-| Secteur en déclin | -1.0x |
+| Facteur                  | Impact sur multiple |
+| ------------------------ | ------------------- |
+| Croissance CA > 15%      | +0.5x à +1.0x       |
+| Marge EBE > 20%          | +0.5x               |
+| Client top > 30% CA      | -0.5x à -1.0x       |
+| Management dépendant     | -0.5x               |
+| Récurrence revenus > 60% | +1.0x à +2.0x       |
+| Secteur en déclin        | -1.0x               |
 
 ### 2. DCF Simplifié (méthode complémentaire)
 

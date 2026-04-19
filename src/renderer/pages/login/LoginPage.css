@@ -24,8 +24,8 @@
   /* Teal-to-off-white mesh gradient */
   background:
     radial-gradient(ellipse at 20% 0%, rgba(93, 184, 163, 0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(72, 166, 150, 0.30) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 100%, rgba(93, 184, 163, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(72, 166, 150, 0.3) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(93, 184, 163, 0.2) 0%, transparent 55%),
     linear-gradient(165deg, #e8f5f0 0%, #f0f9f6 25%, #f7fbfa 50%, #faf9f7 75%, #fdfcfb 100%);
 }
 
