@@ -47,14 +47,7 @@ const initialCompanyInfo: CompanyInfo = {
   jurisdiction: '',
 };
 
-export function DealForm({
-  visible,
-  deal,
-  onSubmit,
-  onClose,
-  validateInput,
-  loading = false,
-}: DealFormProps) {
+export function DealForm({ visible, deal, onSubmit, onClose, validateInput, loading = false }: DealFormProps) {
   const [formData, setFormData] = useState<CreateDealInput>({
     name: '',
     parties: [{ ...initialParty }],
@@ -90,7 +83,7 @@ export function DealForm({
     setFormData((prev) => {
       const newData = { ...prev };
       const fields = field.split('.');
-      
+
       if (fields.length === 1) {
         (newData as Record<string, unknown>)[fields[0]] = value;
       } else if (fields.length === 2) {
@@ -99,7 +92,7 @@ export function DealForm({
           newData.targetCompany = { ...newData.targetCompany, [child]: value };
         }
       }
-      
+
       return newData;
     });
     setValidationErrors([]);
@@ -131,7 +124,7 @@ export function DealForm({
   const handleSubmit = useCallback(async () => {
     // Client-side validation
     const errors: string[] = [];
-    
+
     if (!formData.name?.trim()) {
       errors.push('Deal name is required');
     }
@@ -176,7 +169,7 @@ export function DealForm({
       onOk={handleSubmit}
       onCancel={onClose}
       okText={isEditing ? 'Save Changes' : 'Create Deal'}
-      cancelText="Cancel"
+      cancelText='Cancel'
       confirmLoading={loading}
       autoFocus={false}
       focusLock
@@ -193,7 +186,7 @@ export function DealForm({
           </div>
         )}
 
-        <Form className={styles.form} layout="vertical">
+        <Form className={styles.form} layout='vertical'>
           <div className={styles.formGroup}>
             <span className={styles.label}>
               Deal Name <span className={styles.required}>*</span>
@@ -201,7 +194,7 @@ export function DealForm({
             <Input
               value={formData.name}
               onChange={(value) => handleFieldChange('name', value)}
-              placeholder="e.g., Project Alpha Acquisition"
+              placeholder='e.g., Project Alpha Acquisition'
               allowClear
             />
           </div>
@@ -213,7 +206,7 @@ export function DealForm({
             <Select
               value={formData.transactionType}
               onChange={(value) => handleFieldChange('transactionType', value)}
-              placeholder="Select transaction type"
+              placeholder='Select transaction type'
               options={TRANSACTION_TYPES}
             />
           </div>
@@ -225,7 +218,7 @@ export function DealForm({
             <Input
               value={formData.targetCompany?.name}
               onChange={(value) => handleFieldChange('targetCompany.name', value)}
-              placeholder="Company name"
+              placeholder='Company name'
               allowClear
             />
           </div>
@@ -236,7 +229,7 @@ export function DealForm({
               <Input
                 value={formData.targetCompany?.industry}
                 onChange={(value) => handleFieldChange('targetCompany.industry', value)}
-                placeholder="e.g., Technology"
+                placeholder='e.g., Technology'
                 allowClear
               />
             </div>
@@ -245,7 +238,7 @@ export function DealForm({
               <Input
                 value={formData.targetCompany?.jurisdiction}
                 onChange={(value) => handleFieldChange('targetCompany.jurisdiction', value)}
-                placeholder="e.g., Delaware, USA"
+                placeholder='e.g., Delaware, USA'
                 allowClear
               />
             </div>
@@ -262,7 +255,7 @@ export function DealForm({
                     className={styles.partyName}
                     value={party.name}
                     onChange={(value) => handlePartyChange(index, 'name', value)}
-                    placeholder="Party name"
+                    placeholder='Party name'
                     allowClear
                   />
                   <Select
@@ -273,7 +266,7 @@ export function DealForm({
                   />
                   {formData.parties.length > 1 && (
                     <Button
-                      type="text"
+                      type='text'
                       icon={<Close />}
                       onClick={() => handleRemoveParty(index)}
                       className={styles.removePartyButton}
@@ -281,12 +274,7 @@ export function DealForm({
                   )}
                 </div>
               ))}
-              <Button
-                type="secondary"
-                icon={<Plus />}
-                onClick={handleAddParty}
-                className={styles.addPartyButton}
-              >
+              <Button type='secondary' icon={<Plus />} onClick={handleAddParty} className={styles.addPartyButton}>
                 Add Party
               </Button>
             </div>

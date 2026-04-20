@@ -23,11 +23,11 @@ Live verification completed on `2026-04-19` against the Flowise instance the use
 
 Verified objects returned by the live instance:
 
-| ID | Name | Type | Deployed | Public | Updated |
-| --- | --- | --- | --- | --- | --- |
-| `697004ac-f76a-4400-bb61-7afb42a65c39` | `Company_Look_Up` | `AGENTFLOW` | `false` | `false` | `2026-04-19T04:58:23.000Z` |
-| `2ab0be12-f65c-4c0e-8f4d-7dd36fa599e2` | `Largo` | `ASSISTANT` | unknown | unknown | `2026-04-19T03:56:22.000Z` |
-| `3a668c37-e508-4e72-8d6e-826f18efa00c` | `Largo Cherche` | `AGENTFLOW` | `false` | `false` | `2026-04-12T13:11:42.000Z` |
+| ID                                     | Name              | Type        | Deployed | Public  | Updated                    |
+| -------------------------------------- | ----------------- | ----------- | -------- | ------- | -------------------------- |
+| `697004ac-f76a-4400-bb61-7afb42a65c39` | `Company_Look_Up` | `AGENTFLOW` | `false`  | `false` | `2026-04-19T04:58:23.000Z` |
+| `2ab0be12-f65c-4c0e-8f4d-7dd36fa599e2` | `Largo`           | `ASSISTANT` | unknown  | unknown | `2026-04-19T03:56:22.000Z` |
+| `3a668c37-e508-4e72-8d6e-826f18efa00c` | `Largo Cherche`   | `AGENTFLOW` | `false`  | `false` | `2026-04-12T13:11:42.000Z` |
 
 Interpretation:
 
@@ -67,15 +67,15 @@ Important detail:
 
 ## Endpoint Matrix
 
-| Endpoint | Method | Status in AionUi | Current Use | Auth | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `/api/v1/prediction/:flowId` | `POST` | Active | Execute a Flowise flow and get a final result | Optional Bearer token | Used by `executeFlow(...)` |
-| `/api/v1/prediction/:flowId` | `POST` | Active | Stream flow execution events and final result | Optional Bearer token | Used by `streamFlow(...)` |
-| `/api/v1/chatflows` | `GET` | Active | List available flows | Optional Bearer token | Also used as health check |
-| `/api/v1/chatflows/:flowId` | `GET` | Active | Fetch one flow definition/metadata | Optional Bearer token | Used by `getFlow(...)` |
-| `/api/v1/vector/upsert` | unknown | Declared only | Not wired | Unknown | Present in constants only |
-| `/api/v1/vector/query` | unknown | Declared only | Not wired | Unknown | Present in constants only |
-| `/api/v2/agentflows` | unknown | Declared only | Not wired | Unknown | Present in constants only |
+| Endpoint                     | Method  | Status in AionUi | Current Use                                   | Auth                  | Notes                      |
+| ---------------------------- | ------- | ---------------- | --------------------------------------------- | --------------------- | -------------------------- |
+| `/api/v1/prediction/:flowId` | `POST`  | Active           | Execute a Flowise flow and get a final result | Optional Bearer token | Used by `executeFlow(...)` |
+| `/api/v1/prediction/:flowId` | `POST`  | Active           | Stream flow execution events and final result | Optional Bearer token | Used by `streamFlow(...)`  |
+| `/api/v1/chatflows`          | `GET`   | Active           | List available flows                          | Optional Bearer token | Also used as health check  |
+| `/api/v1/chatflows/:flowId`  | `GET`   | Active           | Fetch one flow definition/metadata            | Optional Bearer token | Used by `getFlow(...)`     |
+| `/api/v1/vector/upsert`      | unknown | Declared only    | Not wired                                     | Unknown               | Present in constants only  |
+| `/api/v1/vector/query`       | unknown | Declared only    | Not wired                                     | Unknown               | Present in constants only  |
+| `/api/v2/agentflows`         | unknown | Declared only    | Not wired                                     | Unknown               | Present in constants only  |
 
 ## Actual Request Shapes
 
@@ -117,15 +117,15 @@ Important project-specific note:
 
 The streaming parser converts Flowise event names into AionUi agent events.
 
-| Flowise event | AionUi event | Meaning |
-| --- | --- | --- |
-| `token` | `token` | Token stream to UI |
-| `metadata` | `node_start` | Node start-ish lifecycle signal |
-| `usedTools` | `tool_call` | Tool usage surfaced to agent UI |
-| `sourceDocuments` | `node_end` | Retrieval/source completion-ish signal |
-| `agentReasoning` | `tool_call` | Reasoning/tool-like activity |
-| `error` | `error` | Error surfaced to UI |
-| `complete` | `complete` | Final parsed flow result |
+| Flowise event     | AionUi event | Meaning                                |
+| ----------------- | ------------ | -------------------------------------- |
+| `token`           | `token`      | Token stream to UI                     |
+| `metadata`        | `node_start` | Node start-ish lifecycle signal        |
+| `usedTools`       | `tool_call`  | Tool usage surfaced to agent UI        |
+| `sourceDocuments` | `node_end`   | Retrieval/source completion-ish signal |
+| `agentReasoning`  | `tool_call`  | Reasoning/tool-like activity           |
+| `error`           | `error`      | Error surfaced to UI                   |
+| `complete`        | `complete`   | Final parsed flow result               |
 
 Final parsed result shape:
 

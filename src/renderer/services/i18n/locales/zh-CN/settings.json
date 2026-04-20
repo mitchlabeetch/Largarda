@@ -244,7 +244,39 @@
   "capabilities": "能力扩展",
   "capabilitiesTab": {
     "skills": "技能",
-    "tools": "MCP 与语音"
+    "tools": "MCP 与语音",
+    "integrations": "集成"
+  },
+  "integrations": {
+    "description": "通过 Nango 连接外部系统，让 Largo 在 M&A 工作流中接入 CRM、存储及其他第三方上下文。",
+    "emptyHint": "当前没有可用集成。请先在桌面环境中配置 Nango 以启用外部连接。",
+    "empty": "暂无可用集成",
+    "loadFailed": "加载集成失败",
+    "loadFailedWithReason": "加载集成失败：{{reason}}",
+    "connectSuccess": "集成连接成功",
+    "connectFailed": "完成集成连接失败",
+    "connectFailedWithReason": "无法打开集成流程：{{reason}}",
+    "connectStarted": "已打开连接流程",
+    "reconnectStarted": "已打开重新连接流程",
+    "disconnectSuccess": "集成已断开",
+    "disconnectFailed": "断开集成失败",
+    "disconnectFailedWithReason": "断开集成失败：{{reason}}",
+    "defaultDescription": "连接此提供方后，基于 Flowise 的 M&A 工作流即可访问外部数据。",
+    "connected": "已连接",
+    "connectionId": "连接 ID",
+    "lastError": "最近错误",
+    "connect": "连接",
+    "reconnect": "重新连接",
+    "disconnect": "断开连接",
+    "refresh": "刷新",
+    "status": {
+      "not_connected": "未连接",
+      "connecting": "连接中",
+      "connected": "已连接",
+      "reauth_required": "需要重新认证",
+      "error": "错误",
+      "disabled": "已禁用"
+    }
   },
   "webui": "远程连接",
   "installed": "已安装",

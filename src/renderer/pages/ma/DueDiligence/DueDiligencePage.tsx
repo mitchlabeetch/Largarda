@@ -1,0 +1,619 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * DueDiligencePage Component
+ * Main page for due diligence analysis with document selection, configuration,
+ * progress display, results visualization, and comparison view.
+ */
+
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  Button,
+  Card,
+  Checkbox,
+  Empty,
+  Message,
+  Modal,
+  Progress,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from '@arco-design/web-react';
+import {
+  Play,
+  Refresh,
+  Analysis as CompareIcon,
+  DocDetail as DocumentIcon,
+  Analysis,
+  Attention,
+  Success,
+  Close,
+} from '@icon-park/react';
+import { useTranslation } from 'react-i18next';
+import { RiskScoreCard } from '@/renderer/components/ma/RiskScoreCard';
+import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
+import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
+import { useDueDiligence } from '@/renderer/hooks/ma/useDueDiligence';
+import type { MaDocument, RiskCategory, RiskSeverity } from '@/common/ma/types';
+import type { AnalysisType, DueDiligenceResult, ComparisonResult } from '@process/services/ma/DueDiligenceService';
+import styles from './DueDiligencePage.module.css';
+
+const { Title, Text } = Typography;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type ViewMode = 'analysis' | 'comparison' | 'history';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const SEVERITY_COLORS: Record<RiskSeverity, string> = {
+  low: 'green',
+  medium: 'orange',
+  high: 'red',
+  critical: 'purple',
+};
+
+const EMPTY_RISK_SCORES: Record<RiskCategory, number> = {
+  financial: 0,
+  legal: 0,
+  operational: 0,
+  regulatory: 0,
+  reputational: 0,
+};
+
+// ============================================================================
+// Sub-Components
+// ============================================================================
+
+interface DocumentSelectorProps {
+  documents: MaDocument[];
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+}
+
+function DocumentSelector({ documents, selectedIds, onSelectionChange }: DocumentSelectorProps) {
+  const { t } = useTranslation();
+
+  const handleSelectAll = useCallback(() => {
+    onSelectionChange(documents.map((d) => d.id));
+  }, [documents, onSelectionChange]);
+
+  const handleClearAll = useCallback(() => {
+    onSelectionChange([]);
+  }, [onSelectionChange]);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      if (selectedIds.includes(id)) {
+        onSelectionChange(selectedIds.filter((i) => i !== id));
+      } else {
+        onSelectionChange([...selectedIds, id]);
+      }
+    },
+    [selectedIds, onSelectionChange]
+  );
+
+  if (documents.length === 0) {
+    return (
+      <div className={styles.emptyDocuments}>
+        <Empty description={t('ma.dueDiligence.documents.empty')} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.documentSelector}>
+      <div className={styles.selectorHeader}>
+        <Text>
+          {t('ma.dueDiligence.documents.selectCount', { selected: selectedIds.length, total: documents.length })}
+        </Text>
+        <div className={styles.selectorActions}>
+          <Button size='small' onClick={handleSelectAll}>
+            {t('ma.dueDiligence.documents.selectAll')}
+          </Button>
+          <Button size='small' onClick={handleClearAll}>
+            {t('ma.dueDiligence.documents.clear')}
+          </Button>
+        </div>
+      </div>
+      <div className={styles.documentList}>
+        {documents.map((doc) => (
+          <div
+            key={doc.id}
+            className={`${styles.documentItem} ${selectedIds.includes(doc.id) ? styles.selected : ''}`}
+            onClick={() => handleToggle(doc.id)}
+          >
+            <Checkbox checked={selectedIds.includes(doc.id)} />
+            <DocumentIcon className={styles.documentIcon} />
+            <div className={styles.documentInfo}>
+              <span className={styles.documentName}>{doc.filename}</span>
+              <span className={styles.documentMeta}>
+                {doc.format.toUpperCase()} • {doc.metadata?.documentType ?? t('ma.dueDiligence.documents.unknownType')}
+              </span>
+            </div>
+            <Tag size='small' color={doc.status === 'completed' ? 'green' : doc.status === 'error' ? 'red' : 'blue'}>
+              {doc.status}
+            </Tag>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface AnalysisConfigProps {
+  selectedTypes: AnalysisType[];
+  onTypesChange: (types: AnalysisType[]) => void;
+}
+
+function AnalysisConfig({ selectedTypes, onTypesChange }: AnalysisConfigProps) {
+  const { t } = useTranslation();
+
+  const analysisTypes: { value: AnalysisType; labelKey: string; descriptionKey: string }[] = [
+    {
+      value: 'due_diligence',
+      labelKey: 'ma.dueDiligence.analysisTypes.dueDiligence',
+      descriptionKey: 'ma.dueDiligence.analysisTypes.dueDiligenceDesc',
+    },
+    {
+      value: 'risk_assessment',
+      labelKey: 'ma.dueDiligence.analysisTypes.riskAssessment',
+      descriptionKey: 'ma.dueDiligence.analysisTypes.riskAssessmentDesc',
+    },
+    {
+      value: 'financial_extraction',
+      labelKey: 'ma.dueDiligence.analysisTypes.financialExtraction',
+      descriptionKey: 'ma.dueDiligence.analysisTypes.financialExtractionDesc',
+    },
+    {
+      value: 'document_comparison',
+      labelKey: 'ma.dueDiligence.analysisTypes.documentComparison',
+      descriptionKey: 'ma.dueDiligence.analysisTypes.documentComparisonDesc',
+    },
+  ];
+
+  const handleToggle = useCallback(
+    (type: AnalysisType) => {
+      if (selectedTypes.includes(type)) {
+        onTypesChange(selectedTypes.filter((t) => t !== type));
+      } else {
+        onTypesChange([...selectedTypes, type]);
+      }
+    },
+    [selectedTypes, onTypesChange]
+  );
+
+  return (
+    <div className={styles.analysisConfig}>
+      <Text className={styles.configLabel}>{t('ma.dueDiligence.analysisTypes.title')}</Text>
+      <div className={styles.typeList}>
+        {analysisTypes.map((type) => (
+          <div
+            key={type.value}
+            className={`${styles.typeItem} ${selectedTypes.includes(type.value) ? styles.selected : ''}`}
+            onClick={() => handleToggle(type.value)}
+          >
+            <Checkbox checked={selectedTypes.includes(type.value)} />
+            <div className={styles.typeInfo}>
+              <span className={styles.typeLabel}>{t(type.labelKey)}</span>
+              <span className={styles.typeDescription}>{t(type.descriptionKey)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface ProgressDisplayProps {
+  progress: {
+    stage: string;
+    progress: number;
+    message?: string;
+    currentDocument?: string;
+    risksFound?: number;
+  };
+}
+
+function ProgressDisplay({ progress }: ProgressDisplayProps) {
+  const { t } = useTranslation();
+
+  const stageLabels: Record<string, string> = {
+    initializing: t('ma.dueDiligence.progress.stages.initializing'),
+    extracting: t('ma.dueDiligence.progress.stages.extracting'),
+    analyzing: t('ma.dueDiligence.progress.stages.analyzing'),
+    scoring: t('ma.dueDiligence.progress.stages.scoring'),
+    complete: t('ma.dueDiligence.progress.stages.complete'),
+    error: t('ma.dueDiligence.progress.stages.error'),
+  };
+
+  return (
+    <div className={styles.progressDisplay}>
+      <div className={styles.progressHeader}>
+        <Text className={styles.progressStage}>{stageLabels[progress.stage] ?? progress.stage}</Text>
+        {progress.risksFound !== undefined && (
+          <Tag color='blue'>{t('ma.dueDiligence.progress.risksFound', { count: progress.risksFound })}</Tag>
+        )}
+      </div>
+      <Progress
+        percent={progress.progress}
+        status={progress.stage === 'error' ? 'error' : progress.stage === 'complete' ? 'success' : 'normal'}
+      />
+      {progress.message && <Text className={styles.progressMessage}>{progress.message}</Text>}
+      {progress.currentDocument && <Text className={styles.progressDocument}>📄 {progress.currentDocument}</Text>}
+    </div>
+  );
+}
+
+interface ResultsDisplayProps {
+  result: DueDiligenceResult;
+  onCompare?: () => void;
+}
+
+function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
+  const { t } = useTranslation();
+  const [selectedCategory, setSelectedCategory] = useState<RiskCategory | null>(null);
+
+  const filteredRisks = useMemo(() => {
+    if (!selectedCategory) return result.risks;
+    return result.risks.filter((r) => r.category === selectedCategory);
+  }, [result.risks, selectedCategory]);
+
+  const columns = [
+    {
+      title: t('ma.dueDiligence.results.severity'),
+      dataIndex: 'severity',
+      key: 'severity',
+      width: 100,
+      render: (severity: RiskSeverity) => <Tag color={SEVERITY_COLORS[severity]}>{severity.toUpperCase()}</Tag>,
+    },
+    {
+      title: t('ma.dueDiligence.results.score'),
+      dataIndex: 'score',
+      key: 'score',
+      width: 80,
+      render: (score: number) => <Text bold>{score}</Text>,
+    },
+    {
+      title: t('ma.dueDiligence.results.title'),
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string) => <Text>{title}</Text>,
+    },
+    {
+      title: t('ma.dueDiligence.results.category'),
+      dataIndex: 'category',
+      key: 'category',
+      width: 120,
+      render: (category: RiskCategory) => <Tag>{category.charAt(0).toUpperCase() + category.slice(1)}</Tag>,
+    },
+  ];
+
+  return (
+    <div className={styles.resultsDisplay}>
+      {/* Summary Card */}
+      <Card className={styles.summaryCard}>
+        <div className={styles.summaryHeader}>
+          <Title heading={5}>{t('ma.dueDiligence.results.summary')}</Title>
+          <Text type='secondary'>
+            {t('ma.dueDiligence.results.generatedAt')}: {new Date(result.generatedAt).toLocaleString()}
+          </Text>
+        </div>
+        <Text className={styles.summaryText}>{result.summary}</Text>
+        {result.recommendations.length > 0 && (
+          <div className={styles.recommendations}>
+            <Text className={styles.recommendationsTitle}>{t('ma.dueDiligence.results.recommendations')}</Text>
+            <ul className={styles.recommendationsList}>
+              {result.recommendations.map((rec, index) => (
+                <li key={index}>{rec}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {onCompare && (
+          <Button icon={<CompareIcon />} onClick={onCompare}>
+            {t('ma.dueDiligence.results.compareDeals')}
+          </Button>
+        )}
+      </Card>
+
+      {/* Risk Score Card */}
+      <RiskScoreCard riskScores={result.riskScores} overallScore={result.overallRiskScore} risks={result.risks} />
+
+      {/* Risk Findings Table */}
+      <Card className={styles.findingsCard}>
+        <div className={styles.findingsHeader}>
+          <Title heading={5}>{t('ma.dueDiligence.results.findings', { count: result.risks.length })}</Title>
+          <div className={styles.categoryFilters}>
+            {(['financial', 'legal', 'operational', 'regulatory', 'reputational'] as RiskCategory[]).map((cat) => (
+              <Button
+                key={cat}
+                size='small'
+                type={selectedCategory === cat ? 'primary' : 'default'}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              >
+                {t(`ma.dueDiligence.categories.${cat}`)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <Table columns={columns} data={filteredRisks} rowKey='id' pagination={{ pageSize: 10 }} size='small' />
+      </Card>
+    </div>
+  );
+}
+
+interface ComparisonDisplayProps {
+  comparison: ComparisonResult;
+  onClose: () => void;
+}
+
+function ComparisonDisplay({ comparison, onClose }: ComparisonDisplayProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div className={styles.comparisonDisplay}>
+      <div className={styles.comparisonHeader}>
+        <Title heading={5}>{t('ma.dueDiligence.comparison.title')}</Title>
+        <Button icon={<Close />} onClick={onClose} />
+      </div>
+
+      <Card className={styles.comparisonSummary}>
+        <Text>{comparison.comparison.summary}</Text>
+      </Card>
+
+      <RiskScoreCard
+        riskScores={comparison.deals[0]?.categoryScores ?? EMPTY_RISK_SCORES}
+        isComparison
+        comparisonData={comparison.comparison.categoryComparison}
+      />
+
+      <Card className={styles.topRisksCard}>
+        <Title heading={5}>{t('ma.dueDiligence.comparison.topRisks')}</Title>
+        <div className={styles.topRisksList}>
+          {comparison.comparison.topRisks.map((risk) => (
+            <div key={risk.id} className={styles.topRiskItem}>
+              <Tag color={SEVERITY_COLORS[risk.severity]}>{risk.severity}</Tag>
+              <Text>{risk.title}</Text>
+              <Text type='secondary'>
+                {t('ma.dueDiligence.results.score')}: {risk.score}
+              </Text>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
+export function DueDiligencePage() {
+  const { t } = useTranslation();
+  const { activeDeal, deals } = useDealContext();
+  const { documents, isLoading: documentsLoading } = useDocuments({
+    dealId: activeDeal?.id ?? '',
+    autoRefresh: !!activeDeal,
+  });
+
+  const {
+    analyses,
+    currentAnalysis,
+    isLoading: analysesLoading,
+    startAnalysis,
+    cancelAnalysis,
+    compareDeals,
+    refresh,
+  } = useDueDiligence({ dealId: activeDeal?.id });
+
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [selectedAnalysisTypes, setSelectedAnalysisTypes] = useState<AnalysisType[]>(['due_diligence']);
+  const [viewMode, setViewMode] = useState<ViewMode>('analysis');
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
+
+  const canStartAnalysis = useMemo(() => {
+    return (
+      activeDeal && selectedDocumentIds.length > 0 && selectedAnalysisTypes.length > 0 && !currentAnalysis.isRunning
+    );
+  }, [activeDeal, selectedDocumentIds, selectedAnalysisTypes, currentAnalysis.isRunning]);
+
+  const handleStartAnalysis = useCallback(async () => {
+    if (!canStartAnalysis) return;
+
+    try {
+      await startAnalysis({
+        documentIds: selectedDocumentIds,
+        analysisTypes: selectedAnalysisTypes,
+      });
+      Message.success(t('ma.dueDiligence.messages.analysisSuccess'));
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : t('ma.dueDiligence.messages.analysisFailed'));
+    }
+  }, [canStartAnalysis, selectedDocumentIds, selectedAnalysisTypes, startAnalysis, t]);
+
+  const handleCompare = useCallback(async () => {
+    const activeDeals = deals.filter((d) => d.status === 'active');
+    if (activeDeals.length < 2) {
+      Message.warning(t('ma.dueDiligence.messages.needTwoDeals'));
+      return;
+    }
+
+    setIsComparing(true);
+    try {
+      const result = await compareDeals(activeDeals.map((d) => d.id));
+      setComparisonResult(result);
+      setViewMode('comparison');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : t('ma.dueDiligence.messages.comparisonFailed'));
+    } finally {
+      setIsComparing(false);
+    }
+  }, [deals, compareDeals, t]);
+
+  const latestAnalysis = analyses[0];
+
+  if (!activeDeal) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.emptyState}>
+          <Empty description={t('ma.dueDiligence.empty.selectDeal')} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.titleSection}>
+          <Title heading={4}>{t('ma.dueDiligence.title')}</Title>
+          <Text type='secondary'>{activeDeal.name}</Text>
+        </div>
+        <div className={styles.actions}>
+          <Button icon={<Refresh />} onClick={refresh}>
+            {t('ma.dueDiligence.actions.refresh')}
+          </Button>
+          <Button
+            icon={<CompareIcon />}
+            onClick={handleCompare}
+            loading={isComparing}
+            disabled={deals.filter((d) => d.status === 'active').length < 2}
+          >
+            {t('ma.dueDiligence.actions.compareDeals')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className={styles.content}>
+        {/* Left Panel - Configuration */}
+        <div className={styles.configPanel}>
+          <Card className={styles.configCard}>
+            <Title heading={5}>{t('ma.dueDiligence.documents.title')}</Title>
+            {documentsLoading ? (
+              <div className={styles.loadingState}>
+                <Spin />
+              </div>
+            ) : (
+              <DocumentSelector
+                documents={documents}
+                selectedIds={selectedDocumentIds}
+                onSelectionChange={setSelectedDocumentIds}
+              />
+            )}
+          </Card>
+
+          <Card className={styles.configCard}>
+            <AnalysisConfig selectedTypes={selectedAnalysisTypes} onTypesChange={setSelectedAnalysisTypes} />
+          </Card>
+
+          <div className={styles.startButton}>
+            <Button
+              type='primary'
+              size='large'
+              icon={<Play />}
+              onClick={handleStartAnalysis}
+              disabled={!canStartAnalysis}
+              loading={currentAnalysis.isRunning}
+              long
+            >
+              {currentAnalysis.isRunning
+                ? t('ma.dueDiligence.actions.analyzing')
+                : t('ma.dueDiligence.actions.startAnalysis')}
+            </Button>
+            {currentAnalysis.isRunning && (
+              <Button size='large' icon={<Close />} onClick={cancelAnalysis} status='danger'>
+                {t('ma.dueDiligence.actions.cancel')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Results */}
+        <div className={styles.resultsPanel}>
+          {/* Progress Display */}
+          {currentAnalysis.isRunning && currentAnalysis.progress && (
+            <Card className={styles.progressCard}>
+              <ProgressDisplay progress={currentAnalysis.progress} />
+            </Card>
+          )}
+
+          {/* Error Display */}
+          {currentAnalysis.error && (
+            <Card className={styles.errorCard}>
+              <div className={styles.errorContent}>
+                <Attention className={styles.errorIcon} />
+                <Text type='error'>{currentAnalysis.error}</Text>
+              </div>
+            </Card>
+          )}
+
+          {/* Comparison View */}
+          {viewMode === 'comparison' && comparisonResult && (
+            <ComparisonDisplay
+              comparison={comparisonResult}
+              onClose={() => {
+                setComparisonResult(null);
+                setViewMode('analysis');
+              }}
+            />
+          )}
+
+          {/* Results Display */}
+          {viewMode === 'analysis' && latestAnalysis && !currentAnalysis.isRunning && (
+            <ResultsDisplay result={latestAnalysis} onCompare={handleCompare} />
+          )}
+
+          {/* Empty State */}
+          {viewMode === 'analysis' && !latestAnalysis && !currentAnalysis.isRunning && !currentAnalysis.error && (
+            <div className={styles.emptyResults}>
+              <Empty
+                icon={<Analysis className={styles.emptyIcon} />}
+                description={t('ma.dueDiligence.empty.noResults')}
+              />
+            </div>
+          )}
+
+          {/* History */}
+          {viewMode === 'history' && (
+            <Card>
+              <Title heading={5}>{t('ma.dueDiligence.history.title')}</Title>
+              {analyses.length === 0 ? (
+                <Empty description={t('ma.dueDiligence.history.empty')} />
+              ) : (
+                <div className={styles.historyList}>
+                  {analyses.map((analysis) => (
+                    <div key={analysis.id} className={styles.historyItem}>
+                      <div className={styles.historyInfo}>
+                        <Text>{new Date(analysis.generatedAt).toLocaleString()}</Text>
+                        <Tag>{t('ma.dueDiligence.history.riskScore', { score: analysis.overallRiskScore })}</Tag>
+                      </div>
+                      <Text type='secondary'>
+                        {t('ma.dueDiligence.history.findingsCount', { count: analysis.risks.length })}
+                      </Text>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default DueDiligencePage;

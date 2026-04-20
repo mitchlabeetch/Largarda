@@ -7,3 +7,5 @@
 export { DealRepository, getDealRepository } from './DealRepository';
 export { DocumentRepository, getDocumentRepository } from './DocumentRepository';
 export { AnalysisRepository, getAnalysisRepository } from './AnalysisRepository';
+export { FlowiseSessionRepository, getFlowiseSessionRepository } from './FlowiseSessionRepository';
+export { IntegrationConnectionRepository, getIntegrationConnectionRepository } from './IntegrationConnectionRepository';

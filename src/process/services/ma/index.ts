@@ -9,3 +9,22 @@ export type { ChunkingOptions, ProcessingProgress, DocumentProcessingResult } fr
 
 export { DealContextService, getDealContextService } from './DealContextService';
 export type { DealContext, CreateDealInput, UpdateDealInput, DealStatus } from './DealContextService';
+
+export {
+  DueDiligenceService,
+  getDueDiligenceService,
+  calculateRiskScore,
+  determineSeverity,
+  calculateCategoryScores,
+  calculateOverallScore,
+} from './DueDiligenceService';
+export type {
+  AnalysisType,
+  DueDiligenceRequest,
+  DueDiligenceResult,
+  ComparisonResult,
+  DealComparison,
+  AnalysisProgress,
+} from './DueDiligenceService';
+
+export { IntegrationService, getIntegrationService } from './IntegrationService';

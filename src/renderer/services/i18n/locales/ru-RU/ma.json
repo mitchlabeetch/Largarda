@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "Анализ Due Diligence",
+    "empty": {
+      "selectDeal": "Выберите сделку для начала анализа due diligence",
+      "noResults": "Результаты анализа отсутствуют. Выберите документы и запустите анализ."
+    },
+    "actions": {
+      "refresh": "Обновить",
+      "compareDeals": "Сравнить сделки",
+      "startAnalysis": "Запустить анализ",
+      "analyzing": "Анализ...",
+      "cancel": "Отмена"
+    },
+    "messages": {
+      "analysisSuccess": "Анализ успешно завершен",
+      "analysisFailed": "Ошибка анализа",
+      "needTwoDeals": "Для сравнения необходимо минимум 2 активные сделки",
+      "comparisonFailed": "Ошибка сравнения"
+    },
+    "documents": {
+      "title": "Выбор документов",
+      "selectCount": "Выбрать документы ({{selected}}/{{total}})",
+      "selectAll": "Выбрать все",
+      "clear": "Очистить",
+      "empty": "Документы не загружены",
+      "unknownType": "Неизвестно"
+    },
+    "analysisTypes": {
+      "title": "Типы анализа",
+      "dueDiligence": "Due Diligence",
+      "dueDiligenceDesc": "Комплексный анализ рисков",
+      "riskAssessment": "Оценка рисков",
+      "riskAssessmentDesc": "Фокус на идентификации рисков",
+      "financialExtraction": "Извлечение финансовых данных",
+      "financialExtractionDesc": "Извлечение финансовых показателей",
+      "documentComparison": "Сравнение документов",
+      "documentComparisonDesc": "Сравнение нескольких документов"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "Инициализация",
+        "extracting": "Извлечение документов",
+        "analyzing": "Анализ",
+        "scoring": "Оценка рисков",
+        "complete": "Завершено",
+        "error": "Ошибка"
+      },
+      "risksFound": "Найдено {{count}} рисков"
+    },
+    "results": {
+      "summary": "Сводка анализа",
+      "generatedAt": "Создано",
+      "recommendations": "Рекомендации",
+      "compareDeals": "Сравнить с другими сделками",
+      "findings": "Риски ({{count}})",
+      "severity": "Серьезность",
+      "score": "Балл",
+      "title": "Название",
+      "category": "Категория"
+    },
+    "categories": {
+      "financial": "Финансовые",
+      "legal": "Юридические",
+      "operational": "Операционные",
+      "regulatory": "Регуляторные",
+      "reputational": "Репутационные"
+    },
+    "comparison": {
+      "title": "Сравнение сделок",
+      "topRisks": "Основные риски по всем сделкам"
+    },
+    "history": {
+      "title": "История анализов",
+      "empty": "Нет предыдущих анализов",
+      "riskScore": "Оценка риска {{score}}",
+      "findingsCount": "{{count}} результатов"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "Дисконтированный денежный поток",

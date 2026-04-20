@@ -1,0 +1,415 @@
+/**
+ * DueDiligencePage Styles
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-2);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--color-bg-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Content */
+.content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Config Panel */
+.configPanel {
+  width: 360px;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--color-bg-1);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.configCard {
+  flex-shrink: 0;
+}
+
+/* Document Selector */
+.documentSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selectorActions {
+  display: flex;
+  gap: 8px;
+}
+
+.documentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.documentItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.documentItem:hover {
+  background: var(--color-fill-2);
+}
+
+.documentItem.selected {
+  background: rgb(var(--primary-6));
+  background: var(--color-primary-light-1);
+}
+
+.documentIcon {
+  color: var(--color-text-3);
+}
+
+.documentInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.documentName {
+  font-size: 13px;
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentMeta {
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+
+.emptyDocuments {
+  padding: 24px;
+}
+
+/* Analysis Config */
+.analysisConfig {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.configLabel {
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.typeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.typeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.typeItem:hover {
+  background: var(--color-fill-2);
+}
+
+.typeItem.selected {
+  background: var(--color-primary-light-1);
+}
+
+.typeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.typeLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.typeDescription {
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+
+/* Start Button */
+.startButton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* Results Panel */
+.resultsPanel {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Progress Display */
+.progressCard {
+  flex-shrink: 0;
+}
+
+.progressDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progressStage {
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.progressMessage {
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+.progressDocument {
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+
+/* Error Display */
+.errorCard {
+  flex-shrink: 0;
+}
+
+.errorContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.errorIcon {
+  color: var(--color-danger);
+}
+
+/* Results Display */
+.resultsDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summaryCard {
+  flex-shrink: 0;
+}
+
+.summaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.summaryText {
+  line-height: 1.6;
+  color: var(--color-text-2);
+}
+
+.recommendations {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.recommendationsTitle {
+  font-weight: 500;
+  color: var(--color-text-1);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.recommendationsList {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-2);
+}
+
+.recommendationsList li {
+  margin-bottom: 4px;
+}
+
+.findingsCard {
+  flex: 1;
+}
+
+.findingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.categoryFilters {
+  display: flex;
+  gap: 8px;
+}
+
+/* Comparison Display */
+.comparisonDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comparisonHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comparisonSummary {
+  flex-shrink: 0;
+}
+
+.topRisksCard {
+  flex-shrink: 0;
+}
+
+.topRisksList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topRiskItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+}
+
+/* History */
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+}
+
+.historyInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Empty States */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.emptyResults {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  color: var(--color-text-3);
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .content {
+    flex-direction: column;
+  }
+
+  .configPanel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 50vh;
+  }
+
+  .resultsPanel {
+    flex: 1;
+  }
+}

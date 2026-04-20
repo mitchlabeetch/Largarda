@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "Analyse Due Diligence",
+    "empty": {
+      "selectDeal": "Sélectionnez un deal pour commencer l'analyse due diligence",
+      "noResults": "Aucun résultat d'analyse. Sélectionnez des documents et lancez une analyse."
+    },
+    "actions": {
+      "refresh": "Actualiser",
+      "compareDeals": "Comparer les Deals",
+      "startAnalysis": "Lancer l'Analyse",
+      "analyzing": "Analyse en cours...",
+      "cancel": "Annuler"
+    },
+    "messages": {
+      "analysisSuccess": "Analyse terminée avec succès",
+      "analysisFailed": "Échec de l'analyse",
+      "needTwoDeals": "Au moins 2 deals actifs sont nécessaires pour comparer",
+      "comparisonFailed": "Échec de la comparaison"
+    },
+    "documents": {
+      "title": "Sélection des Documents",
+      "selectCount": "Sélectionner Documents ({{selected}}/{{total}})",
+      "selectAll": "Tout sélectionner",
+      "clear": "Effacer",
+      "empty": "Aucun document téléchargé",
+      "unknownType": "Inconnu"
+    },
+    "analysisTypes": {
+      "title": "Types d'Analyse",
+      "dueDiligence": "Due Diligence",
+      "dueDiligenceDesc": "Analyse des risques complète",
+      "riskAssessment": "Évaluation des Risques",
+      "riskAssessmentDesc": "Focus sur l'identification des risques",
+      "financialExtraction": "Extraction Financière",
+      "financialExtractionDesc": "Extraire les métriques financières",
+      "documentComparison": "Comparaison de Documents",
+      "documentComparisonDesc": "Comparer plusieurs documents"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "Initialisation",
+        "extracting": "Extraction des Documents",
+        "analyzing": "Analyse",
+        "scoring": "Notation des Risques",
+        "complete": "Terminé",
+        "error": "Erreur"
+      },
+      "risksFound": "{{count}} risques identifiés"
+    },
+    "results": {
+      "summary": "Résumé de l'Analyse",
+      "generatedAt": "Généré le",
+      "recommendations": "Recommandations",
+      "compareDeals": "Comparer avec d'autres Deals",
+      "findings": "Constats de Risques ({{count}})",
+      "severity": "Sévérité",
+      "score": "Score",
+      "title": "Titre",
+      "category": "Catégorie"
+    },
+    "categories": {
+      "financial": "Financier",
+      "legal": "Juridique",
+      "operational": "Opérationnel",
+      "regulatory": "Réglementaire",
+      "reputational": "Réputationnel"
+    },
+    "comparison": {
+      "title": "Comparaison de Deals",
+      "topRisks": "Principaux Risques Tous Deals Confondus"
+    },
+    "history": {
+      "title": "Historique des Analyses",
+      "empty": "Aucune analyse précédente",
+      "riskScore": "Score de risque {{score}}",
+      "findingsCount": "{{count}} constats"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "Flux de trésorerie actualisés",

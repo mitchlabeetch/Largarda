@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "尽职调查分析",
+    "empty": {
+      "selectDeal": "选择一个交易开始尽职调查分析",
+      "noResults": "暂无分析结果。选择文档并开始分析。"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "compareDeals": "比较交易",
+      "startAnalysis": "开始分析",
+      "analyzing": "分析中...",
+      "cancel": "取消"
+    },
+    "messages": {
+      "analysisSuccess": "分析成功完成",
+      "analysisFailed": "分析失败",
+      "needTwoDeals": "需要至少2个活跃交易才能比较",
+      "comparisonFailed": "比较失败"
+    },
+    "documents": {
+      "title": "文档选择",
+      "selectCount": "选择文档 ({{selected}}/{{total}})",
+      "selectAll": "全选",
+      "clear": "清除",
+      "empty": "尚未上传文档",
+      "unknownType": "未知"
+    },
+    "analysisTypes": {
+      "title": "分析类型",
+      "dueDiligence": "尽职调查",
+      "dueDiligenceDesc": "全面风险分析",
+      "riskAssessment": "风险评估",
+      "riskAssessmentDesc": "专注于风险识别",
+      "financialExtraction": "财务提取",
+      "financialExtractionDesc": "提取财务指标",
+      "documentComparison": "文档比较",
+      "documentComparisonDesc": "比较多个文档"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "初始化中",
+        "extracting": "提取文档中",
+        "analyzing": "分析中",
+        "scoring": "风险评分中",
+        "complete": "完成",
+        "error": "错误"
+      },
+      "risksFound": "发现 {{count}} 个风险"
+    },
+    "results": {
+      "summary": "分析摘要",
+      "generatedAt": "生成时间",
+      "recommendations": "建议",
+      "compareDeals": "与其他交易比较",
+      "findings": "风险发现 ({{count}})",
+      "severity": "严重程度",
+      "score": "分数",
+      "title": "标题",
+      "category": "类别"
+    },
+    "categories": {
+      "financial": "财务",
+      "legal": "法律",
+      "operational": "运营",
+      "regulatory": "监管",
+      "reputational": "声誉"
+    },
+    "comparison": {
+      "title": "交易比较",
+      "topRisks": "所有交易的主要风险"
+    },
+    "history": {
+      "title": "分析历史",
+      "empty": "暂无历史分析",
+      "riskScore": "风险分数 {{score}}",
+      "findingsCount": "{{count}} 个发现"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "现金流折现",

@@ -34,7 +34,10 @@ interface UseDocumentsReturn {
   /** Update document status */
   updateStatus: (id: string, status: DocumentStatus, error?: string) => Promise<void>;
   /** Processing status for uploads */
-  uploadStatus: Map<string, { progress: number; status: 'uploading' | 'processing' | 'completed' | 'error'; error?: string }>;
+  uploadStatus: Map<
+    string,
+    { progress: number; status: 'uploading' | 'processing' | 'completed' | 'error'; error?: string }
+  >;
 }
 
 const fetcher = (dealId: string) => ipcBridge.ma.document.listByDeal.invoke({ dealId });
@@ -140,10 +143,7 @@ export function useDocuments(options: UseDocumentsOptions): UseDocumentsReturn {
       // Optimistic update: remove from local state immediately
       const previousDocuments = documents;
 
-      mutate(
-        (currentDocs) => (currentDocs || []).filter((doc) => doc.id !== id),
-        false
-      );
+      mutate((currentDocs) => (currentDocs || []).filter((doc) => doc.id !== id), false);
 
       try {
         await ipcBridge.ma.document.delete.invoke({ id });

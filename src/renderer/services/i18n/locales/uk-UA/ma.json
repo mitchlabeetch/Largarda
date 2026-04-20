@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "Аналіз Due Diligence",
+    "empty": {
+      "selectDeal": "Оберіть угоду для початку аналізу due diligence",
+      "noResults": "Результати аналізу відсутні. Оберіть документи та запустіть аналіз."
+    },
+    "actions": {
+      "refresh": "Оновити",
+      "compareDeals": "Порівняти угоди",
+      "startAnalysis": "Запустити аналіз",
+      "analyzing": "Аналіз...",
+      "cancel": "Скасувати"
+    },
+    "messages": {
+      "analysisSuccess": "Аналіз успішно завершено",
+      "analysisFailed": "Помилка аналізу",
+      "needTwoDeals": "Для порівняння необхідно мінімум 2 активні угоди",
+      "comparisonFailed": "Помилка порівняння"
+    },
+    "documents": {
+      "title": "Вибір документів",
+      "selectCount": "Обрати документи ({{selected}}/{{total}})",
+      "selectAll": "Обрати всі",
+      "clear": "Очистити",
+      "empty": "Документи не завантажено",
+      "unknownType": "Невідомо"
+    },
+    "analysisTypes": {
+      "title": "Типи аналізу",
+      "dueDiligence": "Due Diligence",
+      "dueDiligenceDesc": "Комплексний аналіз ризиків",
+      "riskAssessment": "Оцінка ризиків",
+      "riskAssessmentDesc": "Фокус на ідентифікації ризиків",
+      "financialExtraction": "Вилучення фінансових даних",
+      "financialExtractionDesc": "Вилучення фінансових показників",
+      "documentComparison": "Порівняння документів",
+      "documentComparisonDesc": "Порівняння кількох документів"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "Ініціалізація",
+        "extracting": "Вилучення документів",
+        "analyzing": "Аналіз",
+        "scoring": "Оцінка ризиків",
+        "complete": "Завершено",
+        "error": "Помилка"
+      },
+      "risksFound": "Знайдено {{count}} ризиків"
+    },
+    "results": {
+      "summary": "Зведення аналізу",
+      "generatedAt": "Створено",
+      "recommendations": "Рекомендації",
+      "compareDeals": "Порівняти з іншими угодами",
+      "findings": "Ризики ({{count}})",
+      "severity": "Серйозність",
+      "score": "Бал",
+      "title": "Назва",
+      "category": "Категорія"
+    },
+    "categories": {
+      "financial": "Фінансові",
+      "legal": "Юридичні",
+      "operational": "Операційні",
+      "regulatory": "Регуляторні",
+      "reputational": "Репутаційні"
+    },
+    "comparison": {
+      "title": "Порівняння угод",
+      "topRisks": "Основні ризики по всіх угодах"
+    },
+    "history": {
+      "title": "Історія аналізів",
+      "empty": "Немає попередніх аналізів",
+      "riskScore": "Оцінка ризику {{score}}",
+      "findingsCount": "{{count}} результатів"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "Дисконтований грошовий потік",

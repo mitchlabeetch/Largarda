@@ -1,0 +1,309 @@
+/**
+ * RiskScoreCard Component Styles
+ */
+
+.container {
+  background: var(--color-bg-1);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.dealName {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+/* Overall Score */
+.overallScore {
+  display: flex;
+  align-items: center;
+}
+
+.scoreCircle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-1);
+}
+
+.scoreNumber {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.scoreLabel {
+  font-size: 10px;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Categories */
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Category Bar */
+.categoryBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.categoryHeader:hover {
+  background: var(--color-fill-1);
+  margin: -4px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.categoryInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryIcon {
+  font-size: 16px;
+}
+
+.categoryLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.helpIcon {
+  color: var(--color-text-3);
+  cursor: help;
+}
+
+.categoryScore {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scoreValue {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.scoreMax {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.findingCount {
+  font-size: 10px;
+}
+
+.categoryProgress {
+  margin: 0;
+}
+
+/* Findings List */
+.findingsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.findingItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--color-bg-1);
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.findingHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.findingTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  flex: 1;
+}
+
+.findingDescription {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-2);
+  line-height: 1.5;
+}
+
+.findingRecommendation {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: var(--color-text-2);
+  line-height: 1.5;
+  padding: 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+}
+
+/* Comparison Bar */
+.comparisonBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.comparisonBar:last-child {
+  border-bottom: none;
+}
+
+.comparisonScores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comparisonScoreItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comparisonDealName {
+  font-size: 12px;
+  color: var(--color-text-2);
+  width: 80px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comparisonProgress {
+  flex: 1;
+  margin: 0;
+}
+
+.comparisonScoreValue {
+  font-size: 12px;
+  font-weight: 600;
+  width: 30px;
+  text-align: right;
+}
+
+/* Summary */
+.summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summaryLabel {
+  font-size: 10px;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--color-text-3);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .scoreCircle {
+    width: 60px;
+    height: 60px;
+  }
+
+  .scoreNumber {
+    font-size: 18px;
+  }
+
+  .summary {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .summaryItem {
+    flex: 1;
+    min-width: 60px;
+  }
+}

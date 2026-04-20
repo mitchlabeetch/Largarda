@@ -72,14 +72,15 @@ export function useDealContext(options: UseDealContextOptions = {}): UseDealCont
   });
 
   // Fetch active deal
-  const {
-    data: fetchedActiveDeal,
-    mutate: mutateActiveDeal,
-  } = useSWR<DealContext | null>('ma.activeDeal', () => activeDealFetcher(), {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-    refreshInterval: autoRefresh ? refreshInterval : undefined,
-  });
+  const { data: fetchedActiveDeal, mutate: mutateActiveDeal } = useSWR<DealContext | null>(
+    'ma.activeDeal',
+    () => activeDealFetcher(),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+      refreshInterval: autoRefresh ? refreshInterval : undefined,
+    }
+  );
 
   // Sync active deal from fetched data
   useEffect(() => {

@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "デューデリジェンス分析",
+    "empty": {
+      "selectDeal": "ディールを選択してデューデリジェンス分析を開始",
+      "noResults": "分析結果がありません。ドキュメントを選択して分析を開始してください。"
+    },
+    "actions": {
+      "refresh": "更新",
+      "compareDeals": "ディール比較",
+      "startAnalysis": "分析開始",
+      "analyzing": "分析中...",
+      "cancel": "キャンセル"
+    },
+    "messages": {
+      "analysisSuccess": "分析が正常に完了しました",
+      "analysisFailed": "分析に失敗しました",
+      "needTwoDeals": "比較には2つ以上のアクティブなディールが必要です",
+      "comparisonFailed": "比較に失敗しました"
+    },
+    "documents": {
+      "title": "ドキュメント選択",
+      "selectCount": "ドキュメントを選択 ({{selected}}/{{total}})",
+      "selectAll": "全選択",
+      "clear": "クリア",
+      "empty": "アップロードされたドキュメントがありません",
+      "unknownType": "不明"
+    },
+    "analysisTypes": {
+      "title": "分析タイプ",
+      "dueDiligence": "デューデリジェンス",
+      "dueDiligenceDesc": "包括的なリスク分析",
+      "riskAssessment": "リスク評価",
+      "riskAssessmentDesc": "リスク特定に焦点",
+      "financialExtraction": "財務抽出",
+      "financialExtractionDesc": "財務指標の抽出",
+      "documentComparison": "ドキュメント比較",
+      "documentComparisonDesc": "複数ドキュメントの比較"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "初期化中",
+        "extracting": "ドキュメント抽出中",
+        "analyzing": "分析中",
+        "scoring": "リスクスコアリング中",
+        "complete": "完了",
+        "error": "エラー"
+      },
+      "risksFound": "{{count}}件のリスクを検出"
+    },
+    "results": {
+      "summary": "分析サマリー",
+      "generatedAt": "生成日時",
+      "recommendations": "推奨事項",
+      "compareDeals": "他のディールと比較",
+      "findings": "リスク発見 ({{count}})",
+      "severity": "重大度",
+      "score": "スコア",
+      "title": "タイトル",
+      "category": "カテゴリ"
+    },
+    "categories": {
+      "financial": "財務",
+      "legal": "法務",
+      "operational": "オペレーション",
+      "regulatory": "規制",
+      "reputational": "評判"
+    },
+    "comparison": {
+      "title": "ディール比較",
+      "topRisks": "全ディールの主要リスク"
+    },
+    "history": {
+      "title": "分析履歴",
+      "empty": "過去の分析がありません",
+      "riskScore": "リスクスコア {{score}}",
+      "findingsCount": "{{count}}件の発見"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "ディスカウント・キャッシュフロー (DCF)",

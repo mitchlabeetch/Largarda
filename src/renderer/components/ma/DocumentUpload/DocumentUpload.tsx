@@ -48,7 +48,7 @@ export function DocumentUpload({
 
   const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
     const extension = file.name.split('.').pop()?.toLowerCase() as DocumentFormat | undefined;
-    
+
     if (!extension || !SUPPORTED_FORMATS.includes(extension)) {
       return {
         valid: false,
@@ -127,7 +127,7 @@ export function DocumentUpload({
         return { id: document.id, filename: file.name };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-        
+
         setUploadProgress((prev) => {
           const next = new Map(prev);
           next.set(uid, {
@@ -147,7 +147,11 @@ export function DocumentUpload({
   );
 
   const handleRequest = useCallback(
-    async (options: { onProgress: (percent: number) => void; onSuccess: () => void; onError: (error: Error) => void }) => {
+    async (options: {
+      onProgress: (percent: number) => void;
+      onSuccess: () => void;
+      onError: (error: Error) => void;
+    }) => {
       const { onProgress, onSuccess, onError } = options;
       const file = (options as unknown as { file: File }).file;
 
@@ -201,27 +205,17 @@ export function DocumentUpload({
             <div className={styles.fileInfo}>
               <FileText className={styles.fileIcon} />
               <span className={styles.fileName}>{item.filename}</span>
-              {item.status === 'error' && (
-                <span className={styles.errorText}>{item.error}</span>
-              )}
+              {item.status === 'error' && <span className={styles.errorText}>{item.error}</span>}
             </div>
             <div className={styles.progressSection}>
               {item.status === 'uploading' && (
-                <Progress
-                  percent={item.progress}
-                  size="small"
-                  className={styles.progress}
-                />
+                <Progress percent={item.progress} size='small' className={styles.progress} />
               )}
-              {item.status === 'success' && (
-                <span className={styles.successText}>Uploaded</span>
-              )}
-              {item.status === 'error' && (
-                <span className={styles.errorText}>Failed</span>
-              )}
+              {item.status === 'success' && <span className={styles.successText}>Uploaded</span>}
+              {item.status === 'error' && <span className={styles.errorText}>Failed</span>}
               <Button
-                type="text"
-                size="mini"
+                type='text'
+                size='mini'
                 icon={<Close />}
                 onClick={() => handleRemove(item.uid)}
                 className={styles.removeButton}
@@ -250,20 +244,14 @@ export function DocumentUpload({
         customRequest={handleRequest}
         autoUpload={true}
         showUploadList={false}
-        tip={
-          <div className={styles.tip}>
-            Supported formats: PDF, DOCX, XLSX, TXT (max 50MB)
-          </div>
-        }
+        tip={<div className={styles.tip}>Supported formats: PDF, DOCX, XLSX, TXT (max 50MB)</div>}
       >
         <div className={styles.dropzone}>
           <div className={styles.dropzoneContent}>
             <UploadIcon className={styles.uploadIcon} />
             <div className={styles.dropzoneText}>
               <span className={styles.primaryText}>Click or drag files to upload</span>
-              <span className={styles.secondaryText}>
-                Support batch upload of multiple documents
-              </span>
+              <span className={styles.secondaryText}>Support batch upload of multiple documents</span>
             </div>
           </div>
         </div>

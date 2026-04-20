@@ -1325,7 +1325,20 @@ import type {
   CreateRiskFindingInput,
   FlowiseSession,
   CreateFlowiseSessionInput,
+  MaIntegrationProvider,
+  MaIntegrationConnection,
+  MaIntegrationDescriptor,
+  CreateIntegrationSessionInput,
+  IntegrationSessionResult,
+  IntegrationProxyRequest,
+  IntegrationProxyResponse,
 } from '@/common/ma/types';
+import type {
+  DueDiligenceRequest,
+  DueDiligenceResult,
+  ComparisonResult,
+  AnalysisProgress,
+} from '@process/services/ma/DueDiligenceService';
 
 export const ma = {
   deal: {
@@ -1340,10 +1353,9 @@ export const ma = {
     archive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.archive'),
     close: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.close'),
     reactivate: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.reactivate'),
-    getContextForAI: bridge.buildProvider<
-      { hasContext: boolean; deal?: DealContext; contextString?: string },
-      void
-    >('ma.deal.get-context-for-ai'),
+    getContextForAI: bridge.buildProvider<{ hasContext: boolean; deal?: DealContext; contextString?: string }, void>(
+      'ma.deal.get-context-for-ai'
+    ),
     validate: bridge.buildProvider<{ valid: boolean; errors: string[] }, CreateDealInput>('ma.deal.validate'),
   },
   document: {
@@ -1376,5 +1388,26 @@ export const ma = {
     getByConversation: bridge.buildProvider<FlowiseSession | null, { conversationId: string }>(
       'ma.flowise-session.get-by-conversation'
     ),
+  },
+  integration: {
+    listProviders: bridge.buildProvider<MaIntegrationProvider[], void>('ma.integration.list-providers'),
+    listConnections: bridge.buildProvider<MaIntegrationConnection[], void>('ma.integration.list-connections'),
+    listDescriptors: bridge.buildProvider<MaIntegrationDescriptor[], void>('ma.integration.list-descriptors'),
+    createConnectSession: bridge.buildProvider<IntegrationSessionResult, CreateIntegrationSessionInput>(
+      'ma.integration.create-connect-session'
+    ),
+    createReconnectSession: bridge.buildProvider<IntegrationSessionResult, CreateIntegrationSessionInput>(
+      'ma.integration.create-reconnect-session'
+    ),
+    disconnect: bridge.buildProvider<boolean, { providerId: string }>('ma.integration.disconnect'),
+    proxyRequest: bridge.buildProvider<IntegrationProxyResponse, IntegrationProxyRequest>(
+      'ma.integration.proxy-request'
+    ),
+  },
+  dueDiligence: {
+    analyze: bridge.buildProvider<DueDiligenceResult, DueDiligenceRequest>('ma.due-diligence.analyze'),
+    getAnalysis: bridge.buildProvider<DueDiligenceResult | null, { id: string }>('ma.due-diligence.get'),
+    listAnalyses: bridge.buildProvider<DueDiligenceResult[], { dealId: string }>('ma.due-diligence.list'),
+    compareDeals: bridge.buildProvider<ComparisonResult, { dealIds: string[] }>('ma.due-diligence.compare'),
   },
 };

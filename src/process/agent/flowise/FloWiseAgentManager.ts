@@ -15,6 +15,7 @@ import type { IConfirmation } from '@/common/chat/chatLib';
 import type { DealContext, FlowInput, FlowResult, FlowEvent } from '@/common/ma/types';
 import type { FloWiseConnection } from './FloWiseConnection';
 import { FloWiseError, createFloWiseConnection } from './FloWiseConnection';
+import { getIntegrationService } from '@process/services/ma/IntegrationService';
 
 export type FloWiseAgentType = 'flowise';
 
@@ -68,10 +69,10 @@ export class FloWiseAgentManager extends BaseAgentManager<FloWiseAgentManagerDat
     this._lastActivityAt = Date.now();
     this.currentMessageId = message.msg_id ?? this.generateMessageId();
 
-    const input: FlowInput = {
+    const input = await this.enrichFlowInput({
       question: message.content,
       context: this.dealContext ?? undefined,
-    };
+    });
 
     this.isStreaming = true;
     this.status = 'running';
@@ -102,7 +103,7 @@ export class FloWiseAgentManager extends BaseAgentManager<FloWiseAgentManagerDat
    * Execute a flow and return the result (non-streaming).
    */
   async executeFlow(input: FlowInput): Promise<FlowResult> {
-    return this.connection.executeFlow(this.flowId, input);
+    return this.connection.executeFlow(this.flowId, await this.enrichFlowInput(input));
   }
 
   /**
@@ -242,6 +243,22 @@ export class FloWiseAgentManager extends BaseAgentManager<FloWiseAgentManagerDat
     };
 
     this.addConfirmation(confirmation);
+  }
+
+  private async enrichFlowInput(input: FlowInput): Promise<FlowInput> {
+    const integrationContext = await getIntegrationService().buildFlowiseIntegrationContext();
+
+    if (Object.keys(integrationContext).length === 0) {
+      return input;
+    }
+
+    return {
+      ...input,
+      overrideConfig: {
+        ...input.overrideConfig,
+        largoIntegrations: integrationContext,
+      },
+    };
   }
 
   private handleError(error: unknown): void {

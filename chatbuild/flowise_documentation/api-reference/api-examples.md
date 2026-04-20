@@ -58,12 +58,12 @@ const response = await fetch('http://localhost:3000/api/v1/prediction/your-flow-
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    Authorization: 'Bearer your-flow-api-key'
+    Authorization: 'Bearer your-flow-api-key',
   },
   body: JSON.stringify({
     question: 'Summarize the purpose of this flow',
-    streaming: false
-  })
+    streaming: false,
+  }),
 });
 
 const result = await response.json();
@@ -94,17 +94,17 @@ curl -X POST "http://localhost:3000/api/v1/prediction/your-flow-id" \
 const payload = {
   question: 'Continue our conversation',
   overrideConfig: {
-    sessionId: 'user-123'
-  }
+    sessionId: 'user-123',
+  },
 };
 
 const response = await fetch('http://localhost:3000/api/v1/prediction/your-flow-id', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    Authorization: 'Bearer your-flow-api-key'
+    Authorization: 'Bearer your-flow-api-key',
   },
-  body: JSON.stringify(payload)
+  body: JSON.stringify(payload),
 });
 
 console.log(await response.json());
@@ -141,18 +141,18 @@ const payload = {
     vars: {
       tenantId: 'acme',
       locale: 'fr-FR',
-      plan: 'enterprise'
-    }
-  }
+      plan: 'enterprise',
+    },
+  },
 };
 
 const response = await fetch('http://localhost:3000/api/v1/prediction/your-flow-id', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    Authorization: 'Bearer your-flow-api-key'
+    Authorization: 'Bearer your-flow-api-key',
   },
-  body: JSON.stringify(payload)
+  body: JSON.stringify(payload),
 });
 
 console.log(await response.json());
@@ -209,15 +209,15 @@ const response = await fetch('http://localhost:3000/api/v1/prediction/your-flow-
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    Authorization: 'Bearer your-flow-api-key'
+    Authorization: 'Bearer your-flow-api-key',
   },
   body: JSON.stringify({
     form: {
       title: 'Quarterly Review',
       department: 'Product',
-      priority: 'high'
-    }
-  })
+      priority: 'high',
+    },
+  }),
 });
 
 console.log(await response.json());
@@ -315,8 +315,8 @@ curl -X GET "http://localhost:3000/api/v1/chatflows" \
 ```ts
 const response = await fetch('http://localhost:3000/api/v1/chatflows', {
   headers: {
-    Authorization: 'Bearer your-flow-api-key'
-  }
+    Authorization: 'Bearer your-flow-api-key',
+  },
 });
 
 console.log(await response.json());

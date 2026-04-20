@@ -16,6 +16,7 @@ import { initWebAdapter } from './adapter';
 import { setupBasicMiddleware, setupCors, setupErrorHandler } from './setup';
 import { registerAuthRoutes } from './routes/authRoutes';
 import { registerApiRoutes } from './routes/apiRoutes';
+import { registerNangoRoutes } from './routes/nangoRoutes';
 import { registerStaticRoutes } from './routes/staticRoutes';
 import { generateQRLoginUrlDirect } from '@process/bridge/webuiQR';
 
@@ -256,6 +257,7 @@ export async function startWebServerWithInstance(port: number, allowRemote = fal
   const initialCredentials = await initializeDefaultAdmin();
 
   // 配置中间件 / Configure middleware
+  registerNangoRoutes(app);
   setupBasicMiddleware(app);
   setupCors(app, port, allowRemote);
 

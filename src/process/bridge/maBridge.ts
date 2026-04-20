@@ -24,17 +24,31 @@ import type {
   CreateRiskFindingInput,
   FlowiseSession,
   CreateFlowiseSessionInput,
+  MaIntegrationProvider,
+  MaIntegrationConnection,
+  MaIntegrationDescriptor,
+  CreateIntegrationSessionInput,
+  IntegrationSessionResult,
+  IntegrationProxyRequest,
+  IntegrationProxyResponse,
 } from '@/common/ma/types';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
+import {
+  getFlowiseSessionRepository,
+  type FlowiseSessionRepository,
+} from '@process/services/database/repositories/ma/FlowiseSessionRepository';
 import { DealContextService } from '@process/services/ma/DealContextService';
+import { getIntegrationService, type IntegrationService } from '@process/services/ma/IntegrationService';
 
 // Repository instances
 let dealRepo: DealRepository | null = null;
 let documentRepo: DocumentRepository | null = null;
 let analysisRepo: AnalysisRepository | null = null;
 let dealContextService: DealContextService | null = null;
+let flowiseSessionRepo: FlowiseSessionRepository | null = null;
+let integrationService: IntegrationService | null = null;
 
 function getDealRepo(): DealRepository {
   if (!dealRepo) {
@@ -62,6 +76,16 @@ function getDealContextServiceInstance(): DealContextService {
     dealContextService = new DealContextService();
   }
   return dealContextService;
+}
+
+function getFlowiseSessionRepo(): FlowiseSessionRepository {
+  flowiseSessionRepo ??= getFlowiseSessionRepository();
+  return flowiseSessionRepo;
+}
+
+function getIntegrationServiceInstance(): IntegrationService {
+  integrationService ??= getIntegrationService();
+  return integrationService;
 }
 
 /**
@@ -158,13 +182,15 @@ export function initMaBridge(): void {
   });
 
   // Get deal context for AI
-  ipcBridge.ma.deal.getContextForAI.provider(async (): Promise<{
-    hasContext: boolean;
-    deal?: DealContext;
-    contextString?: string;
-  }> => {
-    return getDealContextServiceInstance().getDealContextForAI();
-  });
+  ipcBridge.ma.deal.getContextForAI.provider(
+    async (): Promise<{
+      hasContext: boolean;
+      deal?: DealContext;
+      contextString?: string;
+    }> => {
+      return getDealContextServiceInstance().getDealContextForAI();
+    }
+  );
 
   // Close a deal
   ipcBridge.ma.deal.close.provider(async (params): Promise<DealContext | null> => {
@@ -363,23 +389,102 @@ export function initMaBridge(): void {
   // Create a Flowise session
   ipcBridge.ma.flowiseSession.create.provider(async (params): Promise<FlowiseSession> => {
     const input = params as CreateFlowiseSessionInput;
-    // TODO: Implement FlowiseSessionRepository
-    // For now, return a placeholder
-    return {
-      id: crypto.randomUUID(),
-      conversationId: input.conversationId,
-      flowId: input.flowId,
-      dealId: input.dealId,
-      sessionKey: input.sessionKey,
-      config: input.config,
-      createdAt: Date.now(),
-    };
+    const result = await getFlowiseSessionRepo().create(input);
+    if (!result.success || !result.data) {
+      throw new Error(result.error ?? 'Failed to create Flowise session');
+    }
+    return result.data;
   });
 
   // Get a Flowise session by conversation ID
   ipcBridge.ma.flowiseSession.getByConversation.provider(async (params): Promise<FlowiseSession | null> => {
     const { conversationId } = params as { conversationId: string };
-    // TODO: Implement FlowiseSessionRepository
-    return null;
+    const result = await getFlowiseSessionRepo().getByConversation(conversationId);
+    if (!result.success) {
+      throw new Error(result.error ?? 'Failed to get Flowise session');
+    }
+    return result.data;
+  });
+
+  // ============================================================================
+  // External Integration Operations
+  // ============================================================================
+
+  ipcBridge.ma.integration.listProviders.provider(async (): Promise<MaIntegrationProvider[]> => {
+    return getIntegrationServiceInstance().listProviders();
+  });
+
+  ipcBridge.ma.integration.listConnections.provider(async (): Promise<MaIntegrationConnection[]> => {
+    return getIntegrationServiceInstance().listConnections();
+  });
+
+  ipcBridge.ma.integration.listDescriptors.provider(async (): Promise<MaIntegrationDescriptor[]> => {
+    return getIntegrationServiceInstance().listDescriptors();
+  });
+
+  ipcBridge.ma.integration.createConnectSession.provider(async (params): Promise<IntegrationSessionResult> => {
+    const input = params as CreateIntegrationSessionInput;
+    return getIntegrationServiceInstance().createConnectSession(input);
+  });
+
+  ipcBridge.ma.integration.createReconnectSession.provider(async (params): Promise<IntegrationSessionResult> => {
+    const input = params as CreateIntegrationSessionInput;
+    return getIntegrationServiceInstance().createReconnectSession(input);
+  });
+
+  ipcBridge.ma.integration.disconnect.provider(async (params): Promise<boolean> => {
+    const { providerId } = params as { providerId: string };
+    return getIntegrationServiceInstance().disconnect(providerId);
+  });
+
+  ipcBridge.ma.integration.proxyRequest.provider(async (params): Promise<IntegrationProxyResponse> => {
+    const input = params as IntegrationProxyRequest;
+    return getIntegrationServiceInstance().proxyRequest(input);
+  });
+
+  // ============================================================================
+  // Due Diligence Operations
+  // ============================================================================
+
+  // Run due diligence analysis
+  ipcBridge.ma.dueDiligence.analyze.provider(async (params) => {
+    const { DueDiligenceService } = await import('@process/services/ma/DueDiligenceService');
+    const request = params as any;
+    const service = new DueDiligenceService();
+    const result = await service.analyze(request);
+    if (!result.success || !result.data) {
+      throw new Error(result.error ?? 'Failed to run analysis');
+    }
+    return result.data;
+  });
+
+  // Get due diligence analysis result
+  ipcBridge.ma.dueDiligence.getAnalysis.provider(async (params) => {
+    const { DueDiligenceService } = await import('@process/services/ma/DueDiligenceService');
+    const { id } = params as { id: string };
+    const service = new DueDiligenceService();
+    const result = await service.getAnalysis(id);
+    return result.data;
+  });
+
+  // List due diligence analyses for a deal
+  ipcBridge.ma.dueDiligence.listAnalyses.provider(async (params) => {
+    const { DueDiligenceService } = await import('@process/services/ma/DueDiligenceService');
+    const { dealId } = params as { dealId: string };
+    const service = new DueDiligenceService();
+    const result = await service.listAnalyses(dealId);
+    return result.data;
+  });
+
+  // Compare multiple deals
+  ipcBridge.ma.dueDiligence.compareDeals.provider(async (params) => {
+    const { DueDiligenceService } = await import('@process/services/ma/DueDiligenceService');
+    const { dealIds } = params as { dealIds: string[] };
+    const service = new DueDiligenceService();
+    const result = await service.compareDeals(dealIds);
+    if (!result.success || !result.data) {
+      throw new Error(result.error ?? 'Failed to compare deals');
+    }
+    return result.data;
   });
 }

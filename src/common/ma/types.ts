@@ -428,6 +428,163 @@ export const CreateFlowiseSessionInputSchema = z.object({
 });
 
 // ============================================================================
+// External Integration Types
+// ============================================================================
+
+export type MaIntegrationCategory = 'storage' | 'crm' | 'communication' | 'finance' | 'productivity' | 'other';
+export type MaIntegrationStatus =
+  | 'not_connected'
+  | 'connecting'
+  | 'connected'
+  | 'reauth_required'
+  | 'error'
+  | 'disabled';
+
+export interface MaIntegrationProvider {
+  id: string;
+  providerConfigKey: string;
+  title: string;
+  description?: string;
+  category: MaIntegrationCategory;
+  logoUrl?: string;
+  enabled: boolean;
+}
+
+export interface MaIntegrationConnection {
+  id: string;
+  providerId: string;
+  providerConfigKey: string;
+  connectionId?: string;
+  status: MaIntegrationStatus;
+  displayName?: string;
+  metadata?: Record<string, unknown>;
+  lastError?: string;
+  connectedAt?: number;
+  lastSyncedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MaIntegrationDescriptor {
+  provider: MaIntegrationProvider;
+  connection: MaIntegrationConnection | null;
+}
+
+export interface CreateIntegrationSessionInput {
+  providerId: string;
+}
+
+export interface IntegrationSessionResult {
+  providerId: string;
+  providerConfigKey: string;
+  connectionId?: string;
+  sessionToken: string;
+  connectLink: string;
+  expiresAt: string;
+  connectBaseUrl?: string;
+  apiBaseUrl?: string;
+  isReconnect: boolean;
+}
+
+export interface IntegrationProxyRequest {
+  providerId: string;
+  endpoint: string;
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  headers?: Record<string, string>;
+  params?: string | Record<string, string | number | string[] | number[]>;
+  data?: unknown;
+  retries?: number;
+}
+
+export interface IntegrationProxyResponse {
+  status: number;
+  data: unknown;
+  headers: Record<string, string | string[] | undefined>;
+}
+
+export const MaIntegrationCategorySchema = z.enum([
+  'storage',
+  'crm',
+  'communication',
+  'finance',
+  'productivity',
+  'other',
+]);
+
+export const MaIntegrationStatusSchema = z.enum([
+  'not_connected',
+  'connecting',
+  'connected',
+  'reauth_required',
+  'error',
+  'disabled',
+]);
+
+export const MaIntegrationProviderSchema = z.object({
+  id: z.string().min(1),
+  providerConfigKey: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  category: MaIntegrationCategorySchema,
+  logoUrl: z.string().url().optional(),
+  enabled: z.boolean(),
+});
+
+export const MaIntegrationConnectionSchema = z.object({
+  id: z.string().min(1),
+  providerId: z.string().min(1),
+  providerConfigKey: z.string().min(1),
+  connectionId: z.string().optional(),
+  status: MaIntegrationStatusSchema,
+  displayName: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  lastError: z.string().optional(),
+  connectedAt: z.number().int().positive().optional(),
+  lastSyncedAt: z.number().int().positive().optional(),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+});
+
+export const MaIntegrationDescriptorSchema = z.object({
+  provider: MaIntegrationProviderSchema,
+  connection: MaIntegrationConnectionSchema.nullable(),
+});
+
+export const CreateIntegrationSessionInputSchema = z.object({
+  providerId: z.string().min(1),
+});
+
+export const IntegrationSessionResultSchema = z.object({
+  providerId: z.string().min(1),
+  providerConfigKey: z.string().min(1),
+  connectionId: z.string().optional(),
+  sessionToken: z.string().min(1),
+  connectLink: z.string().url(),
+  expiresAt: z.string().min(1),
+  connectBaseUrl: z.string().url().optional(),
+  apiBaseUrl: z.string().url().optional(),
+  isReconnect: z.boolean(),
+});
+
+export const IntegrationProxyRequestSchema = z.object({
+  providerId: z.string().min(1),
+  endpoint: z.string().min(1),
+  method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']).optional(),
+  headers: z.record(z.string()).optional(),
+  params: z
+    .union([z.string(), z.record(z.union([z.string(), z.number(), z.array(z.string()), z.array(z.number())]))])
+    .optional(),
+  data: z.unknown().optional(),
+  retries: z.number().int().min(0).max(10).optional(),
+});
+
+export const IntegrationProxyResponseSchema = z.object({
+  status: z.number().int(),
+  data: z.unknown(),
+  headers: z.record(z.union([z.string(), z.array(z.string())]).optional()),
+});
+
+// ============================================================================
 // Financial Types
 // ============================================================================
 
@@ -694,6 +851,21 @@ export interface IMaFlowiseSessionRow {
   created_at: number;
 }
 
+export interface IMaIntegrationConnectionRow {
+  id: string;
+  provider_id: string;
+  provider_config_key: string;
+  connection_id: string | null;
+  status: string;
+  display_name: string | null;
+  metadata: string | null;
+  last_error: string | null;
+  connected_at: number | null;
+  last_synced_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
 // ============================================================================
 // Type Conversion Functions
 // ============================================================================
@@ -843,5 +1015,39 @@ export function rowToFlowiseSession(row: IMaFlowiseSessionRow): FlowiseSession {
     sessionKey: row.session_key ?? undefined,
     config: row.config ? JSON.parse(row.config) : undefined,
     createdAt: row.created_at,
+  };
+}
+
+export function integrationConnectionToRow(connection: MaIntegrationConnection): IMaIntegrationConnectionRow {
+  return {
+    id: connection.id,
+    provider_id: connection.providerId,
+    provider_config_key: connection.providerConfigKey,
+    connection_id: connection.connectionId ?? null,
+    status: connection.status,
+    display_name: connection.displayName ?? null,
+    metadata: connection.metadata ? JSON.stringify(connection.metadata) : null,
+    last_error: connection.lastError ?? null,
+    connected_at: connection.connectedAt ?? null,
+    last_synced_at: connection.lastSyncedAt ?? null,
+    created_at: connection.createdAt,
+    updated_at: connection.updatedAt,
+  };
+}
+
+export function rowToIntegrationConnection(row: IMaIntegrationConnectionRow): MaIntegrationConnection {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    providerConfigKey: row.provider_config_key,
+    connectionId: row.connection_id ?? undefined,
+    status: row.status as MaIntegrationStatus,
+    displayName: row.display_name ?? undefined,
+    metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+    lastError: row.last_error ?? undefined,
+    connectedAt: row.connected_at ?? undefined,
+    lastSyncedAt: row.last_synced_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }

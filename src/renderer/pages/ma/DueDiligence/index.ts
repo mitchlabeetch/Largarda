@@ -4,4 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { DealContextPage, default } from './DealContextPage';
+export { DueDiligencePage, default } from './DueDiligencePage';

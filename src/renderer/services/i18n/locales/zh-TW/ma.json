@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "盡職調查分析",
+    "empty": {
+      "selectDeal": "選擇一個交易開始盡職調查分析",
+      "noResults": "暫無分析結果。選擇文件並開始分析。"
+    },
+    "actions": {
+      "refresh": "重新整理",
+      "compareDeals": "比較交易",
+      "startAnalysis": "開始分析",
+      "analyzing": "分析中...",
+      "cancel": "取消"
+    },
+    "messages": {
+      "analysisSuccess": "分析成功完成",
+      "analysisFailed": "分析失敗",
+      "needTwoDeals": "需要至少2個活躍交易才能比較",
+      "comparisonFailed": "比較失敗"
+    },
+    "documents": {
+      "title": "文件選擇",
+      "selectCount": "選擇文件 ({{selected}}/{{total}})",
+      "selectAll": "全選",
+      "clear": "清除",
+      "empty": "尚未上傳文件",
+      "unknownType": "未知"
+    },
+    "analysisTypes": {
+      "title": "分析類型",
+      "dueDiligence": "盡職調查",
+      "dueDiligenceDesc": "全面風險分析",
+      "riskAssessment": "風險評估",
+      "riskAssessmentDesc": "專注於風險識別",
+      "financialExtraction": "財務提取",
+      "financialExtractionDesc": "提取財務指標",
+      "documentComparison": "文件比較",
+      "documentComparisonDesc": "比較多個文件"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "初始化中",
+        "extracting": "提取文件中",
+        "analyzing": "分析中",
+        "scoring": "風險評分中",
+        "complete": "完成",
+        "error": "錯誤"
+      },
+      "risksFound": "發現 {{count}} 個風險"
+    },
+    "results": {
+      "summary": "分析摘要",
+      "generatedAt": "生成時間",
+      "recommendations": "建議",
+      "compareDeals": "與其他交易比較",
+      "findings": "風險發現 ({{count}})",
+      "severity": "嚴重程度",
+      "score": "分數",
+      "title": "標題",
+      "category": "類別"
+    },
+    "categories": {
+      "financial": "財務",
+      "legal": "法律",
+      "operational": "營運",
+      "regulatory": "監管",
+      "reputational": "聲譽"
+    },
+    "comparison": {
+      "title": "交易比較",
+      "topRisks": "所有交易的主要風險"
+    },
+    "history": {
+      "title": "分析歷史",
+      "empty": "暫無歷史分析",
+      "riskScore": "風險分數 {{score}}",
+      "findingsCount": "{{count}} 個發現"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "現金流折現",

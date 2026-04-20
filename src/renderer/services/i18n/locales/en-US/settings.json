@@ -244,7 +244,39 @@
   "capabilities": "Capabilities",
   "capabilitiesTab": {
     "skills": "Skills",
-    "tools": "MCP & Voice"
+    "tools": "MCP & Voice",
+    "integrations": "Integrations"
+  },
+  "integrations": {
+    "description": "Connect external systems through Nango so Largo can bring CRM, storage, and other third-party context into M&A workflows.",
+    "emptyHint": "No integrations are currently available. Configure Nango in the desktop environment to enable external connections.",
+    "empty": "No integrations available yet",
+    "loadFailed": "Failed to load integrations",
+    "loadFailedWithReason": "Failed to load integrations: {{reason}}",
+    "connectSuccess": "Integration connected successfully",
+    "connectFailed": "Failed to complete the integration connection",
+    "connectFailedWithReason": "Unable to open the integration flow: {{reason}}",
+    "connectStarted": "Connect flow opened",
+    "reconnectStarted": "Reconnect flow opened",
+    "disconnectSuccess": "Integration disconnected",
+    "disconnectFailed": "Failed to disconnect integration",
+    "disconnectFailedWithReason": "Failed to disconnect integration: {{reason}}",
+    "defaultDescription": "Connect this provider so Flowise-powered M&A workflows can access external data.",
+    "connected": "Connected",
+    "connectionId": "Connection ID",
+    "lastError": "Last error",
+    "connect": "Connect",
+    "reconnect": "Reconnect",
+    "disconnect": "Disconnect",
+    "refresh": "Refresh",
+    "status": {
+      "not_connected": "Not connected",
+      "connecting": "Connecting",
+      "connected": "Connected",
+      "reauth_required": "Reauth required",
+      "error": "Error",
+      "disabled": "Disabled"
+    }
   },
   "webui": "Remote",
   "installed": "Installed",

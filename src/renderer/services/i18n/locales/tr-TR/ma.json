@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "Özen İncelemesi Analizi",
+    "empty": {
+      "selectDeal": "Özen incelemesi analizine başlamak için bir işlem seçin",
+      "noResults": "Henüz analiz sonucu yok. Belgeleri seçin ve analizi başlatın."
+    },
+    "actions": {
+      "refresh": "Yenile",
+      "compareDeals": "İşlemleri Karşılaştır",
+      "startAnalysis": "Analizi Başlat",
+      "analyzing": "Analiz ediliyor...",
+      "cancel": "İptal"
+    },
+    "messages": {
+      "analysisSuccess": "Analiz başarıyla tamamlandı",
+      "analysisFailed": "Analiz başarısız",
+      "needTwoDeals": "Karşılaştırma için en az 2 aktif işlem gerekli",
+      "comparisonFailed": "Karşılaştırma başarısız"
+    },
+    "documents": {
+      "title": "Belge Seçimi",
+      "selectCount": "Belgeleri Seç ({{selected}}/{{total}})",
+      "selectAll": "Tümünü Seç",
+      "clear": "Temizle",
+      "empty": "Henüz belge yüklenmedi",
+      "unknownType": "Bilinmiyor"
+    },
+    "analysisTypes": {
+      "title": "Analiz Türleri",
+      "dueDiligence": "Özen İncelemesi",
+      "dueDiligenceDesc": "Kapsamlı risk analizi",
+      "riskAssessment": "Risk Değerlendirmesi",
+      "riskAssessmentDesc": "Risk belirlemeye odaklanma",
+      "financialExtraction": "Finansal Çıkarım",
+      "financialExtractionDesc": "Finansal metrikleri çıkarma",
+      "documentComparison": "Belge Karşılaştırması",
+      "documentComparisonDesc": "Birden fazla belgeyi karşılaştırma"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "Başlatılıyor",
+        "extracting": "Belgeler Çıkarılıyor",
+        "analyzing": "Analiz Ediliyor",
+        "scoring": "Riskler Puanlanıyor",
+        "complete": "Tamamlandı",
+        "error": "Hata"
+      },
+      "risksFound": "{{count}} risk bulundu"
+    },
+    "results": {
+      "summary": "Analiz Özeti",
+      "generatedAt": "Oluşturulma",
+      "recommendations": "Öneriler",
+      "compareDeals": "Diğer İşlemlerle Karşılaştır",
+      "findings": "Risk Bulguları ({{count}})",
+      "severity": "Ciddiyet",
+      "score": "Puan",
+      "title": "Başlık",
+      "category": "Kategori"
+    },
+    "categories": {
+      "financial": "Finansal",
+      "legal": "Hukuki",
+      "operational": "Operasyonel",
+      "regulatory": "Düzenleyici",
+      "reputational": "İtibari"
+    },
+    "comparison": {
+      "title": "İşlem Karşılaştırması",
+      "topRisks": "Tüm İşlemlerdeki En Önemli Riskler"
+    },
+    "history": {
+      "title": "Analiz Geçmişi",
+      "empty": "Önceki analiz yok",
+      "riskScore": "Risk puanı {{score}}",
+      "findingsCount": "{{count}} bulgu"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "İndirgenmiş Nakit Akışı",

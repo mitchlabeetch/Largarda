@@ -244,7 +244,39 @@
   "capabilities": "Fonctionnalités",
   "capabilitiesTab": {
     "skills": "Skills",
-    "tools": "MCP et voix"
+    "tools": "MCP et voix",
+    "integrations": "Intégrations"
+  },
+  "integrations": {
+    "description": "Connectez des systèmes externes via Nango afin que Largo puisse intégrer le contexte CRM, stockage et autres services tiers dans les workflows M&A.",
+    "emptyHint": "Aucune intégration n'est actuellement disponible. Configurez Nango dans l'environnement desktop pour activer les connexions externes.",
+    "empty": "Aucune intégration disponible pour le moment",
+    "loadFailed": "Échec du chargement des intégrations",
+    "loadFailedWithReason": "Échec du chargement des intégrations : {{reason}}",
+    "connectSuccess": "Intégration connectée avec succès",
+    "connectFailed": "Échec de la finalisation de la connexion d'intégration",
+    "connectFailedWithReason": "Impossible d'ouvrir le flux d'intégration : {{reason}}",
+    "connectStarted": "Flux de connexion ouvert",
+    "reconnectStarted": "Flux de reconnexion ouvert",
+    "disconnectSuccess": "Intégration déconnectée",
+    "disconnectFailed": "Échec de la déconnexion de l'intégration",
+    "disconnectFailedWithReason": "Échec de la déconnexion de l'intégration : {{reason}}",
+    "defaultDescription": "Connectez ce fournisseur afin que les workflows M&A pilotés par Flowise puissent accéder aux données externes.",
+    "connected": "Connecté",
+    "connectionId": "ID de connexion",
+    "lastError": "Dernière erreur",
+    "connect": "Connecter",
+    "reconnect": "Reconnecter",
+    "disconnect": "Déconnecter",
+    "refresh": "Actualiser",
+    "status": {
+      "not_connected": "Non connecté",
+      "connecting": "Connexion en cours",
+      "connected": "Connecté",
+      "reauth_required": "Réauthentification requise",
+      "error": "Erreur",
+      "disabled": "Désactivé"
+    }
   },
   "webui": "Distant",
   "installed": "Installé",

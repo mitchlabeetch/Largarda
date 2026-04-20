@@ -1,4 +1,82 @@
 {
+  "dueDiligence": {
+    "title": "Due Diligence Analysis",
+    "empty": {
+      "selectDeal": "Select a deal to start due diligence analysis",
+      "noResults": "No analysis results yet. Select documents and start an analysis."
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "compareDeals": "Compare Deals",
+      "startAnalysis": "Start Analysis",
+      "analyzing": "Analyzing...",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "analysisSuccess": "Analysis completed successfully",
+      "analysisFailed": "Analysis failed",
+      "needTwoDeals": "Need at least 2 active deals to compare",
+      "comparisonFailed": "Comparison failed"
+    },
+    "documents": {
+      "title": "Document Selection",
+      "selectCount": "Select Documents ({{selected}}/{{total}})",
+      "selectAll": "Select All",
+      "clear": "Clear",
+      "empty": "No documents uploaded yet",
+      "unknownType": "Unknown"
+    },
+    "analysisTypes": {
+      "title": "Analysis Types",
+      "dueDiligence": "Due Diligence",
+      "dueDiligenceDesc": "Comprehensive risk analysis",
+      "riskAssessment": "Risk Assessment",
+      "riskAssessmentDesc": "Focus on risk identification",
+      "financialExtraction": "Financial Extraction",
+      "financialExtractionDesc": "Extract financial metrics",
+      "documentComparison": "Document Comparison",
+      "documentComparisonDesc": "Compare multiple documents"
+    },
+    "progress": {
+      "stages": {
+        "initializing": "Initializing",
+        "extracting": "Extracting Documents",
+        "analyzing": "Analyzing",
+        "scoring": "Scoring Risks",
+        "complete": "Complete",
+        "error": "Error"
+      },
+      "risksFound": "{{count}} risks found"
+    },
+    "results": {
+      "summary": "Analysis Summary",
+      "generatedAt": "Generated",
+      "recommendations": "Recommendations",
+      "compareDeals": "Compare with Other Deals",
+      "findings": "Risk Findings ({{count}})",
+      "severity": "Severity",
+      "score": "Score",
+      "title": "Title",
+      "category": "Category"
+    },
+    "categories": {
+      "financial": "Financial",
+      "legal": "Legal",
+      "operational": "Operational",
+      "regulatory": "Regulatory",
+      "reputational": "Reputational"
+    },
+    "comparison": {
+      "title": "Deal Comparison",
+      "topRisks": "Top Risks Across All Deals"
+    },
+    "history": {
+      "title": "Analysis History",
+      "empty": "No previous analyses",
+      "riskScore": "{{score}} risk score",
+      "findingsCount": "{{count}} findings"
+    }
+  },
   "valuation": {
     "methods": {
       "dcf": "Discounted Cash Flow",

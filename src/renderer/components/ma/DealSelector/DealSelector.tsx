@@ -71,9 +71,7 @@ export function DealSelector({
               {deal.transactionType} • {deal.targetCompany.name}
             </span>
           </div>
-          <span className={`${styles.dealStatus} ${styles[deal.status]}`}>
-            {statusLabels[deal.status]}
-          </span>
+          <span className={`${styles.dealStatus} ${styles[deal.status]}`}>{statusLabels[deal.status]}</span>
         </div>
       );
     },
@@ -90,20 +88,16 @@ export function DealSelector({
         <div className={styles.emptyState}>
           <Empty
             icon={<div className={styles.emptyIcon}>📁</div>}
-            description={
-              <span className={styles.emptyText}>No deals yet</span>
-            }
+            description={<span className={styles.emptyText}>No deals yet</span>}
           />
           {showCreateButton && onCreateNew && (
-            <Button type="primary" size="small" icon={<Plus />} onClick={onCreateNew}>
+            <Button type='primary' size='small' icon={<Plus />} onClick={onCreateNew}>
               Create First Deal
             </Button>
           )}
         </div>
       ) : (
-        <div className={styles.dealList}>
-          {deals.map(renderDealItem)}
-        </div>
+        <div className={styles.dealList}>{deals.map(renderDealItem)}</div>
       )}
     </div>
   );
@@ -113,16 +107,12 @@ export function DealSelector({
       <div className={styles.selector}>
         <Dropdown
           droplist={dropdownContent}
-          trigger="click"
-          position="bl"
+          trigger='click'
+          position='bl'
           onVisibleChange={(visible) => setIsDropdownVisible(visible)}
           disabled={isLoading}
         >
-          <Button
-            className={styles.selectorButton}
-            icon={<Down />}
-            loading={isLoading}
-          >
+          <Button className={styles.selectorButton} icon={<Down />} loading={isLoading}>
             {activeDeal ? activeDeal.name : 'Select a deal'}
           </Button>
         </Dropdown>

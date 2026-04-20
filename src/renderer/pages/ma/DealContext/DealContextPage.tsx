@@ -215,18 +215,20 @@ export function DealContextPage() {
           <div className={styles.dealCardHeader}>
             <span className={styles.dealCardName}>{deal.name}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className={`${styles.dealCardStatus} ${styles[deal.status]}`}>
-                {statusLabels[deal.status]}
-              </span>
+              <span className={`${styles.dealCardStatus} ${styles[deal.status]}`}>{statusLabels[deal.status]}</span>
               <Dropdown
-                droplist={<Menu>{getDealActions(deal).map((item) => (
-                  <Menu.Item key={item.key} onClick={item.onClick}>
-                    {item.icon} {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
-                  </Menu.Item>
-                ))}</Menu>}
-                trigger="click"
+                droplist={
+                  <Menu>
+                    {getDealActions(deal).map((item) => (
+                      <Menu.Item key={item.key} onClick={item.onClick}>
+                        {item.icon} {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
+                      </Menu.Item>
+                    ))}
+                  </Menu>
+                }
+                trigger='click'
               >
-                <Button type="text" size="small" icon={<More />} />
+                <Button type='text' size='small' icon={<More />} />
               </Dropdown>
             </div>
           </div>
@@ -246,7 +248,7 @@ export function DealContextPage() {
           <Button icon={<Refresh />} onClick={refresh}>
             Refresh
           </Button>
-          <Button type="primary" icon={<Plus />} onClick={handleCreateNew}>
+          <Button type='primary' icon={<Plus />} onClick={handleCreateNew}>
             New Deal
           </Button>
         </div>
@@ -290,12 +292,10 @@ export function DealContextPage() {
               <div className={styles.emptyIcon}>📁</div>
               <div className={styles.emptyTitle}>No deals found</div>
               <div className={styles.emptyText}>
-                {filterStatus === 'all'
-                  ? 'Create your first deal to get started'
-                  : `No ${filterStatus} deals`}
+                {filterStatus === 'all' ? 'Create your first deal to get started' : `No ${filterStatus} deals`}
               </div>
               {filterStatus === 'all' && (
-                <Button type="primary" icon={<Plus />} onClick={handleCreateNew}>
+                <Button type='primary' icon={<Plus />} onClick={handleCreateNew}>
                   Create Deal
                 </Button>
               )}
@@ -316,8 +316,8 @@ export function DealContextPage() {
                   </Button>
                   {selectedDeal.status === 'active' && (
                     <Popconfirm
-                      title="Archive this deal?"
-                      content="Archived deals can be reactivated later."
+                      title='Archive this deal?'
+                      content='Archived deals can be reactivated later.'
                       onOk={() => handleArchive(selectedDeal)}
                     >
                       <Button>Archive</Button>
@@ -338,15 +338,11 @@ export function DealContextPage() {
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>Created</span>
-                  <span className={styles.detailValue}>
-                    {new Date(selectedDeal.createdAt).toLocaleDateString()}
-                  </span>
+                  <span className={styles.detailValue}>{new Date(selectedDeal.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>Updated</span>
-                  <span className={styles.detailValue}>
-                    {new Date(selectedDeal.updatedAt).toLocaleDateString()}
-                  </span>
+                  <span className={styles.detailValue}>{new Date(selectedDeal.updatedAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -401,9 +397,7 @@ export function DealContextPage() {
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>👈</div>
               <div className={styles.emptyTitle}>Select a deal</div>
-              <div className={styles.emptyText}>
-                Choose a deal from the list to view details
-              </div>
+              <div className={styles.emptyText}>Choose a deal from the list to view details</div>
             </div>
           )}
         </div>

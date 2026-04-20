@@ -1289,6 +1289,43 @@ const migration_v26: IMigration = {
 };
 
 /**
+ * Migration v26 -> v27: Add M&A integration connections table
+ */
+const migration_v27: IMigration = {
+  version: 27,
+  name: 'Add M&A integration connections table',
+  up: (db) => {
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_integration_connections (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL UNIQUE,
+      provider_config_key TEXT NOT NULL,
+      connection_id TEXT,
+      status TEXT NOT NULL DEFAULT 'not_connected',
+      display_name TEXT,
+      metadata TEXT,
+      last_error TEXT,
+      connected_at INTEGER,
+      last_synced_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+    )`);
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_ma_integration_connections_provider_config_key ON ma_integration_connections(provider_config_key)'
+    );
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_integration_connections_status ON ma_integration_connections(status)');
+
+    console.log('[Migration v27] Added M&A integration connections table');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_ma_integration_connections_status');
+    db.exec('DROP INDEX IF EXISTS idx_ma_integration_connections_provider_config_key');
+    db.exec('DROP TABLE IF EXISTS ma_integration_connections');
+
+    console.log('[Migration v27] Rolled back: Removed M&A integration connections table');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1297,7 +1334,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
-  migration_v25, migration_v26,
+  migration_v25, migration_v26, migration_v27,
 ];
 
 /**

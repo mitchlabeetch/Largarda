@@ -19,11 +19,11 @@ It is the execution plan for upgrading the live Flowise instance at `https://fil
 
 `GET /api/v1/chatflows` currently returns three draft objects:
 
-| Name | ID | Type | Notes |
-| --- | --- | --- | --- |
-| `Company_Look_Up` | `697004ac-f76a-4400-bb61-7afb42a65c39` | `AGENTFLOW` | Narrow utility draft |
-| `Largo` | `2ab0be12-f65c-4c0e-8f4d-7dd36fa599e2` | `ASSISTANT` | Draft assistant object |
-| `Largo Cherche` | `3a668c37-e508-4e72-8d6e-826f18efa00c` | `AGENTFLOW` | Research-oriented draft |
+| Name              | ID                                     | Type        | Notes                   |
+| ----------------- | -------------------------------------- | ----------- | ----------------------- |
+| `Company_Look_Up` | `697004ac-f76a-4400-bb61-7afb42a65c39` | `AGENTFLOW` | Narrow utility draft    |
+| `Largo`           | `2ab0be12-f65c-4c0e-8f4d-7dd36fa599e2` | `ASSISTANT` | Draft assistant object  |
+| `Largo Cherche`   | `3a668c37-e508-4e72-8d6e-826f18efa00c` | `AGENTFLOW` | Research-oriented draft |
 
 ### Repo integration reality
 
@@ -44,17 +44,17 @@ Important current limitations:
 
 The Largo Flowise tenant should be generated from the following local sources.
 
-| Source | Role in target design |
-| --- | --- |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/SOUL.md` | Core product posture and operational philosophy |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/IDENTITY.md` | System persona, tone, user mode switching |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/USER.md` | Christophe profile, permissions, timezone, preferred channels |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/WORKFLOWS.md` | Functional workflow catalog for tools, sub-agents, and routines |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/MEMORY.md` | Memory model, persistence layers, session and deal context rules |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/API_REFERENCE.md` | External API catalog for tools and integrations |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/FLOWISE_IMPLEMENTATION.md` | High-level Flowise-native target architecture |
-| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/flowise_kb/` | Uploadable seed assets for prompts, tools, flows, memory, loaders |
-| `.kiro/specs/ma-assistant-flowise-backend/tasks.md` | Product requirements and flow-template roadmap |
+| Source                                                                                          | Role in target design                                             |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/SOUL.md`                   | Core product posture and operational philosophy                   |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/IDENTITY.md`               | System persona, tone, user mode switching                         |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/USER.md`                   | Christophe profile, permissions, timezone, preferred channels     |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/WORKFLOWS.md`              | Functional workflow catalog for tools, sub-agents, and routines   |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/MEMORY.md`                 | Memory model, persistence layers, session and deal context rules  |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/API_REFERENCE.md`          | External API catalog for tools and integrations                   |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/FLOWISE_IMPLEMENTATION.md` | High-level Flowise-native target architecture                     |
+| `chatbuild/architecture_repos/largobase-main/largo_v2_knowledge_base/flowise_kb/`               | Uploadable seed assets for prompts, tools, flows, memory, loaders |
+| `.kiro/specs/ma-assistant-flowise-backend/tasks.md`                                             | Product requirements and flow-template roadmap                    |
 
 ## Target Tenant Shape
 
@@ -80,17 +80,17 @@ Build specialized flows from `flowise_kb/agentflows/` and `WORKFLOWS.md`.
 
 Recommended production inventory:
 
-| Flow | Type | Source | Responsibility |
-| --- | --- | --- | --- |
-| `Largo Core` | Chatflow | `largo_main_agent.json` + persona docs | Main orchestration |
-| `Largo Research` | Agentflow | `research_agent.json` | Company research, market and web research |
-| `Largo Documents` | Agentflow | `document_agent.json` | Document generation, parsing, synthesis |
-| `Largo Meetings` | Agentflow | `meeting_agent.json` | Meeting prep and follow-up |
-| `Largo Email` | Agentflow | `email_agent.json` | Email drafting and triage |
-| `Largo Prospecting` | Agentflow | `prospect_agent.json` | Prospect enrichment and outreach prep |
-| `Largo Due Diligence` | Chatflow or Agentflow | `.kiro` task 13.2 | Risk review, checklist, structured DD support |
-| `Largo Financial Extraction` | Chatflow or Agentflow | `.kiro` task 13.2 | Financial metric extraction and normalization |
-| `Largo Company Intelligence` | Agentflow | `.kiro` task 13.2 | External company intelligence and MCP-backed retrieval |
+| Flow                         | Type                  | Source                                 | Responsibility                                         |
+| ---------------------------- | --------------------- | -------------------------------------- | ------------------------------------------------------ |
+| `Largo Core`                 | Chatflow              | `largo_main_agent.json` + persona docs | Main orchestration                                     |
+| `Largo Research`             | Agentflow             | `research_agent.json`                  | Company research, market and web research              |
+| `Largo Documents`            | Agentflow             | `document_agent.json`                  | Document generation, parsing, synthesis                |
+| `Largo Meetings`             | Agentflow             | `meeting_agent.json`                   | Meeting prep and follow-up                             |
+| `Largo Email`                | Agentflow             | `email_agent.json`                     | Email drafting and triage                              |
+| `Largo Prospecting`          | Agentflow             | `prospect_agent.json`                  | Prospect enrichment and outreach prep                  |
+| `Largo Due Diligence`        | Chatflow or Agentflow | `.kiro` task 13.2                      | Risk review, checklist, structured DD support          |
+| `Largo Financial Extraction` | Chatflow or Agentflow | `.kiro` task 13.2                      | Financial metric extraction and normalization          |
+| `Largo Company Intelligence` | Agentflow             | `.kiro` task 13.2                      | External company intelligence and MCP-backed retrieval |
 
 ### 3. Tool inventory
 
@@ -135,11 +135,11 @@ This keeps the first rollout aligned with the parts of Largo that already have s
 
 The Largo knowledge base should be split into at least three logical document stores.
 
-| Store | Contents | Usage |
-| --- | --- | --- |
-| `largo-core-kb` | `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md`, `WORKFLOWS.md`, `API_REFERENCE.md` | Prompt grounding, operating rules, personality, routing |
-| `largo-mna-kb` | M&A methodology docs, due diligence references, valuation logic, deal playbooks | DD and research flows |
-| `largo-product-kb` | `.kiro/specs/ma-assistant-flowise-backend/*`, implementation notes, app-side integration docs | Engineering and product support flows |
+| Store              | Contents                                                                                      | Usage                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `largo-core-kb`    | `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md`, `WORKFLOWS.md`, `API_REFERENCE.md`          | Prompt grounding, operating rules, personality, routing |
+| `largo-mna-kb`     | M&A methodology docs, due diligence references, valuation logic, deal playbooks               | DD and research flows                                   |
+| `largo-product-kb` | `.kiro/specs/ma-assistant-flowise-backend/*`, implementation notes, app-side integration docs | Engineering and product support flows                   |
 
 Do not dump everything into a single unstructured store. Separate stores improve retrieval quality and let each flow query only relevant corpora.
 
@@ -147,12 +147,12 @@ Do not dump everything into a single unstructured store. Separate stores improve
 
 Adopt a layered memory design that mirrors `MEMORY.md`.
 
-| Layer | Flowise role | External role |
-| --- | --- | --- |
-| Short-term | Buffer memory per session | Recent turns and active reasoning context |
-| Medium-term | Conversation/session linkage | Repo DB tables such as `ma_flowise_sessions` and deal entities |
-| Long-term semantic | Vector memory or vector store retrieval | Preferences, recurring client patterns, reusable DD context |
-| Durable business context | Not solely inside Flowise | Deal, document, and analysis state stored in Largo app DB |
+| Layer                    | Flowise role                            | External role                                                  |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------- |
+| Short-term               | Buffer memory per session               | Recent turns and active reasoning context                      |
+| Medium-term              | Conversation/session linkage            | Repo DB tables such as `ma_flowise_sessions` and deal entities |
+| Long-term semantic       | Vector memory or vector store retrieval | Preferences, recurring client patterns, reusable DD context    |
+| Durable business context | Not solely inside Flowise               | Deal, document, and analysis state stored in Largo app DB      |
 
 Rule:
 
