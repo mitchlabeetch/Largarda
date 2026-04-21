@@ -431,7 +431,14 @@ export const CreateFlowiseSessionInputSchema = z.object({
 // External Integration Types
 // ============================================================================
 
-export type MaIntegrationCategory = 'storage' | 'crm' | 'communication' | 'finance' | 'productivity' | 'other';
+export type MaIntegrationCategory =
+  | 'storage'
+  | 'crm'
+  | 'communication'
+  | 'finance'
+  | 'productivity'
+  | 'research'
+  | 'other';
 export type MaIntegrationStatus =
   | 'not_connected'
   | 'connecting'
@@ -508,6 +515,7 @@ export const MaIntegrationCategorySchema = z.enum([
   'communication',
   'finance',
   'productivity',
+  'research',
   'other',
 ]);
 
@@ -698,6 +706,35 @@ export interface FlowEdge {
   sourceHandle?: string;
   targetHandle?: string;
 }
+
+/**
+ * Snapshot of whether the main process currently has enough
+ * configuration to talk to Flowise, and whether the backend is
+ * reachable right now. Consumed by `ma.flowise.getReadiness` IPC
+ * and the `useFlowiseReadiness` renderer hook so AI surfaces can
+ * disable themselves gracefully when the key is missing or the
+ * service is down.
+ *
+ * - `hasApiKey`      true when either a caller passed `apiKey` or
+ *                    `FLOWISE_API_KEY` is set in the main-process env.
+ * - `apiKeySource`   indicates where the key came from (or `'none'`).
+ * - `pingOk`         result of `GET /api/v1/ping` (unauthenticated).
+ * - `authOk`         result of `GET /api/v1/chatflows` with bearer;
+ *                    `undefined` when `hasApiKey` is false (not probed).
+ * - `flowCount`      number of flows visible to the key, when authOk.
+ * - `checkedAt`      epoch millis when the probe ran.
+ * - `error`          short human-readable error when the probe failed.
+ */
+export type FlowiseReadiness = {
+  baseUrl: string;
+  hasApiKey: boolean;
+  apiKeySource: 'arg' | 'env' | 'none';
+  pingOk: boolean;
+  authOk?: boolean;
+  flowCount?: number;
+  checkedAt: number;
+  error?: string;
+};
 
 // Zod Schemas
 export const FlowiseConfigSchema = z.object({

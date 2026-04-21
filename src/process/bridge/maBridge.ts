@@ -24,6 +24,7 @@ import type {
   CreateRiskFindingInput,
   FlowiseSession,
   CreateFlowiseSessionInput,
+  FlowiseReadiness,
   MaIntegrationProvider,
   MaIntegrationConnection,
   MaIntegrationDescriptor,
@@ -41,6 +42,7 @@ import {
 } from '@process/services/database/repositories/ma/FlowiseSessionRepository';
 import { DealContextService } from '@process/services/ma/DealContextService';
 import { getIntegrationService, type IntegrationService } from '@process/services/ma/IntegrationService';
+import { probeFlowiseReadiness } from '@process/agent/flowise/FloWiseConnection';
 
 // Repository instances
 let dealRepo: DealRepository | null = null;
@@ -179,6 +181,11 @@ export function initMaBridge(): void {
       throw new Error(result.error ?? 'Failed to get active deal');
     }
     return result.data;
+  });
+
+  // Clear active deal
+  ipcBridge.ma.deal.clearActive.provider(async (): Promise<void> => {
+    await getDealContextServiceInstance().clearActiveDeal();
   });
 
   // Get deal context for AI
@@ -404,6 +411,15 @@ export function initMaBridge(): void {
       throw new Error(result.error ?? 'Failed to get Flowise session');
     }
     return result.data;
+  });
+
+  // ============================================================================
+  // Flowise Readiness Operations
+  // ============================================================================
+
+  // Get Flowise readiness status
+  ipcBridge.ma.flowise.getReadiness.provider(async (): Promise<FlowiseReadiness> => {
+    return probeFlowiseReadiness();
   });
 
   // ============================================================================

@@ -123,11 +123,73 @@ export const ANALYSIS_TYPE_LABELS: Record<AnalysisType, string> = {
 };
 
 // ============================================================================
+// Self-hosted backend URLs (manuora.fr stack)
+// ============================================================================
+
+/**
+ * Canonical Flowise backend for Largo production.
+ * Audit of 2026-04-20 confirmed this instance is the single AI orchestration
+ * surface; see `docs/audit/2026-04-20-backend-snapshot-findings.md`.
+ */
+export const FLOWISE_PRODUCTION_URL = 'https://filo.manuora.fr';
+
+/**
+ * Canonical Qdrant vector store for Largo production (v1.17.1).
+ * Direct access is gated by an API key stored in Flowise under
+ * the `largo/qdrantApi` credential.
+ */
+export const QDRANT_PRODUCTION_URL = 'https://qdrant.manuora.fr';
+
+/**
+ * MetaMCP federation bus URL. Only consumed when the Wave 10 MetaMCP
+ * integration is enabled via `LARGO_METAMCP=1`.
+ */
+export const METAMCP_PRODUCTION_URL = 'https://mcp.manuora.fr';
+
+// ============================================================================
+// Embedding contract (matches the live Qdrant collections)
+// ============================================================================
+
+/**
+ * Canonical embedding model for every Largo Qdrant collection.
+ *
+ * This contract was verified against the live document stores on 2026-04-20:
+ * - `LargoCurated20260419c/d` (281 + 335 chunks)
+ * - `LargoRepaired20260419/b` (0 + 336 chunks)
+ *
+ * Any new RAG ingestion MUST emit vectors of matching provider / model /
+ * dimension or the chunks will be unreachable. Changing this constant is
+ * a breaking change that requires a full reingest.
+ */
+export const EMBEDDING_CONTRACT = {
+  provider: 'mistralAIEmbeddings',
+  modelName: 'mistral-embed',
+  dimensions: 1024,
+  distance: 'Cosine',
+} as const;
+
+/**
+ * Canonical Qdrant collection-naming pattern for Largo-managed corpora.
+ * Format: `largo_{scope}_{scopeId?}_{yyyymmdd}{rotationLetter?}`.
+ *
+ * Examples:
+ *   `largo_glossary_20260419d`
+ *   `largo_deal_0f3a1b2c_20260420`
+ *   `largo_sector_6201Z_20260420a`
+ *   `largo_news_20260420`
+ *
+ * See `docs/plans/2026-04-20-backend-scaling-plan.md` § 3 for the full
+ * topology (scopes, retention, payload indexes).
+ */
+export const KB_COLLECTION_SCOPES = ['global', 'deal', 'company', 'sector', 'news', 'watchlist', 'legacy'] as const;
+export type KbCollectionScope = (typeof KB_COLLECTION_SCOPES)[number];
+
+// ============================================================================
 // Flowise Configuration
 // ============================================================================
 
 export const FLOWISE_DEFAULT_CONFIG = {
-  baseUrl: 'http://localhost:3000',
+  baseUrl: FLOWISE_PRODUCTION_URL,
   timeout: 60000,
   retryAttempts: 3,
   retryBaseDelay: 1000,
@@ -140,6 +202,7 @@ export const FLOWISE_ENDPOINTS = {
   vectorUpsert: '/api/v1/vector/upsert',
   vectorQuery: '/api/v1/vector/query',
   agentflowV2: '/api/v2/agentflows',
+  ping: '/api/v1/ping',
 } as const;
 
 export const FLOWISE_EVENT_TYPES = [

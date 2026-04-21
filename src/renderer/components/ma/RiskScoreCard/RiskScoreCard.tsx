@@ -11,8 +11,23 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Progress, Tooltip, Collapse, Empty, Spin, Tag } from '@arco-design/web-react';
-import { Caution, CloseOne, Help, Attention, Success, Down, Right } from '@icon-park/react';
+import { Progress, Tooltip, Collapse, Tag } from '@arco-design/web-react';
+import {
+  Caution,
+  CloseOne,
+  Help,
+  Attention,
+  Success,
+  Down,
+  Right,
+  Wallet,
+  Scale,
+  Tool,
+  FileText,
+  Trophy,
+} from '@icon-park/react';
+import { useTranslation } from 'react-i18next';
+import { Skeleton, EmptyState } from '@/renderer/components/base';
 import type { RiskCategory, RiskSeverity, RiskFinding } from '@/common/ma/types';
 import styles from './RiskScoreCard.module.css';
 
@@ -49,50 +64,6 @@ interface CategoryConfig {
 }
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-const CATEGORY_CONFIG: Record<RiskCategory, CategoryConfig> = {
-  financial: {
-    label: 'Financial',
-    color: '#165DFF',
-    icon: <span className={styles.categoryIcon}>💰</span>,
-    description: 'Risks related to financial health, revenue, and profitability',
-  },
-  legal: {
-    label: 'Legal',
-    color: '#722ED1',
-    icon: <span className={styles.categoryIcon}>⚖️</span>,
-    description: 'Risks related to litigation, contracts, and legal compliance',
-  },
-  operational: {
-    label: 'Operational',
-    color: '#0FC6C2',
-    icon: <span className={styles.categoryIcon}>⚙️</span>,
-    description: 'Risks related to business operations and key personnel',
-  },
-  regulatory: {
-    label: 'Regulatory',
-    color: '#F53F3F',
-    icon: <span className={styles.categoryIcon}>📋</span>,
-    description: 'Risks related to regulatory compliance and permits',
-  },
-  reputational: {
-    label: 'Reputational',
-    color: '#FF7D00',
-    icon: <span className={styles.categoryIcon}>🏆</span>,
-    description: 'Risks related to brand reputation and public perception',
-  },
-};
-
-const SEVERITY_CONFIG: Record<RiskSeverity, { label: string; color: string }> = {
-  low: { label: 'Low', color: '#00B42A' },
-  medium: { label: 'Medium', color: '#FF7D00' },
-  high: { label: 'High', color: '#F53F3F' },
-  critical: { label: 'Critical', color: '#722ED1' },
-};
-
-// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -101,13 +72,6 @@ function getScoreColor(score: number): string {
   if (score >= 51) return '#F53F3F'; // High
   if (score >= 26) return '#FF7D00'; // Medium
   return '#00B42A'; // Low
-}
-
-function getScoreLabel(score: number): string {
-  if (score >= 76) return 'Critical';
-  if (score >= 51) return 'High';
-  if (score >= 26) return 'Medium';
-  return 'Low';
 }
 
 function getSeverityIcon(severity: RiskSeverity): React.ReactNode {
@@ -135,10 +99,20 @@ interface CategoryBarProps {
   findings?: RiskFinding[];
   onClick?: () => void;
   isExpanded?: boolean;
+  categoryConfig: Record<RiskCategory, CategoryConfig>;
+  severityConfig: Record<RiskSeverity, { label: string; color: string }>;
 }
 
-function CategoryBar({ category, score, findings, onClick, isExpanded }: CategoryBarProps) {
-  const config = CATEGORY_CONFIG[category];
+function CategoryBar({
+  category,
+  score,
+  findings,
+  onClick,
+  isExpanded,
+  categoryConfig,
+  severityConfig,
+}: CategoryBarProps) {
+  const config = categoryConfig[category];
   const categoryFindings = findings?.filter((f) => f.category === category) ?? [];
   const color = getScoreColor(score);
 
@@ -179,12 +153,17 @@ function CategoryBar({ category, score, findings, onClick, isExpanded }: Categor
               <div className={styles.findingHeader}>
                 {getSeverityIcon(finding.severity)}
                 <span className={styles.findingTitle}>{finding.title}</span>
-                <Tag size='small' color={SEVERITY_CONFIG[finding.severity].color}>
-                  {SEVERITY_CONFIG[finding.severity].label}
+                <Tag size='small' color={severityConfig[finding.severity].color}>
+                  {severityConfig[finding.severity].label}
                 </Tag>
               </div>
               <p className={styles.findingDescription}>{finding.description}</p>
-              {finding.recommendation && <p className={styles.findingRecommendation}>💡 {finding.recommendation}</p>}
+              {finding.recommendation && (
+                <p className={styles.findingRecommendation}>
+                  <Attention theme='filled' size='14' fill='#FF7D00' style={{ marginRight: '4px' }} />
+                  {finding.recommendation}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -197,10 +176,11 @@ interface ComparisonBarProps {
   category: RiskCategory;
   comparisonData: Record<string, Record<RiskCategory, number>>;
   dealNames?: Record<string, string>;
+  categoryConfig: Record<RiskCategory, CategoryConfig>;
 }
 
-function ComparisonBar({ category, comparisonData, dealNames }: ComparisonBarProps) {
-  const config = CATEGORY_CONFIG[category];
+function ComparisonBar({ category, comparisonData, dealNames, categoryConfig }: ComparisonBarProps) {
+  const config = categoryConfig[category];
   const dealIds = Object.keys(comparisonData);
 
   return (
@@ -251,7 +231,55 @@ export function RiskScoreCard({
   onCategoryClick,
   className,
 }: RiskScoreCardProps) {
+  const { t } = useTranslation('ma');
   const [expandedCategories, setExpandedCategories] = useState<Set<RiskCategory>>(new Set());
+
+  const CATEGORY_CONFIG: Record<RiskCategory, CategoryConfig> = {
+    financial: {
+      label: t('riskScoreCard.categories.financial.label'),
+      color: '#165DFF',
+      icon: <Wallet theme='filled' size='16' fill='#165DFF' />,
+      description: t('riskScoreCard.categories.financial.description'),
+    },
+    legal: {
+      label: t('riskScoreCard.categories.legal.label'),
+      color: '#722ED1',
+      icon: <Scale theme='filled' size='16' fill='#722ED1' />,
+      description: t('riskScoreCard.categories.legal.description'),
+    },
+    operational: {
+      label: t('riskScoreCard.categories.operational.label'),
+      color: '#0FC6C2',
+      icon: <Tool theme='filled' size='16' fill='#0FC6C2' />,
+      description: t('riskScoreCard.categories.operational.description'),
+    },
+    regulatory: {
+      label: t('riskScoreCard.categories.regulatory.label'),
+      color: '#F53F3F',
+      icon: <FileText theme='filled' size='16' fill='#F53F3F' />,
+      description: t('riskScoreCard.categories.regulatory.description'),
+    },
+    reputational: {
+      label: t('riskScoreCard.categories.reputational.label'),
+      color: '#FF7D00',
+      icon: <Trophy theme='filled' size='16' fill='#FF7D00' />,
+      description: t('riskScoreCard.categories.reputational.description'),
+    },
+  };
+
+  const SEVERITY_CONFIG: Record<RiskSeverity, { label: string; color: string }> = {
+    low: { label: t('riskScoreCard.severity.low'), color: '#00B42A' },
+    medium: { label: t('riskScoreCard.severity.medium'), color: '#FF7D00' },
+    high: { label: t('riskScoreCard.severity.high'), color: '#F53F3F' },
+    critical: { label: t('riskScoreCard.severity.critical'), color: '#722ED1' },
+  };
+
+  const getScoreLabel = (score: number): string => {
+    if (score >= 76) return t('riskScoreCard.severity.critical');
+    if (score >= 51) return t('riskScoreCard.severity.high');
+    if (score >= 26) return t('riskScoreCard.severity.medium');
+    return t('riskScoreCard.severity.low');
+  };
 
   const toggleCategory = useCallback((category: RiskCategory) => {
     setExpandedCategories((prev) => {
@@ -289,8 +317,7 @@ export function RiskScoreCard({
     return (
       <div className={`${styles.container} ${className || ''}`}>
         <div className={styles.loadingState}>
-          <Spin />
-          <span>Analyzing risks...</span>
+          <Skeleton variant='card' height='120px' />
         </div>
       </div>
     );
@@ -299,7 +326,11 @@ export function RiskScoreCard({
   if (categories.length === 0 && !isComparison) {
     return (
       <div className={`${styles.container} ${className || ''}`}>
-        <Empty description='No risk data available' />
+        <EmptyState
+          icon={<FileText size={64} />}
+          title='No risk data available'
+          description='Upload documents to analyze risks'
+        />
       </div>
     );
   }
@@ -310,7 +341,7 @@ export function RiskScoreCard({
       {!isComparison && (
         <div className={styles.header}>
           <div className={styles.titleSection}>
-            <h3 className={styles.title}>Risk Assessment</h3>
+            <h3 className={styles.title}>{t('riskScoreCard.riskAssessment')}</h3>
             {dealName && <span className={styles.dealName}>{dealName}</span>}
           </div>
           <div className={styles.overallScore}>
@@ -327,7 +358,7 @@ export function RiskScoreCard({
       {/* Comparison header */}
       {isComparison && comparisonData && (
         <div className={styles.header}>
-          <h3 className={styles.title}>Risk Comparison</h3>
+          <h3 className={styles.title}>{t('riskScoreCard.riskComparison')}</h3>
         </div>
       )}
 
@@ -343,12 +374,19 @@ export function RiskScoreCard({
                 findings={risks}
                 onClick={() => handleCategoryClick(category)}
                 isExpanded={expandedCategories.has(category)}
+                categoryConfig={CATEGORY_CONFIG}
+                severityConfig={SEVERITY_CONFIG}
               />
             ))
           : comparisonData
             ? // Comparison view
               (Object.keys(CATEGORY_CONFIG) as RiskCategory[]).map((category) => (
-                <ComparisonBar key={category} category={category} comparisonData={comparisonData} />
+                <ComparisonBar
+                  key={category}
+                  category={category}
+                  comparisonData={comparisonData}
+                  categoryConfig={CATEGORY_CONFIG}
+                />
               ))
             : null}
       </div>
@@ -357,29 +395,29 @@ export function RiskScoreCard({
       {!isComparison && risks.length > 0 && (
         <div className={styles.summary}>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Total Findings</span>
+            <span className={styles.summaryLabel}>{t('riskScoreCard.summary.totalFindings')}</span>
             <span className={styles.summaryValue}>{risks.length}</span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Critical</span>
+            <span className={styles.summaryLabel}>{t('riskScoreCard.severity.critical')}</span>
             <span className={styles.summaryValue} style={{ color: '#722ED1' }}>
               {risks.filter((r) => r.severity === 'critical').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>High</span>
+            <span className={styles.summaryLabel}>{t('riskScoreCard.severity.high')}</span>
             <span className={styles.summaryValue} style={{ color: '#F53F3F' }}>
               {risks.filter((r) => r.severity === 'high').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Medium</span>
+            <span className={styles.summaryLabel}>{t('riskScoreCard.severity.medium')}</span>
             <span className={styles.summaryValue} style={{ color: '#FF7D00' }}>
               {risks.filter((r) => r.severity === 'medium').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Low</span>
+            <span className={styles.summaryLabel}>{t('riskScoreCard.severity.low')}</span>
             <span className={styles.summaryValue} style={{ color: '#00B42A' }}>
               {risks.filter((r) => r.severity === 'low').length}
             </span>

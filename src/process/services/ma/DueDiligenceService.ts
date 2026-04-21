@@ -505,10 +505,9 @@ export class DueDiligenceService {
    */
   private initializeFlowiseConnection(baseUrl?: string, apiKey?: string): FloWiseConnection {
     if (!this.flowiseConnection) {
-      this.flowiseConnection = createFloWiseConnection({
-        baseUrl: baseUrl ?? 'http://localhost:3000',
-        apiKey,
-      });
+      // When baseUrl is undefined, createFloWiseConnection falls back to
+      // FLOWISE_DEFAULT_CONFIG.baseUrl (FLOWISE_PRODUCTION_URL by default).
+      this.flowiseConnection = createFloWiseConnection({ baseUrl, apiKey });
     }
     return this.flowiseConnection;
   }

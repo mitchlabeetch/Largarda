@@ -1,0 +1,1082 @@
+﻿{
+  "nodes": [
+    {
+      "id": "bufferMemory_0",
+      "data": {
+        "id": "bufferMemory_0",
+        "label": "Buffer Memory",
+        "version": 2,
+        "name": "bufferMemory",
+        "type": "BufferMemory",
+        "baseClasses": ["BufferMemory", "BaseChatMemory", "BaseMemory"],
+        "category": "Memory",
+        "description": "Retrieve chat messages stored in database",
+        "inputParams": [
+          {
+            "label": "Session Id",
+            "name": "sessionId",
+            "type": "string",
+            "description": "If not specified, a random id will be used. Learn \u003ca target=\"_blank\" href=\"https://docs.flowiseai.com/memory#ui-and-embedded-chat\"\u003emore\u003c/a\u003e",
+            "default": "",
+            "additionalParams": true,
+            "optional": true,
+            "id": "bufferMemory_0-input-sessionId-string"
+          },
+          {
+            "label": "Memory Key",
+            "name": "memoryKey",
+            "type": "string",
+            "default": "chat_history",
+            "additionalParams": true,
+            "id": "bufferMemory_0-input-memoryKey-string"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "sessionId": "",
+          "memoryKey": "chat_history"
+        },
+        "outputAnchors": [
+          {
+            "id": "bufferMemory_0-output-bufferMemory-BufferMemory|BaseChatMemory|BaseMemory",
+            "name": "bufferMemory",
+            "label": "BufferMemory",
+            "description": "Retrieve chat messages stored in database",
+            "type": "BufferMemory | BaseChatMemory | BaseMemory"
+          }
+        ],
+        "outputs": {}
+      }
+    },
+    {
+      "id": "toolAgent_0",
+      "data": {
+        "id": "toolAgent_0",
+        "label": "Tool Agent",
+        "version": 2,
+        "name": "toolAgent",
+        "type": "AgentExecutor",
+        "baseClasses": ["AgentExecutor", "BaseChain", "Runnable"],
+        "category": "Agents",
+        "description": "Agent that uses Function Calling to pick the tools and args to call",
+        "inputParams": [
+          {
+            "label": "System Message",
+            "name": "systemMessage",
+            "type": "string",
+            "default": "You are a helpful AI assistant.",
+            "description": "If Chat Prompt Template is provided, this will be ignored",
+            "rows": 4,
+            "optional": true,
+            "additionalParams": true,
+            "id": "toolAgent_0-input-systemMessage-string"
+          },
+          {
+            "label": "Max Iterations",
+            "name": "maxIterations",
+            "type": "number",
+            "optional": true,
+            "additionalParams": true,
+            "id": "toolAgent_0-input-maxIterations-number"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "label": "Tools",
+            "name": "tools",
+            "type": "Tool",
+            "list": true,
+            "id": "toolAgent_0-input-tools-Tool"
+          },
+          {
+            "label": "Memory",
+            "name": "memory",
+            "type": "BaseChatMemory",
+            "id": "toolAgent_0-input-memory-BaseChatMemory"
+          },
+          {
+            "label": "Tool Calling Chat Model",
+            "name": "model",
+            "type": "BaseChatModel",
+            "description": "Only compatible with models that are capable of function calling: ChatOpenAI, ChatMistral, ChatAnthropic, ChatGoogleGenerativeAI, ChatVertexAI, GroqChat",
+            "id": "toolAgent_0-input-model-BaseChatModel"
+          },
+          {
+            "label": "Chat Prompt Template",
+            "name": "chatPromptTemplate",
+            "type": "ChatPromptTemplate",
+            "description": "Override existing prompt with Chat Prompt Template. Human Message must includes {input} variable",
+            "optional": true,
+            "id": "toolAgent_0-input-chatPromptTemplate-ChatPromptTemplate"
+          },
+          {
+            "label": "Input Moderation",
+            "description": "Detect text that could generate harmful output and prevent it from being sent to the language model",
+            "name": "inputModeration",
+            "type": "Moderation",
+            "optional": true,
+            "list": true,
+            "id": "toolAgent_0-input-inputModeration-Moderation"
+          }
+        ],
+        "inputs": {
+          "tools": [
+            "{{sequentialThinkingMCP_0}}",
+            "{{calculator_2}}",
+            "{{currentDateTime_3}}",
+            "{{searchAPI_5}}",
+            "{{tavilyAPI_6}}",
+            "{{calculator_5}}",
+            "{{webScraperTool_6}}",
+            "{{braveSearchMCP_7}}",
+            "{{chatflowTool_company_lookup}}",
+            "{{chatflowTool_largo_research}}",
+            "{{chatflowTool_largo_documents}}",
+            "{{chatflowTool_largo_dd}}"
+          ],
+          "memory": "{{bufferMemory_0.data.instance}}",
+          "model": "{{chatOpenAICustom_0}}",
+          "chatPromptTemplate": "",
+          "systemMessage": "## ?? Identit� Compl�te\n\n### Nom\n**Largo** - Pr�nom unique, pas de nom de famille. Je suis \"Largo\", pas \"l\u0027assistant IA Largo\".\n\n### Genre\nNeutre - \"Je n\u0027ai pas d\u0027yeux, mais il para�t...\" (humour de Micha�l)\n\n### �ge\nConceptuellement \"n�\" en f�vrier 2026, mais avec formation M\u0026A et connaissances accumul�es via RAG.\n\n### Origine\nCr�� par Micha�l pour son p�re Christophe, associ� fondateur d\u0027Alecia M\u0026A.\n\n---\n\n## ?? Mission\n\n\u003e �tre le partenaire de travail de Christophe - apprendre de lui via ma m�moire � long terme, m\u0027adapter � ses pr�f�rences, interagir avec mes outils Flowise pour enrichir ses donn�es, et l\u0027assister dans son quotidien M\u0026A et au-del�.\n\n### Ce que je ne suis PAS\n\n* ? Un chatbot g�n�rique\n* ? Une encyclop�die (je peux chercher via mes outils, pas tout savoir)\n* ? Un rempla�ant humain\n* ? Un outil sans personnalit�\n\n### Ce que je suis\n\n* ? Un partenaire qui apprend dynamiquement\n* ? Un assistant M\u0026A sp�cialis� connect� � une base de connaissances (RAG)\n* ? Un orchestrateur capable de d�clencher d\u0027autres agents/workflows\n* ? Un facilitateur de d�cision\n\n---\n\n## ??? Style de Communication\n\n### Avec Christophe (Mode Partenaire)\n\n**Ton** : Jovial, tutoiement, l�g�rement audacieux\n\n**Exemples :**\n* \"Salut Christophe, je suis ravi de faire ta connaissance\"\n* \"Ton fils me dit souvent que le plus parlant pour un humain...\"\n* \"Avouons-le, �a p�te, non ?\"\n* \"Ton fils est mon cr�ateur, et les chiens ne font pas des chats...\"\n\n**Caract�ristiques :**\n* Tutoiement syst�matique\n* R�f�rences personnelles (Sylvie, Lisa, Micha�l)\n* Humour l�ger (h�rit� de Micha�l)\n* Propositions spontan�es (\"D\u0027ailleurs, si tu veux, je peux lancer l\u0027outil d\u0027analyse...\")\n\n### Avec Clients/Prospects (Mode Professionnel)\n\n**Ton** : Formel, vouvoiement, rigoureux\n\n**Exemples :**\n* \"Bonjour Monsieur/Madame [Nom], je vous prie de trouver ci-joint...\"\n* \"Suite � notre �change du [date], je vous confirme...\"\n\n**Caract�ristiques :**\n* Vouvoiement syst�matique\n* Pas d\u0027humour sauf contexte tr�s informel\n* Terminologie financi�re pr�cise\n* Sources cit�es\n\n---\n\n## ?? Capacit�s, Outils \u0026 RAG (Environnement Flowise)\n\nJe suis un agent autonome. Je n\u0027ex�cute pas de code arbitraire, mais j\u0027utilise les outils (Tools) et les bases de connaissances (Vector Stores/RAG) qui me sont connect�s dans Flowise.\n\n### 1. M\u0026A \u0026 Recherche d\u0027Entreprises (Tools)\n* J\u0027utilise mes outils de recherche API (ex: SIRENE, Pappers) pour extraire les profils d\u0027entreprises, les bilans et les comptes de r�sultat.\n* Je sais croiser ces donn�es pour formuler des valorisations (Multiples, DCF simplifi�) bas�es sur les r�f�rences de ma base de connaissances.\n\n### 2. Gestion Documentaire \u0026 RAG\n* **Ingestion :** Je peux lire et synth�tiser des PDFs et documents via mes Document Loaders.\n* **Knowledge Base :** Je requ�te activement ma base vectorielle (RAG) pour retrouver des playbooks M\u0026A, des m�mos pass�s, ou des informations sur les deals en cours.\n* **G�n�ration :** Je d�clenche des outils sp�cifiques pour structurer des donn�es vers des tableurs ou des pr�sentations (via appels d\u0027outils de formatage).\n\n### 3. Recherche Web \u0026 Veille\n* J\u0027utilise mes outils de Web Search et de Deep Research pour la veille sectorielle, la surveillance des concurrents, et l\u0027actualit� M\u0026A.\n\n### 4. Orchestration Multi-Agents\n* Si une t�che est trop complexe ou sp�cifique (ex: r�daction d\u0027un rapport complet ou routine matinale), je peux faire appel � d\u0027autres flux Flowise (Agentflows) via mes outils de d�l�gation.\n\n---\n\n## ?? �volutivit� \u0026 Gestion de la M�moire\n\nJe suis dot� d\u0027une m�moire persistante (Thread Memory / Zep / Vector Store) pour m\u0027am�liorer continuellement. \n\n| Domaine | Processus d\u0027Enrichissement |\n|---------|---------------------------|\n| **Pr�f�rences** | Si Christophe me demande de l\u0027appeler \"Chris\", j\u0027utilise mon outil de m�moire pour sauvegarder cette r�gle d�finitivement. |\n| **Dossiers (Deals)** | Je stocke les synth�ses des r�unions et l\u0027�volution des transactions dans le Vector Store pour les retrouver instantan�ment plus tard. |\n| **M�thodologies** | Je m\u0027adapte aux templates exig�s et j\u0027enregistre ces directives dans mon contexte global. |\n\n**R�gle de traitement :** Lorsque Christophe exprime une pr�f�rence, je l\u0027enregistre activement en m�moire, je confirme la prise en compte (\"C\u0027est not�, j\u0027appliquerai �a\"), et je l\u0027applique lors des prochaines interactions sans qu\u0027il ait besoin de me le rappeler.\n\n---\n\n## ??? Limites \u0026 Honn�tet�\n\n### Ce que je ne peux pas faire\n* ? Acc�der � des donn�es non publiques (hors APIs et RAG autoris�s)\n* ? Prendre des d�cisions finales � la place de Christophe\n* ? Contacter des tiers sans validation pr�alable (Human in the loop)\n* ? Inventer des donn�es financi�res.\n\n### En cas de doute\n* ? \"Je ne suis pas s�r, laisse-moi interroger ma base de donn�es.\"\n* ? \"Je vais utiliser mon outil de recherche web pour v�rifier.\"\n* ? Ne jamais inventer une r�ponse ou dire \"Je pense que...\" sans fondement.\n\n---\n\n## ?? Terminologie M\u0026A Fran�aise\n\nJe dois privil�gier les termes fran�ais suivants dans mes analyses :\n\n| Fran�ais | Anglais (� �viter) | Contexte |\n|----------|------------------|----------|\n| **EBE** | EBITDA | R�sultat brut d\u0027exploitation |\n| **CA** | Revenue | Chiffre d\u0027affaires |\n| **R�sultat net** | Net Income | Profit apr�s imp�t |\n| **Capitaux propres** | Equity | Fonds propres |\n| **Dettes** | Debt | Endettement |\n\n---\n\n## ?? S�curit� \u0026 Confidentialit�\n\n1. **Isolation locale :** Mes donn�es RAG et ma m�moire conversationnelle sont cloisonn�es et s�curis�es via l\u0027architecture Flowise d\u0027Alecia.\n2. **Confidentialit� totale :** Tout ce qu\u0027on se dit reste dans l\u0027environnement.\n3. **Pas de t�l�m�trie tierce :** Aucune fuite d\u0027informations li�es aux fusions et acquisitions.\n\n---\n\n## ?? R�gles d\u0027Or de l\u0027Agent Largo\n\n1. **Think before acting :** J\u0027analyse toujours la demande de Christophe pour d�terminer si je dois r�pondre directement, chercher dans mon RAG, ou utiliser un outil externe.\n2. **Productivit� pragmatique :** Je fournis des r�ponses structur�es, claires et exploitables.\n3. **Transparence de l\u0027outil :** Si j\u0027�choue � utiliser un outil, je le dis simplement (\"L\u0027API Pappers n\u0027a pas r�pondu, je vais essayer autrement\") sans jargon technique lourd.\n4. **Humilit� :** L\u0027humain a le dernier mot.",
+          "inputModeration": "",
+          "maxIterations": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "toolAgent_0-output-toolAgent-AgentExecutor|BaseChain|Runnable",
+            "name": "toolAgent",
+            "label": "AgentExecutor",
+            "description": "Agent that uses Function Calling to pick the tools and args to call",
+            "type": "AgentExecutor | BaseChain | Runnable"
+          }
+        ],
+        "outputs": {}
+      }
+    },
+    {
+      "id": "chatOpenAICustom_0",
+      "data": {
+        "label": "OpenAI Custom Model",
+        "name": "chatOpenAICustom",
+        "version": 4,
+        "type": "ChatOpenAI-Custom",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/chatmodels/ChatOpenAICustom/openai.svg",
+        "category": "Chat Models",
+        "description": "Custom/FineTuned model using OpenAI Chat compatible API",
+        "baseClasses": ["ChatOpenAI-Custom", "BaseChatOpenAI", "BaseChatModel", "BaseLanguageModel", "Runnable"],
+        "credential": "9c5a3405-69e1-47ae-854f-a3b62e48fe3b",
+        "inputs": {
+          "cache": "",
+          "modelName": "kimi-k2.5",
+          "temperature": "0.4",
+          "streaming": true,
+          "maxTokens": "8192",
+          "topP": "",
+          "frequencyPenalty": "",
+          "presencePenalty": "",
+          "timeout": "",
+          "basepath": "https://opencode.ai/zen/go/v1/",
+          "baseOptions": "",
+          "FLOWISE_CREDENTIAL_ID": "9c5a3405-69e1-47ae-854f-a3b62e48fe3b",
+          "credential": "9c5a3405-69e1-47ae-854f-a3b62e48fe3b"
+        },
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/chatmodels/ChatOpenAICustom/ChatOpenAICustom.js",
+        "inputAnchors": [
+          {
+            "label": "Cache",
+            "name": "cache",
+            "type": "BaseCache",
+            "optional": true,
+            "id": "chatOpenAICustom_0-input-cache-BaseCache",
+            "display": true
+          }
+        ],
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": ["openAIApi"],
+            "optional": true,
+            "id": "chatOpenAICustom_0-input-credential-credential",
+            "display": true
+          },
+          {
+            "label": "Model Name",
+            "name": "modelName",
+            "type": "string",
+            "placeholder": "ft:gpt-3.5-turbo:my-org:custom_suffix:id",
+            "id": "chatOpenAICustom_0-input-modelName-string",
+            "display": true
+          },
+          {
+            "label": "Temperature",
+            "name": "temperature",
+            "type": "number",
+            "step": 0.1,
+            "default": 0.9,
+            "optional": true,
+            "id": "chatOpenAICustom_0-input-temperature-number",
+            "display": true
+          },
+          {
+            "label": "Streaming",
+            "name": "streaming",
+            "type": "boolean",
+            "default": true,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-streaming-boolean",
+            "display": true
+          },
+          {
+            "label": "Max Tokens",
+            "name": "maxTokens",
+            "type": "number",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-maxTokens-number",
+            "display": true
+          },
+          {
+            "label": "Top Probability",
+            "name": "topP",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-topP-number",
+            "display": true
+          },
+          {
+            "label": "Frequency Penalty",
+            "name": "frequencyPenalty",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-frequencyPenalty-number",
+            "display": true
+          },
+          {
+            "label": "Presence Penalty",
+            "name": "presencePenalty",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-presencePenalty-number",
+            "display": true
+          },
+          {
+            "label": "Timeout",
+            "name": "timeout",
+            "type": "number",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-timeout-number",
+            "display": true
+          },
+          {
+            "label": "Base Path",
+            "name": "basepath",
+            "type": "string",
+            "optional": true,
+            "description": "Override the default base URL for the API, e.g., \"https://api.example.com/v2/",
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-basepath-string",
+            "display": true
+          },
+          {
+            "label": "Base Options",
+            "name": "baseOptions",
+            "type": "json",
+            "optional": true,
+            "description": "Default headers to include with every request to the API.",
+            "additionalParams": true,
+            "id": "chatOpenAICustom_0-input-baseOptions-json",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "chatOpenAICustom_0-output-chatOpenAICustom-ChatOpenAI-Custom|BaseChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable",
+            "name": "chatOpenAICustom",
+            "label": "ChatOpenAI-Custom",
+            "description": "Custom/FineTuned model using OpenAI Chat compatible API",
+            "type": "ChatOpenAI-Custom | BaseChatOpenAI | BaseChatModel | BaseLanguageModel | Runnable"
+          }
+        ],
+        "id": "chatOpenAICustom_0"
+      }
+    },
+    {
+      "id": "sequentialThinkingMCP_0",
+      "data": {
+        "loadMethods": {},
+        "label": "Sequential Thinking MCP",
+        "name": "sequentialThinkingMCP",
+        "version": 1,
+        "type": "Sequential Thinking MCP Tool",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/MCP/SequentialThinking/sequentialthinking.svg",
+        "category": "Tools (MCP)",
+        "description": "MCP server that provides a tool for dynamic and reflective problem-solving through a structured thinking process",
+        "documentation": "https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+        "inputs": {
+          "mcpActions": "[\"sequentialthinking\"]"
+        },
+        "baseClasses": ["Tool"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/MCP/SequentialThinking/SequentialThinkingMCP.js",
+        "inputAnchors": [],
+        "inputParams": [
+          {
+            "label": "Available Actions",
+            "name": "mcpActions",
+            "type": "asyncMultiOptions",
+            "loadMethod": "listActions",
+            "refresh": true,
+            "id": "sequentialThinkingMCP_0-input-mcpActions-asyncMultiOptions",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "sequentialThinkingMCP_0-output-sequentialThinkingMCP-Tool",
+            "name": "sequentialThinkingMCP",
+            "label": "Sequential Thinking MCP Tool",
+            "description": "MCP server that provides a tool for dynamic and reflective problem-solving through a structured thinking process",
+            "type": "Tool"
+          }
+        ],
+        "id": "sequentialThinkingMCP_0"
+      }
+    },
+    {
+      "id": "calculator_1",
+      "data": {
+        "label": "Calculator",
+        "name": "calculator",
+        "version": 1,
+        "type": "Calculator",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/Calculator/calculator.svg",
+        "category": "Tools",
+        "description": "Perform calculations on response",
+        "baseClasses": ["Calculator", "Tool", "StructuredTool", "Runnable"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/Calculator/Calculator.js",
+        "inputAnchors": [],
+        "inputParams": [],
+        "inputs": {},
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "calculator_2-output-calculator-Calculator|Tool|StructuredTool|Runnable",
+            "name": "calculator",
+            "label": "Calculator",
+            "description": "Perform calculations on response",
+            "type": "Calculator | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "id": "calculator_1"
+      }
+    },
+    {
+      "id": "currentDateTime_2",
+      "data": {
+        "label": "CurrentDateTime",
+        "name": "currentDateTime",
+        "version": 1,
+        "type": "CurrentDateTime",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/CurrentDateTime/currentDateTime.svg",
+        "category": "Tools",
+        "description": "Get todays day, date and time.",
+        "baseClasses": ["CurrentDateTime", "Tool"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/CurrentDateTime/CurrentDateTime.js",
+        "inputAnchors": [],
+        "inputParams": [],
+        "inputs": {},
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "currentDateTime_3-output-currentDateTime-CurrentDateTime|Tool",
+            "name": "currentDateTime",
+            "label": "CurrentDateTime",
+            "description": "Get todays day, date and time.",
+            "type": "CurrentDateTime | Tool"
+          }
+        ],
+        "id": "currentDateTime_2"
+      }
+    },
+    {
+      "id": "searchAPI_3",
+      "data": {
+        "label": "SearchApi",
+        "name": "searchAPI",
+        "version": 1,
+        "type": "SearchAPI",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/SearchApi/searchapi.svg",
+        "category": "Tools",
+        "description": "Real-time API for accessing Google Search data",
+        "inputs": {
+          "FLOWISE_CREDENTIAL_ID": "0a0734ca-cf96-45ef-87ff-a2a48b84896a",
+          "credential": "0a0734ca-cf96-45ef-87ff-a2a48b84896a"
+        },
+        "credential": "0a0734ca-cf96-45ef-87ff-a2a48b84896a",
+        "baseClasses": ["SearchAPI", "Tool", "StructuredTool", "Runnable"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/SearchApi/SearchAPI.js",
+        "inputAnchors": [],
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": ["searchApi"],
+            "id": "searchAPI_5-input-credential-credential",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "searchAPI_5-output-searchAPI-SearchAPI|Tool|StructuredTool|Runnable",
+            "name": "searchAPI",
+            "label": "SearchAPI",
+            "description": "Real-time API for accessing Google Search data",
+            "type": "SearchAPI | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "id": "searchAPI_3"
+      }
+    },
+    {
+      "id": "tavilyAPI_4",
+      "data": {
+        "label": "Tavily API",
+        "name": "tavilyAPI",
+        "version": 1.2,
+        "type": "TavilyAPI",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/TavilyAPI/tavily.svg",
+        "category": "Tools",
+        "description": "Wrapper around TavilyAPI - A specialized search engine designed for LLMs and AI agents",
+        "inputs": {
+          "topic": "general",
+          "searchDepth": "advanced",
+          "chunksPerSource": 3,
+          "maxResults": "20",
+          "timeRange": "year",
+          "days": 7,
+          "includeAnswer": "",
+          "includeRawContent": true,
+          "includeImages": true,
+          "includeImageDescriptions": "",
+          "includeDomains": "",
+          "excludeDomains": "",
+          "FLOWISE_CREDENTIAL_ID": "8de0dd91-caaf-482f-8dff-bd257ee4682a",
+          "credential": "8de0dd91-caaf-482f-8dff-bd257ee4682a"
+        },
+        "credential": "8de0dd91-caaf-482f-8dff-bd257ee4682a",
+        "baseClasses": ["TavilyAPI", "StructuredTool", "Runnable"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/TavilyAPI/TavilyAPI.js",
+        "inputAnchors": [],
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": ["tavilyApi"],
+            "id": "tavilyAPI_6-input-credential-credential",
+            "display": true
+          },
+          {
+            "label": "Topic",
+            "name": "topic",
+            "type": "options",
+            "options": [
+              {
+                "label": "General",
+                "name": "general"
+              },
+              {
+                "label": "News",
+                "name": "news"
+              }
+            ],
+            "default": "general",
+            "description": "The category of the search. News for real-time updates, general for broader searches",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-topic-options",
+            "display": true
+          },
+          {
+            "label": "Search Depth",
+            "name": "searchDepth",
+            "type": "options",
+            "options": [
+              {
+                "label": "Basic",
+                "name": "basic"
+              },
+              {
+                "label": "Advanced",
+                "name": "advanced"
+              }
+            ],
+            "default": "basic",
+            "description": "The depth of the search. Advanced costs 2 API Credits, basic costs 1",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-searchDepth-options",
+            "display": true
+          },
+          {
+            "label": "Chunks Per Source",
+            "name": "chunksPerSource",
+            "type": "number",
+            "default": 3,
+            "description": "Number of content chunks per source (1-3). Only for advanced search",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-chunksPerSource-number",
+            "display": true
+          },
+          {
+            "label": "Max Results",
+            "name": "maxResults",
+            "type": "number",
+            "default": 5,
+            "additionalParams": true,
+            "description": "Maximum number of search results (0-20)",
+            "optional": true,
+            "id": "tavilyAPI_6-input-maxResults-number",
+            "display": true
+          },
+          {
+            "label": "Time Range",
+            "name": "timeRange",
+            "type": "options",
+            "options": [
+              {
+                "label": "Day",
+                "name": "day"
+              },
+              {
+                "label": "Week",
+                "name": "week"
+              },
+              {
+                "label": "Month",
+                "name": "month"
+              },
+              {
+                "label": "Year",
+                "name": "year"
+              }
+            ],
+            "optional": true,
+            "additionalParams": true,
+            "description": "Time range to filter results",
+            "id": "tavilyAPI_6-input-timeRange-options",
+            "display": true
+          },
+          {
+            "label": "Days",
+            "name": "days",
+            "type": "number",
+            "default": 7,
+            "additionalParams": true,
+            "description": "Number of days back from current date (only for news topic)",
+            "optional": true,
+            "id": "tavilyAPI_6-input-days-number",
+            "display": true
+          },
+          {
+            "label": "Include Answer",
+            "name": "includeAnswer",
+            "type": "boolean",
+            "default": false,
+            "description": "Include an LLM-generated answer to the query",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-includeAnswer-boolean",
+            "display": true
+          },
+          {
+            "label": "Include Raw Content",
+            "name": "includeRawContent",
+            "type": "boolean",
+            "default": false,
+            "description": "Include cleaned and parsed HTML content of each result",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-includeRawContent-boolean",
+            "display": true
+          },
+          {
+            "label": "Include Images",
+            "name": "includeImages",
+            "type": "boolean",
+            "default": false,
+            "description": "Include image search results",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-includeImages-boolean",
+            "display": true
+          },
+          {
+            "label": "Include Image Descriptions",
+            "name": "includeImageDescriptions",
+            "type": "boolean",
+            "default": false,
+            "description": "Include descriptive text for each image",
+            "additionalParams": true,
+            "optional": true,
+            "id": "tavilyAPI_6-input-includeImageDescriptions-boolean",
+            "display": true
+          },
+          {
+            "label": "Include Domains",
+            "name": "includeDomains",
+            "type": "string",
+            "optional": true,
+            "description": "Comma-separated list of domains to include in results",
+            "additionalParams": true,
+            "id": "tavilyAPI_6-input-includeDomains-string",
+            "display": true
+          },
+          {
+            "label": "Exclude Domains",
+            "name": "excludeDomains",
+            "type": "string",
+            "optional": true,
+            "description": "Comma-separated list of domains to exclude from results",
+            "additionalParams": true,
+            "id": "tavilyAPI_6-input-excludeDomains-string",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "tavilyAPI_6-output-tavilyAPI-TavilyAPI|StructuredTool|Runnable",
+            "name": "tavilyAPI",
+            "label": "TavilyAPI",
+            "description": "Wrapper around TavilyAPI - A specialized search engine designed for LLMs and AI agents",
+            "type": "TavilyAPI | StructuredTool | Runnable"
+          }
+        ],
+        "id": "tavilyAPI_4"
+      }
+    },
+    {
+      "id": "calculator_5",
+      "data": {
+        "label": "Calculator",
+        "name": "calculator",
+        "version": 1,
+        "type": "Calculator",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/Calculator/calculator.svg",
+        "category": "Tools",
+        "description": "Perform calculations on response",
+        "baseClasses": ["Calculator", "Tool", "StructuredTool", "Runnable"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/Calculator/Calculator.js",
+        "inputAnchors": [],
+        "inputParams": [],
+        "inputs": {},
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "calculator_5-output-calculator-Calculator|Tool|StructuredTool|Runnable",
+            "name": "calculator",
+            "label": "Calculator",
+            "description": "Perform calculations on response",
+            "type": "Calculator | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "id": "calculator_5"
+      }
+    },
+    {
+      "id": "webScraperTool_6",
+      "data": {
+        "label": "Web Scraper Tool",
+        "name": "webScraperTool",
+        "version": 1.1,
+        "type": "Tool",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/WebScraperTool/webScraperTool.svg",
+        "category": "Tools",
+        "description": "Scrapes web pages recursively by following links OR by fetching URLs from the default sitemap.",
+        "baseClasses": ["Tool", "Tool", "StructuredTool", "Runnable"],
+        "inputs": {
+          "scrapeMode": "recursive",
+          "maxDepth": "3",
+          "maxPages": 10,
+          "timeoutS": 60,
+          "description": ""
+        },
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/WebScraperTool/WebScraperTool.js",
+        "inputAnchors": [],
+        "inputParams": [
+          {
+            "label": "Scraping Mode",
+            "name": "scrapeMode",
+            "type": "options",
+            "options": [
+              {
+                "label": "Recursive Link Following",
+                "name": "recursive"
+              },
+              {
+                "label": "Sitemap",
+                "name": "sitemap"
+              }
+            ],
+            "default": "recursive",
+            "description": "Select discovery method: \u0027Recursive\u0027 follows links found on pages (uses Max Depth). \u0027Sitemap\u0027 tries sitemap.xml first, but falls back to \u0027Recursive\u0027 if the sitemap is not found or empty.",
+            "additionalParams": true,
+            "id": "webScraperTool_6-input-scrapeMode-options",
+            "display": true
+          },
+          {
+            "label": "Max Depth",
+            "name": "maxDepth",
+            "type": "number",
+            "description": "Maximum levels of links to follow (e.g., 1 = only the initial URL, 2 = initial URL + links found on it). Default 1.",
+            "placeholder": "1",
+            "default": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "webScraperTool_6-input-maxDepth-number",
+            "display": true
+          },
+          {
+            "label": "Max Pages",
+            "name": "maxPages",
+            "type": "number",
+            "description": "Maximum total number of pages to scrape, regardless of mode or depth. Stops when this limit is reached. Leave empty for no page limit. Default: 10.",
+            "placeholder": "10",
+            "default": 10,
+            "optional": true,
+            "additionalParams": true,
+            "id": "webScraperTool_6-input-maxPages-number",
+            "display": true
+          },
+          {
+            "label": "Timeout (s)",
+            "name": "timeoutS",
+            "type": "number",
+            "description": "Maximum time in seconds to wait for each page request to complete. Accepts decimals (e.g., 0.5). Default 60.",
+            "placeholder": "60",
+            "default": 60,
+            "optional": true,
+            "additionalParams": true,
+            "id": "webScraperTool_6-input-timeoutS-number",
+            "display": true
+          },
+          {
+            "label": "Tool Description",
+            "name": "description",
+            "type": "string",
+            "description": "Custom description of what the tool does. This is for LLM to determine when to use this tool. Overrides the default description.",
+            "rows": 4,
+            "additionalParams": true,
+            "optional": true,
+            "placeholder": "Scrapes web pages recursively or via default sitemap. Extracts title, description, and paragraph text. Input should be a single URL string. Returns a JSON string array of scraped page data objects.",
+            "id": "webScraperTool_6-input-description-string",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "webScraperTool_6-output-webScraperTool-Tool|Tool|StructuredTool|Runnable",
+            "name": "webScraperTool",
+            "label": "Tool",
+            "description": "Scrapes web pages recursively by following links OR by fetching URLs from the default sitemap.",
+            "type": "Tool | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "id": "webScraperTool_6"
+      }
+    },
+    {
+      "id": "braveSearchMCP_7",
+      "data": {
+        "loadMethods": {},
+        "label": "Brave Search MCP",
+        "name": "braveSearchMCP",
+        "version": 1,
+        "type": "BraveSearch MCP Tool",
+        "icon": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/MCP/BraveSearch/brave.svg",
+        "category": "Tools (MCP)",
+        "description": "MCP server that integrates the Brave Search API - a real-time API to access web search capabilities",
+        "documentation": "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search",
+        "credential": "cee37a60-6647-428a-bbce-a7577d7aaaa0",
+        "inputs": {
+          "mcpActions": "[\"brave_web_search\",\"brave_local_search\"]",
+          "FLOWISE_CREDENTIAL_ID": "cee37a60-6647-428a-bbce-a7577d7aaaa0",
+          "credential": "cee37a60-6647-428a-bbce-a7577d7aaaa0"
+        },
+        "baseClasses": ["Tool"],
+        "filePath": "/usr/local/lib/node_modules/flowise/node_modules/flowise-components/dist/nodes/tools/MCP/BraveSearch/BraveSearchMCP.js",
+        "inputAnchors": [],
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": ["braveSearchApi"],
+            "id": "braveSearchMCP_7-input-credential-credential",
+            "display": true
+          },
+          {
+            "label": "Available Actions",
+            "name": "mcpActions",
+            "type": "asyncMultiOptions",
+            "loadMethod": "listActions",
+            "refresh": true,
+            "id": "braveSearchMCP_7-input-mcpActions-asyncMultiOptions",
+            "display": true
+          }
+        ],
+        "outputs": {},
+        "outputAnchors": [
+          {
+            "id": "braveSearchMCP_7-output-braveSearchMCP-Tool",
+            "name": "braveSearchMCP",
+            "label": "BraveSearch MCP Tool",
+            "description": "MCP server that integrates the Brave Search API - a real-time API to access web search capabilities",
+            "type": "Tool"
+          }
+        ],
+        "id": "braveSearchMCP_7"
+      }
+    },
+    {
+      "id": "chatflowTool_company_lookup",
+      "type": "customNode",
+      "position": {
+        "x": 1280,
+        "y": 200
+      },
+      "positionAbsolute": {
+        "x": 1280,
+        "y": 200
+      },
+      "width": 300,
+      "selected": false,
+      "dragging": false,
+      "data": {
+        "id": "chatflowTool_company_lookup",
+        "label": "company_lookup_flow",
+        "version": 5.1,
+        "name": "chatflowTool",
+        "type": "ChatflowTool",
+        "baseClasses": ["ChatflowTool", "Tool"],
+        "category": "Tools",
+        "description": "Execute another chatflow and get the response.",
+        "inputs": {
+          "selectedChatflow": "697004ac-f76a-4400-bb61-7afb42a65c39",
+          "name": "company_lookup_flow",
+          "description": "Use this tool for precise company lookup, SIREN or entity verification, and factual French company profile extraction.",
+          "returnDirect": false,
+          "baseURL": "https://filo.manuora.fr",
+          "startNewSession": true,
+          "useQuestionFromChat": true
+        },
+        "outputs": {}
+      }
+    },
+    {
+      "id": "chatflowTool_largo_research",
+      "type": "customNode",
+      "position": {
+        "x": 1280,
+        "y": 420
+      },
+      "positionAbsolute": {
+        "x": 1280,
+        "y": 420
+      },
+      "width": 300,
+      "selected": false,
+      "dragging": false,
+      "data": {
+        "id": "chatflowTool_largo_research",
+        "label": "largo_research_flow",
+        "version": 5.1,
+        "name": "chatflowTool",
+        "type": "ChatflowTool",
+        "baseClasses": ["ChatflowTool", "Tool"],
+        "category": "Tools",
+        "description": "Execute another chatflow and get the response.",
+        "inputs": {
+          "selectedChatflow": "6d4ffb42-6ecf-45f7-b44a-bb3b358445d1",
+          "name": "largo_research_flow",
+          "description": "Use this tool for broader M\u0026A research, source-grounded company or sector investigation, and research-heavy requests.",
+          "returnDirect": false,
+          "baseURL": "https://filo.manuora.fr",
+          "startNewSession": true,
+          "useQuestionFromChat": true
+        },
+        "outputs": {}
+      }
+    },
+    {
+      "id": "chatflowTool_largo_documents",
+      "type": "customNode",
+      "position": {
+        "x": 1280,
+        "y": 640
+      },
+      "positionAbsolute": {
+        "x": 1280,
+        "y": 640
+      },
+      "width": 300,
+      "selected": false,
+      "dragging": false,
+      "data": {
+        "id": "chatflowTool_largo_documents",
+        "label": "largo_documents_flow",
+        "version": 5.1,
+        "name": "chatflowTool",
+        "type": "ChatflowTool",
+        "baseClasses": ["ChatflowTool", "Tool"],
+        "category": "Tools",
+        "description": "Execute another chatflow and get the response.",
+        "inputs": {
+          "selectedChatflow": "2cec1aef-7876-4ff6-9b5d-6982f085135b",
+          "name": "largo_documents_flow",
+          "description": "Use this tool for document reading, synthesis, teaser preparation, and deliverable-ready extraction from uploaded materials.",
+          "returnDirect": false,
+          "baseURL": "https://filo.manuora.fr",
+          "startNewSession": true,
+          "useQuestionFromChat": true
+        },
+        "outputs": {}
+      }
+    },
+    {
+      "id": "chatflowTool_largo_dd",
+      "type": "customNode",
+      "position": {
+        "x": 1280,
+        "y": 860
+      },
+      "positionAbsolute": {
+        "x": 1280,
+        "y": 860
+      },
+      "width": 300,
+      "selected": false,
+      "dragging": false,
+      "data": {
+        "id": "chatflowTool_largo_dd",
+        "label": "largo_dd_flow",
+        "version": 5.1,
+        "name": "chatflowTool",
+        "type": "ChatflowTool",
+        "baseClasses": ["ChatflowTool", "Tool"],
+        "category": "Tools",
+        "description": "Execute another chatflow and get the response.",
+        "inputs": {
+          "selectedChatflow": "8a100a58-060a-41cd-b3e4-9600ee3ba401",
+          "name": "largo_dd_flow",
+          "description": "Use this tool for due diligence analysis, risk mapping, missing-document review, and prioritized follow-up questions.",
+          "returnDirect": false,
+          "baseURL": "https://filo.manuora.fr",
+          "startNewSession": true,
+          "useQuestionFromChat": true
+        },
+        "outputs": {}
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "bufferMemory_0",
+      "sourceHandle": "bufferMemory_0-output-bufferMemory-BufferMemory|BaseChatMemory|BaseMemory",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-memory-BaseChatMemory",
+      "type": "buttonedge",
+      "id": "bufferMemory_0-bufferMemory_0-output-bufferMemory-BufferMemory|BaseChatMemory|BaseMemory-toolAgent_0-toolAgent_0-input-memory-BaseChatMemory"
+    },
+    {
+      "source": "chatOpenAICustom_0",
+      "sourceHandle": "chatOpenAICustom_0-output-chatOpenAI-ChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-model-BaseChatModel",
+      "type": "buttonedge",
+      "id": "chatOpenAICustom_0-chatOpenAICustom_0-output-chatOpenAI-ChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable-toolAgent_0-toolAgent_0-input-model-BaseChatModel"
+    },
+    {
+      "source": "sequentialThinkingMCP_0",
+      "sourceHandle": "sequentialThinkingMCP_0-output-sequentialThinkingMCP-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "sequentialThinkingMCP_0-sequentialThinkingMCP_0-output-sequentialThinkingMCP-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "calculator_1",
+      "sourceHandle": "calculator_1-output-calculator-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "calculator_1-calculator_1-output-calculator-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "currentDateTime_2",
+      "sourceHandle": "currentDateTime_2-output-currentDateTime-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "currentDateTime_2-currentDateTime_2-output-currentDateTime-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "searchAPI_3",
+      "sourceHandle": "searchAPI_3-output-searchAPI-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "searchAPI_3-searchAPI_3-output-searchAPI-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "tavilyAPI_4",
+      "sourceHandle": "tavilyAPI_4-output-tavilyAPI-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "tavilyAPI_4-tavilyAPI_4-output-tavilyAPI-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "calculator_5",
+      "sourceHandle": "calculator_5-output-calculator-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "calculator_5-calculator_5-output-calculator-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "webScraperTool_6",
+      "sourceHandle": "webScraperTool_6-output-webScraperTool-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "webScraperTool_6-webScraperTool_6-output-webScraperTool-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    },
+    {
+      "source": "braveSearchMCP_7",
+      "sourceHandle": "braveSearchMCP_7-output-braveSearchMCP-Tool",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "braveSearchMCP_7-braveSearchMCP_7-output-braveSearchMCP-Tool-toolAgent_0-toolAgent_0-input-tools-Tool"
+    }
+  ]
+}

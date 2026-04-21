@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: Largo SIRENE (INSEE) tool
+  version: 2026-04-20.0
+  description: |
+    Lookup and search over the French SIRENE (Système Informatisé du
+    Répertoire National des Entreprises) dataset hosted by INSEE.
+
+    Canonical upstream: https://api.insee.fr/entreprises/sirene/V3.11
+
+    All operations respect the INSEE rate limit (30 req / min for the
+    open tier, 2500 req / min for the authenticated tier). The Largo
+    client wraps every call with the shared `RateLimiter` (Wave 1.5.2)
+    and caches successful responses in `ma_datagouv_cache` (Wave 1.5.1).
+servers:
+  - url: https://api.insee.fr/entreprises/sirene/V3.11
+    description: INSEE production
+security:
+  - insee_oauth: []
+components:
+  securitySchemes:
+    insee_oauth:
+      type: http
+      scheme: bearer
+      bearerFormat: oauth2
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    Etablissement:
+      type: object
+      required: [siret, siren, etatAdministratif]
+      properties:
+        siret: { type: string, pattern: '^\d{14}$' }
+        siren: { type: string, pattern: '^\d{9}$' }
+        nic: { type: string, pattern: '^\d{5}$' }
+        etatAdministratif:
+          type: string
+          enum: [A, F]
+          description: A = actif, F = fermé.
+        denominationUsuelleEtablissement: { type: string, nullable: true }
+        adresseEtablissement:
+          type: object
+          properties:
+            numeroVoieEtablissement: { type: string, nullable: true }
+            typeVoieEtablissement: { type: string, nullable: true }
+            libelleVoieEtablissement: { type: string, nullable: true }
+            codePostalEtablissement: { type: string, nullable: true }
+            libelleCommuneEtablissement: { type: string, nullable: true }
+        activitePrincipaleEtablissement:
+          type: string
+          description: Code NAF sur 5 caractères (ex. "6201Z").
+          pattern: '^\d{2}\.?\d{2}[A-Z]$'
+        dateCreationEtablissement: { type: string, format: date, nullable: true }
+    UniteLegale:
+      type: object
+      required: [siren, etatAdministratif]
+      properties:
+        siren: { type: string, pattern: '^\d{9}$' }
+        etatAdministratif: { type: string, enum: [A, C] }
+        denominationUniteLegale: { type: string, nullable: true }
+        categorieJuridiqueUniteLegale: { type: string, nullable: true }
+        categorieEntreprise: { type: string, enum: [PME, ETI, GE], nullable: true }
+        activitePrincipaleUniteLegale: { type: string, pattern: '^\d{2}\.?\d{2}[A-Z]$', nullable: true }
+        trancheEffectifsUniteLegale: { type: string, nullable: true }
+        dateCreationUniteLegale: { type: string, format: date, nullable: true }
+paths:
+  /siret/{siret}:
+    get:
+      operationId: sirene.lookup
+      summary: Look up an établissement by its SIRET.
+      parameters:
+        - name: siret
+          in: path
+          required: true
+          schema: { type: string, pattern: '^\d{14}$' }
+      responses:
+        '200':
+          description: Match
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [etablissement]
+                properties:
+                  etablissement: { $ref: '#/components/schemas/Etablissement' }
+        '404':
+          description: No match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /siren/{siren}:
+    get:
+      operationId: sirene.lookupLegalEntity
+      summary: Look up a unité légale by its SIREN.
+      parameters:
+        - name: siren
+          in: path
+          required: true
+          schema: { type: string, pattern: '^\d{9}$' }
+      responses:
+        '200':
+          description: Match
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uniteLegale]
+                properties:
+                  uniteLegale: { $ref: '#/components/schemas/UniteLegale' }
+        '404':
+          description: No match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /siret:
+    get:
+      operationId: sirene.search
+      summary: Search établissements by free-text criteria.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: |
+            Lucene-style query. Common fields:
+            - `denominationUniteLegale:"ACME*"`
+            - `codePostalEtablissement:75001`
+            - `activitePrincipaleEtablissement:6201Z`
+          schema: { type: string, minLength: 2 }
+        - name: nombre
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 20 }
+        - name: debut
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Hits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [etablissements, header]
+                properties:
+                  header:
+                    type: object
+                    properties:
+                      statut: { type: integer }
+                      total: { type: integer }
+                      debut: { type: integer }
+                      nombre: { type: integer }
+                  etablissements:
+                    type: array
+                    items: { $ref: '#/components/schemas/Etablissement' }

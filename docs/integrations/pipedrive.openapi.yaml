@@ -1,0 +1,23 @@
+﻿openapi: 3.1.0
+info:
+  title: Largo Pipedrive CRM sync (stub)
+  version: 2026-04-20.0
+  x-largo-status: stub
+  description: |
+    PLACEHOLDER stub for the pipedrive tool. Full schema will be
+    authored when the corresponding Largo-process client lands.
+    Consumers: Wave 5 integrations.
+
+    Operations to specify:
+    #   pipedrive.upsert
+    #   pipedrive.search
+components:
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+paths: {}

@@ -9,23 +9,23 @@
 }
 
 .dropzone {
-  border: 2px dashed var(--color-border);
-  border-radius: 8px;
+  border: 2px dashed var(--bg-3);
+  border-radius: var(--radius-lg);
   padding: 32px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: var(--color-bg-1);
+  background: var(--bg-1);
 }
 
 .dropzone:hover {
-  border-color: var(--color-primary-6);
-  background: var(--color-primary-1);
+  border-color: var(--primary);
+  background: var(--aou-1);
 }
 
 .dragging {
-  border-color: var(--color-primary-6);
-  background: var(--color-primary-1);
+  border-color: var(--primary);
+  background: var(--aou-1);
 }
 
 .dropzoneContent {
@@ -37,7 +37,7 @@
 
 .uploadIcon {
   font-size: 48px;
-  color: var(--color-primary-6);
+  color: var(--primary);
 }
 
 .dropzoneText {
@@ -49,17 +49,17 @@
 .primaryText {
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-text-1);
+  color: var(--text-primary);
 }
 
 .secondaryText {
   font-size: 12px;
-  color: var(--color-text-3);
+  color: var(--bg-6);
 }
 
 .tip {
   font-size: 12px;
-  color: var(--color-text-3);
+  color: var(--bg-6);
   margin-top: 8px;
 }
 
@@ -75,9 +75,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: var(--color-bg-2);
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
+  background: var(--bg-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-3);
 }
 
 .fileInfo {
@@ -90,13 +90,13 @@
 
 .fileIcon {
   font-size: 20px;
-  color: var(--color-text-3);
+  color: var(--bg-6);
   flex-shrink: 0;
 }
 
 .fileName {
   font-size: 14px;
-  color: var(--color-text-1);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -115,12 +115,12 @@
 
 .successText {
   font-size: 12px;
-  color: var(--color-success-6);
+  color: var(--success);
 }
 
 .errorText {
   font-size: 12px;
-  color: var(--color-danger-6);
+  color: var(--danger);
 }
 
 .removeButton {

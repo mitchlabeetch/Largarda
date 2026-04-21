@@ -311,8 +311,10 @@ async function analyzeWithFlowise(
   flowiseApiKey?: string,
   analysisRepo?: AnalysisRepository
 ): Promise<RiskFinding[]> {
+  // When flowiseBaseUrl is undefined, createFloWiseConnection falls back to
+  // FLOWISE_DEFAULT_CONFIG.baseUrl (FLOWISE_PRODUCTION_URL by default).
   const connection = createFloWiseConnection({
-    baseUrl: flowiseBaseUrl ?? 'http://localhost:3000',
+    baseUrl: flowiseBaseUrl,
     apiKey: flowiseApiKey,
   });
 

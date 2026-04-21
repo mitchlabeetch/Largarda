@@ -202,5 +202,174 @@
       "deal_structure": "Structuration",
       "due_diligence": "Due diligence"
     }
+  },
+  "dealSelector": {
+    "status": {
+      "active": "Actif",
+      "archived": "Archivé",
+      "closed": "Clôturé"
+    },
+    "noDealsYet": "Aucun deal pour le moment",
+    "createFirstDeal": "Créer le premier deal",
+    "selectDeal": "Sélectionner un deal",
+    "active": "Actif"
+  },
+  "dealForm": {
+    "transactionTypes": {
+      "acquisition": "Acquisition",
+      "merger": "Fusion",
+      "divestiture": "Cession",
+      "jointVenture": "Coentreprise"
+    },
+    "partyRoles": {
+      "buyer": "Acquéreur",
+      "seller": "Vendeur",
+      "target": "Cible",
+      "advisor": "Conseiller"
+    },
+    "validation": {
+      "dealNameRequired": "Le nom du deal est requis",
+      "atLeastOnePartyRequired": "Au moins une partie est requise",
+      "partyNameRequired": "Partie {{index}} : le nom est requis",
+      "transactionTypeRequired": "Le type de transaction est requis",
+      "targetCompanyNameRequired": "Le nom de la société cible est requis"
+    },
+    "editDeal": "Modifier le deal",
+    "createNewDeal": "Créer un nouveau deal",
+    "saveChanges": "Enregistrer les modifications",
+    "createDeal": "Créer le deal",
+    "cancel": "Annuler",
+    "fields": {
+      "dealName": "Nom du deal",
+      "transactionType": "Type de transaction",
+      "targetCompany": "Société cible",
+      "industry": "Secteur",
+      "jurisdiction": "Juridiction",
+      "parties": "Parties"
+    },
+    "placeholders": {
+      "dealName": "ex : Projet Alpha Acquisition",
+      "transactionType": "Sélectionner le type de transaction",
+      "companyName": "Nom de la société",
+      "industry": "ex : Technologie",
+      "jurisdiction": "ex : Delaware, USA",
+      "partyName": "Nom de la partie"
+    },
+    "addParty": "Ajouter une partie"
+  },
+  "dealContext": {
+    "title": "Gestion des deals",
+    "refresh": "Actualiser",
+    "newDeal": "Nouveau deal",
+    "status": {
+      "active": "Actif",
+      "archived": "Archivé",
+      "closed": "Clôturé"
+    },
+    "messages": {
+      "updatedSuccessfully": "Deal mis à jour avec succès",
+      "createdSuccessfully": "Deal créé avec succès",
+      "saveFailed": "Échec de l'enregistrement du deal",
+      "archived": "Deal archivé",
+      "archiveFailed": "Échec de l'archivage du deal",
+      "closed": "Deal clôturé",
+      "closeFailed": "Échec de la clôture du deal",
+      "reactivated": "Deal réactivé",
+      "reactivateFailed": "Échec de la réactivation du deal",
+      "deleted": "Deal supprimé",
+      "deleteFailed": "Échec de la suppression du deal"
+    },
+    "deleteConfirm": {
+      "title": "Supprimer le deal",
+      "content": "Êtes-vous sûr de vouloir supprimer \"{{dealName}}\" ? Cette action ne peut être annulée.",
+      "ok": "Supprimer"
+    },
+    "dealsCount": "Deals ({{count}})",
+    "filters": {
+      "all": "Tous",
+      "active": "Actifs",
+      "archived": "Archivés",
+      "closed": "Clôturés"
+    },
+    "empty": {
+      "noDealsFound": "Aucun deal trouvé",
+      "createFirstDeal": "Créez votre premier deal pour commencer",
+      "noStatusDeals": "Aucun deal {{status}}",
+      "createDeal": "Créer un deal",
+      "selectDeal": "Sélectionner un deal",
+      "selectDealText": "Choisissez un deal dans la liste pour voir les détails"
+    },
+    "edit": "Modifier",
+    "archiveConfirm": {
+      "title": "Archiver ce deal ?",
+      "content": "Les deals archivés peuvent être réactivés ultérieurement."
+    },
+    "archive": "Archiver",
+    "details": {
+      "transactionDetails": "Détails de la transaction",
+      "type": "Type",
+      "status": "Statut",
+      "created": "Créé le",
+      "updated": "Mis à jour le",
+      "targetCompany": "Société cible",
+      "name": "Nom",
+      "industry": "Secteur",
+      "jurisdiction": "Juridiction",
+      "parties": "Parties"
+    },
+    "documents": {
+      "title": "Documents associés ({{count}})"
+    }
+  },
+  "documentUpload": {
+    "errors": {
+      "unsupportedFormat": "Format non pris en charge : .{{extension}}. Formats pris en charge : PDF, DOCX, XLSX, TXT",
+      "fileTooLarge": "Fichier trop volumineux : {{size}}Mo. Taille maximale : 50Mo",
+      "uploadFailed": "Échec du téléchargement"
+    },
+    "status": {
+      "uploaded": "Téléchargé",
+      "failed": "Échec"
+    },
+    "tip": "Formats pris en charge : PDF, DOCX, XLSX, TXT (max 50Mo)",
+    "primaryText": "Cliquez ou glissez des fichiers pour les télécharger",
+    "secondaryText": "Supporte le téléchargement par lot de plusieurs documents"
+  },
+  "riskScoreCard": {
+    "categories": {
+      "financial": {
+        "label": "Financier",
+        "description": "Risques liés à la santé financière, au chiffre d'affaires et à la rentabilité"
+      },
+      "legal": {
+        "label": "Juridique",
+        "description": "Risques liés aux litiges, aux contrats et à la conformité légale"
+      },
+      "operational": {
+        "label": "Opérationnel",
+        "description": "Risques liés aux opérations commerciales et au personnel clé"
+      },
+      "regulatory": {
+        "label": "Réglementaire",
+        "description": "Risques liés à la conformité réglementaire et aux autorisations"
+      },
+      "reputational": {
+        "label": "Réputationnel",
+        "description": "Risques liés à la réputation de la marque et à la perception publique"
+      }
+    },
+    "severity": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé",
+      "critical": "Critique"
+    },
+    "analyzing": "Analyse des risques...",
+    "noData": "Aucune donnée de risque disponible",
+    "riskAssessment": "Évaluation des risques",
+    "riskComparison": "Comparaison des risques",
+    "summary": {
+      "totalFindings": "Total des constats"
+    }
   }
 }

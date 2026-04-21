@@ -9,10 +9,29 @@
  * Provides flow execution, streaming, and health check capabilities.
  */
 
-import type { FlowiseConfig, FlowInput, FlowResult, FlowEvent, FlowMeta, FlowDetail } from '@/common/ma/types';
+import type {
+  FlowiseConfig,
+  FlowInput,
+  FlowResult,
+  FlowEvent,
+  FlowMeta,
+  FlowDetail,
+  FlowiseReadiness,
+} from '@/common/ma/types';
 import { FLOWISE_DEFAULT_CONFIG, FLOWISE_ENDPOINTS } from '@/common/ma/constants';
 
-export type { FlowiseConfig, FlowInput, FlowResult, FlowEvent, FlowMeta, FlowDetail };
+export type { FlowiseConfig, FlowInput, FlowResult, FlowEvent, FlowMeta, FlowDetail, FlowiseReadiness };
+
+/**
+ * Env-var names used for Flowise configuration fallback. These are
+ * read from `process.env` at the moment `createFloWiseConnection` is
+ * called, so callers can mutate the env (tests, Electron main bootstrap)
+ * before any service touches Flowise.
+ */
+export const FLOWISE_ENV = {
+  baseUrl: 'FLOWISE_BASE_URL',
+  apiKey: 'FLOWISE_API_KEY',
+} as const;
 
 /**
  * FloWiseConnection - Client for Flowise API communication.
@@ -383,15 +402,132 @@ export class FloWiseError extends Error {
 }
 
 /**
- * Create a FloWiseConnection with default configuration.
+ * Resolve the effective Flowise configuration, layering values in this
+ * order (most explicit wins):
+ *
+ *   1. Values passed in `config`.
+ *   2. `process.env.FLOWISE_BASE_URL` / `process.env.FLOWISE_API_KEY`.
+ *   3. `FLOWISE_DEFAULT_CONFIG.baseUrl` (no env-default for apiKey).
+ *
+ * Exported separately from `createFloWiseConnection` so the readiness
+ * probe and tests can reason about the layering without instantiating
+ * a connection.
+ */
+export function resolveFlowiseConfig(config: Partial<FlowiseConfig> = {}): {
+  baseUrl: string;
+  apiKey: string | undefined;
+  apiKeySource: 'arg' | 'env' | 'none';
+} {
+  const envBaseUrl = typeof process !== 'undefined' ? process.env[FLOWISE_ENV.baseUrl] : undefined;
+  const envApiKey = typeof process !== 'undefined' ? process.env[FLOWISE_ENV.apiKey] : undefined;
+
+  const baseUrl = config.baseUrl ?? (envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : FLOWISE_DEFAULT_CONFIG.baseUrl);
+
+  let apiKey: string | undefined;
+  let apiKeySource: 'arg' | 'env' | 'none';
+  if (config.apiKey && config.apiKey.length > 0) {
+    apiKey = config.apiKey;
+    apiKeySource = 'arg';
+  } else if (envApiKey && envApiKey.length > 0) {
+    apiKey = envApiKey;
+    apiKeySource = 'env';
+  } else {
+    apiKey = undefined;
+    apiKeySource = 'none';
+  }
+
+  return { baseUrl, apiKey, apiKeySource };
+}
+
+/**
+ * Create a FloWiseConnection with default configuration, applying the
+ * env-var fallback described in `resolveFlowiseConfig`.
  */
 export function createFloWiseConnection(config: Partial<FlowiseConfig> = {}): FloWiseConnection {
+  const resolved = resolveFlowiseConfig(config);
   return new FloWiseConnection({
-    baseUrl: config.baseUrl ?? FLOWISE_DEFAULT_CONFIG.baseUrl,
-    apiKey: config.apiKey,
+    baseUrl: resolved.baseUrl,
+    apiKey: resolved.apiKey,
     timeout: config.timeout,
     retryAttempts: config.retryAttempts,
     retryBaseDelay: config.retryBaseDelay,
     retryMaxDelay: config.retryMaxDelay,
   });
+}
+
+/**
+ * Probe whether Flowise is reachable and whether the resolved API key
+ * authenticates successfully. Never throws: returns a `FlowiseReadiness`
+ * snapshot with `pingOk=false` / `authOk=false` on failure, plus a short
+ * `error` string for diagnostics.
+ *
+ * Contract guarantees:
+ *
+ * - Runs two HTTP calls at most: `GET /api/v1/ping` always, and
+ *   `GET /api/v1/chatflows` only when a key is present.
+ * - Hard-caps each call at 5000 ms so the UI doesn't block on a slow
+ *   Flowise.
+ * - Performs no mutations and does not affect the connection singleton.
+ */
+export async function probeFlowiseReadiness(config: Partial<FlowiseConfig> = {}): Promise<FlowiseReadiness> {
+  const { baseUrl, apiKey, apiKeySource } = resolveFlowiseConfig(config);
+  const normalisedBase = baseUrl.replace(/\/$/, '');
+  const checkedAt = Date.now();
+  const hasApiKey = apiKey !== undefined && apiKey.length > 0;
+
+  const pingUrl = `${normalisedBase}${FLOWISE_ENDPOINTS.ping}`;
+  let pingOk = false;
+  let error: string | undefined;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(pingUrl, { method: 'GET', signal: controller.signal });
+    clearTimeout(timeoutId);
+    pingOk = response.ok;
+    if (!pingOk) {
+      error = `ping ${response.status}`;
+    }
+  } catch (err) {
+    error = `ping ${err instanceof Error ? err.message : String(err)}`;
+  }
+
+  if (!pingOk || !hasApiKey) {
+    return { baseUrl: normalisedBase, hasApiKey, apiKeySource, pingOk, checkedAt, error };
+  }
+
+  const flowsUrl = `${normalisedBase}${FLOWISE_ENDPOINTS.chatflows}`;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(flowsUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      return {
+        baseUrl: normalisedBase,
+        hasApiKey,
+        apiKeySource,
+        pingOk,
+        authOk: false,
+        checkedAt,
+        error: `auth ${response.status}`,
+      };
+    }
+    const data = (await response.json()) as unknown;
+    const flowCount = Array.isArray(data) ? data.length : 0;
+    return { baseUrl: normalisedBase, hasApiKey, apiKeySource, pingOk, authOk: true, flowCount, checkedAt };
+  } catch (err) {
+    return {
+      baseUrl: normalisedBase,
+      hasApiKey,
+      apiKeySource,
+      pingOk,
+      authOk: false,
+      checkedAt,
+      error: `auth ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }

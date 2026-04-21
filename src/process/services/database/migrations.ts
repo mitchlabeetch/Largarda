@@ -1326,6 +1326,214 @@ const migration_v27: IMigration = {
 };
 
 /**
+ * Migration v27 -> v28: Add M&A data spine tables
+ * Creates tables for company profiles, contacts, watchlists, data.gouv.fr cache,
+ * knowledge base sources, document chunks, chatflow registry, and prompt versions.
+ */
+const migration_v28: IMigration = {
+  version: 28,
+  name: 'Add M&A data spine tables',
+  up: (db) => {
+    // ma_companies table - company profiles with enrichment data
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_companies (
+        id TEXT PRIMARY KEY,
+        siren TEXT NOT NULL UNIQUE,
+        siret TEXT,
+        name TEXT NOT NULL,
+        legal_form TEXT,
+        naf_code TEXT,
+        sector_id TEXT,
+        jurisdiction TEXT,
+        headquarters_address TEXT,
+        registered_at INTEGER,
+        employee_count INTEGER,
+        revenue REAL,
+        sources_json TEXT,
+        last_enriched_at INTEGER,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_siren ON ma_companies(siren)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_siret ON ma_companies(siret)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_name ON ma_companies(name)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_sector ON ma_companies(sector_id)');
+
+    // ma_contacts table - contacts linked to companies and deals
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_contacts (
+        id TEXT PRIMARY KEY,
+        company_id TEXT,
+        deal_id TEXT,
+        full_name TEXT NOT NULL,
+        role TEXT,
+        email TEXT,
+        phone TEXT,
+        linkedin_url TEXT,
+        notes TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        FOREIGN KEY (company_id) REFERENCES ma_companies(id) ON DELETE SET NULL,
+        FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_company_id ON ma_contacts(company_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_deal_id ON ma_contacts(deal_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_email ON ma_contacts(email)');
+
+    // ma_watchlists table - user-defined watchlists for company monitoring
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_watchlists (
+        id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        criteria_json TEXT NOT NULL,
+        cadence TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_watchlists_owner_user_id ON ma_watchlists(owner_user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_watchlists_enabled ON ma_watchlists(enabled)');
+
+    // ma_watchlist_hits table - matches when watchlist criteria are met
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_watchlist_hits (
+        id TEXT PRIMARY KEY,
+        watchlist_id TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        matched_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        seen_at INTEGER,
+        FOREIGN KEY (watchlist_id) REFERENCES ma_watchlists(id) ON DELETE CASCADE
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_watchlist_hits_watchlist_id ON ma_watchlist_hits(watchlist_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_watchlist_hits_matched_at ON ma_watchlist_hits(matched_at DESC)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_watchlist_hits_seen_at ON ma_watchlist_hits(seen_at)');
+
+    // ma_datagouv_cache table - cache for data.gouv.fr API responses
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_datagouv_cache (
+        id TEXT PRIMARY KEY,
+        api_surface TEXT NOT NULL,
+        key_json TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        fetched_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        ttl_ms INTEGER NOT NULL,
+        source_url TEXT
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_datagouv_cache_api_surface ON ma_datagouv_cache(api_surface)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_datagouv_cache_fetched_at ON ma_datagouv_cache(fetched_at)');
+
+    // ma_kb_sources table - knowledge base source tracking
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_kb_sources (
+        id TEXT PRIMARY KEY,
+        scope TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        flowise_document_store_id TEXT,
+        embedding_model TEXT,
+        chunk_count INTEGER DEFAULT 0,
+        last_ingested_at INTEGER,
+        status TEXT NOT NULL DEFAULT 'pending',
+        error_text TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        UNIQUE(scope, scope_id)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_kb_sources_scope ON ma_kb_sources(scope)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_kb_sources_status ON ma_kb_sources(status)');
+
+    // ma_documents_chunks table - document chunks for RAG
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_documents_chunks (
+        id TEXT PRIMARY KEY,
+        document_id TEXT NOT NULL,
+        deal_id TEXT,
+        chunk_index INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        token_count INTEGER,
+        flowise_chunk_id TEXT,
+        metadata_json TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        FOREIGN KEY (document_id) REFERENCES ma_documents(id) ON DELETE CASCADE,
+        FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_documents_chunks_document_id ON ma_documents_chunks(document_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_documents_chunks_deal_id ON ma_documents_chunks(deal_id)');
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_ma_documents_chunks_chunk_index ON ma_documents_chunks(document_id, chunk_index)'
+    );
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_ma_documents_chunks_flowise_chunk_id ON ma_documents_chunks(flowise_chunk_id)'
+    );
+
+    // ma_chatflow_registry table - chatflow version tracking
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_chatflow_registry (
+        flow_key TEXT PRIMARY KEY,
+        flow_id TEXT NOT NULL,
+        prompt_version_id TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        description TEXT,
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_chatflow_registry_flow_id ON ma_chatflow_registry(flow_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_chatflow_registry_status ON ma_chatflow_registry(status)');
+
+    // ma_prompt_versions table - prompt version history
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_prompt_versions (
+        id TEXT PRIMARY KEY,
+        flow_key TEXT NOT NULL,
+        hash TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        created_by TEXT,
+        FOREIGN KEY (flow_key) REFERENCES ma_chatflow_registry(flow_key) ON DELETE CASCADE
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_prompt_versions_flow_key ON ma_prompt_versions(flow_key)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_prompt_versions_hash ON ma_prompt_versions(hash)');
+
+    console.log('[Migration v28] Added M&A data spine tables');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_ma_prompt_versions_hash');
+    db.exec('DROP INDEX IF EXISTS idx_ma_prompt_versions_flow_key');
+    db.exec('DROP TABLE IF EXISTS ma_prompt_versions');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_chatflow_registry_status');
+    db.exec('DROP INDEX IF EXISTS idx_ma_chatflow_registry_flow_id');
+    db.exec('DROP TABLE IF EXISTS ma_chatflow_registry');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_flowise_chunk_id');
+    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_chunk_index');
+    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_deal_id');
+    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_document_id');
+    db.exec('DROP TABLE IF EXISTS ma_documents_chunks');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_kb_sources_status');
+    db.exec('DROP INDEX IF EXISTS idx_ma_kb_sources_scope');
+    db.exec('DROP TABLE IF EXISTS ma_kb_sources');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_datagouv_cache_fetched_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_datagouv_cache_api_surface');
+    db.exec('DROP TABLE IF EXISTS ma_datagouv_cache');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_watchlist_hits_seen_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_watchlist_hits_matched_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_watchlist_hits_watchlist_id');
+    db.exec('DROP TABLE IF EXISTS ma_watchlist_hits');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_watchlists_enabled');
+    db.exec('DROP INDEX IF EXISTS idx_ma_watchlists_owner_user_id');
+    db.exec('DROP TABLE IF EXISTS ma_watchlists');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_contacts_email');
+    db.exec('DROP INDEX IF EXISTS idx_ma_contacts_deal_id');
+    db.exec('DROP INDEX IF EXISTS idx_ma_contacts_company_id');
+    db.exec('DROP TABLE IF EXISTS ma_contacts');
+
+    db.exec('DROP INDEX IF EXISTS idx_ma_companies_sector');
+    db.exec('DROP INDEX IF EXISTS idx_ma_companies_name');
+    db.exec('DROP INDEX IF EXISTS idx_ma_companies_siret');
+    db.exec('DROP INDEX IF EXISTS idx_ma_companies_siren');
+    db.exec('DROP TABLE IF EXISTS ma_companies');
+
+    console.log('[Migration v28] Rolled back: Removed M&A data spine tables');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1334,7 +1542,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
-  migration_v25, migration_v26, migration_v27,
+  migration_v25, migration_v26, migration_v27, migration_v28,
 ];
 
 /**

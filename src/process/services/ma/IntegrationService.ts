@@ -55,6 +55,10 @@ function inferCategory(integration: ApiPublicIntegration): MaIntegrationCategory
     return 'productivity';
   }
 
+  if (key.includes('data') || key.includes('research') || key.includes('dataset') || key.includes('api')) {
+    return 'research';
+  }
+
   return 'other';
 }
 

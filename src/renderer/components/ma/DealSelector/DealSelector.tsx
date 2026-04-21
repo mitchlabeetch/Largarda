@@ -5,8 +5,10 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { Dropdown, Button, Empty, Spin } from '@arco-design/web-react';
-import { Down, Plus, Check } from '@icon-park/react';
+import { Dropdown, Button } from '@arco-design/web-react';
+import { Down, Plus, Check, FileText } from '@icon-park/react';
+import { useTranslation } from 'react-i18next';
+import { Skeleton, EmptyState } from '@/renderer/components/base';
 import type { DealContext, DealStatus } from '@/common/ma/types';
 import styles from './DealSelector.module.css';
 
@@ -27,12 +29,6 @@ interface DealSelectorProps {
   className?: string;
 }
 
-const statusLabels: Record<DealStatus, string> = {
-  active: 'Active',
-  archived: 'Archived',
-  closed: 'Closed',
-};
-
 export function DealSelector({
   deals,
   activeDeal,
@@ -42,7 +38,14 @@ export function DealSelector({
   showCreateButton = true,
   className,
 }: DealSelectorProps) {
+  const { t } = useTranslation('ma');
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+
+  const statusLabels: Record<DealStatus, string> = {
+    active: t('dealSelector.status.active'),
+    archived: t('dealSelector.status.archived'),
+    closed: t('dealSelector.status.closed'),
+  };
 
   const handleSelect = useCallback(
     (deal: DealContext) => {
@@ -82,19 +85,27 @@ export function DealSelector({
     <div className={styles.container}>
       {isLoading ? (
         <div className={styles.emptyState}>
-          <Spin />
+          <Skeleton variant='circle' />
+          <Skeleton variant='line' width='100%' />
+          <Skeleton variant='line' width='80%' />
         </div>
       ) : deals.length === 0 ? (
         <div className={styles.emptyState}>
-          <Empty
-            icon={<div className={styles.emptyIcon}>📁</div>}
-            description={<span className={styles.emptyText}>No deals yet</span>}
+          <EmptyState
+            icon={<FileText size={64} />}
+            title={t('dealSelector.noDealsYet')}
+            primaryAction={
+              showCreateButton && onCreateNew
+                ? {
+                    label: t('dealSelector.createFirstDeal'),
+                    onClick: onCreateNew,
+                    icon: <Plus />,
+                    type: 'primary',
+                  }
+                : undefined
+            }
+            i18nNs='ma'
           />
-          {showCreateButton && onCreateNew && (
-            <Button type='primary' size='small' icon={<Plus />} onClick={onCreateNew}>
-              Create First Deal
-            </Button>
-          )}
         </div>
       ) : (
         <div className={styles.dealList}>{deals.map(renderDealItem)}</div>
@@ -113,12 +124,12 @@ export function DealSelector({
           disabled={isLoading}
         >
           <Button className={styles.selectorButton} icon={<Down />} loading={isLoading}>
-            {activeDeal ? activeDeal.name : 'Select a deal'}
+            {activeDeal ? activeDeal.name : t('dealSelector.selectDeal')}
           </Button>
         </Dropdown>
         {activeDeal && (
           <span className={styles.activeIndicator}>
-            <Check /> Active
+            <Check /> {t('dealSelector.active')}
           </span>
         )}
       </div>

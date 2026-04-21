@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: Largo data.gouv.fr tool
+  version: 2026-04-20.0
+  description: |
+    Discovery and query interface for datasets published on the French
+    open-data platform.
+
+    Canonical upstreams:
+      Main API:      https://www.data.gouv.fr/api/1
+      Tabular API:   https://tabular.api.data.gouv.fr/api
+      Metrics API:   https://metric-api.data.gouv.fr/api
+
+    This tool is **unauthenticated** but courteous to the platform —
+    every call goes through the shared rate-limiter (default
+    1 req / s / host) and responses are cached in `ma_datagouv_cache`
+    for 7 d (dataset metadata) and 24 h (tabular queries).
+servers:
+  - url: https://www.data.gouv.fr/api/1
+    description: Main API
+  - url: https://tabular.api.data.gouv.fr/api
+    description: Tabular API
+  - url: https://metric-api.data.gouv.fr/api
+    description: Metrics API
+components:
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    DatasetSummary:
+      type: object
+      required: [id, title, slug]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        organization:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string }
+        tags: { type: array, items: { type: string } }
+        metrics:
+          type: object
+          properties:
+            views: { type: integer }
+            reuses: { type: integer }
+            followers: { type: integer }
+        created_at: { type: string, format: date-time, nullable: true }
+        last_modified: { type: string, format: date-time, nullable: true }
+    Resource:
+      type: object
+      required: [id, title, url]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        format: { type: string, nullable: true }
+        mime: { type: string, nullable: true }
+        url: { type: string, format: uri }
+        filesize: { type: integer, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+paths:
+  /datasets:
+    get:
+      operationId: datagouv.search_datasets
+      summary: Search datasets by free-text query and filters.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: tag
+          in: query
+          schema: { type: string }
+        - name: organization
+          in: query
+          schema: { type: string }
+        - name: license
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, total]
+                properties:
+                  total: { type: integer }
+                  page: { type: integer }
+                  page_size: { type: integer }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/DatasetSummary' }
+  /datasets/{dataset_id}:
+    get:
+      operationId: datagouv.get_dataset
+      summary: Dataset detail (metadata + resources).
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/DatasetSummary'
+                  - type: object
+                    properties:
+                      resources:
+                        type: array
+                        items: { $ref: '#/components/schemas/Resource' }
+  /resources/{resource_id}/data:
+    get:
+      operationId: datagouv.tabular
+      summary: Query a tabular resource with SQL-like filters.
+      description: |
+        Uses the Tabular API server. `filters` is a JSON-encoded
+        condition object; see
+        https://tabular.api.data.gouv.fr/ for the exact DSL.
+      servers:
+        - url: https://tabular.api.data.gouv.fr/api
+      parameters:
+        - name: resource_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 50 }
+        - name: filters
+          in: query
+          schema: { type: string, description: JSON-encoded filter object. }
+      responses:
+        '200':
+          description: Rows
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, total]
+                properties:
+                  total: { type: integer }
+                  page: { type: integer }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+  /datasets/data/{dataset_id}:
+    get:
+      operationId: datagouv.metrics
+      summary: Usage metrics for a dataset over a period.
+      servers:
+        - url: https://metric-api.data.gouv.fr/api
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: metric_month__sort
+          in: query
+          schema: { type: string, default: '-metric_month' }
+      responses:
+        '200':
+          description: Monthly metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        metric_month: { type: string, format: date }
+                        monthly_visit: { type: integer, nullable: true }
+                        monthly_download_resource: { type: integer, nullable: true }
+  /dataservices:
+    get:
+      operationId: datagouv.search_dataservices
+      summary: Discover dataservices (APIs) published on data.gouv.fr.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, total]
+                properties:
+                  total: { type: integer }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        title: { type: string }
+                        description: { type: string, nullable: true }
+                        base_api_url: { type: string, format: uri, nullable: true }
+                        openapi_url: { type: string, format: uri, nullable: true }

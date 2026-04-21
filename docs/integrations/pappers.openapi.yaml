@@ -1,0 +1,156 @@
+openapi: 3.1.0
+info:
+  title: Largo Pappers tool
+  version: 2026-04-20.0
+  description: |
+    Pappers API access for French company intelligence (enriched SIRENE
+    with financial statements, beneficial owners, publications BODACC,
+    etc.).
+
+    Canonical upstream: https://api.pappers.fr/v2
+
+    Rate-limited via the shared Largo limiter (Wave 1.5.2). Responses
+    cache in `ma_datagouv_cache` with a 24 h TTL for the lookup path
+    and 7 d for financials (which refresh only on new filings).
+servers:
+  - url: https://api.pappers.fr/v2
+    description: Pappers production
+security:
+  - pappers_key: []
+components:
+  securitySchemes:
+    pappers_key:
+      type: apiKey
+      in: query
+      name: api_token
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    Company:
+      type: object
+      required: [siren, nom_entreprise]
+      properties:
+        siren: { type: string, pattern: '^\d{9}$' }
+        siret_siege: { type: string, pattern: '^\d{14}$' }
+        nom_entreprise: { type: string }
+        forme_juridique: { type: string, nullable: true }
+        code_naf: { type: string, pattern: '^\d{2}\.?\d{2}[A-Z]$', nullable: true }
+        libelle_code_naf: { type: string, nullable: true }
+        date_creation: { type: string, format: date, nullable: true }
+        tranche_effectif: { type: string, nullable: true }
+        capital: { type: number, nullable: true }
+        statut_rcs: { type: string, nullable: true }
+        site_web: { type: string, format: uri, nullable: true }
+        telephone: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+    Financials:
+      type: object
+      properties:
+        annee: { type: integer }
+        date_cloture_exercice: { type: string, format: date }
+        duree_exercice: { type: integer, description: Duration in months. }
+        chiffre_affaires: { type: number, nullable: true }
+        resultat: { type: number, nullable: true }
+        effectif: { type: integer, nullable: true }
+        marge_brute: { type: number, nullable: true }
+        ebe: { type: number, nullable: true }
+        ebit: { type: number, nullable: true }
+        capitaux_propres: { type: number, nullable: true }
+        dettes: { type: number, nullable: true }
+        tresorerie: { type: number, nullable: true }
+paths:
+  /entreprise:
+    get:
+      operationId: pappers.lookup
+      summary: Look up a company by SIREN.
+      parameters:
+        - name: siren
+          in: query
+          required: true
+          schema: { type: string, pattern: '^\d{9}$' }
+        - name: format_publications_bodacc
+          in: query
+          schema: { type: string, enum: [json], default: json }
+      responses:
+        '200':
+          description: Match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '404':
+          description: No match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /recherche:
+    get:
+      operationId: pappers.search
+      summary: Full-text + filter search over the Pappers company graph.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2 }
+        - name: code_naf
+          in: query
+          schema: { type: string, pattern: '^\d{2}\.?\d{2}[A-Z]$' }
+        - name: departement
+          in: query
+          schema: { type: string, pattern: '^\d{2,3}$' }
+        - name: tranche_effectif
+          in: query
+          schema: { type: string }
+        - name: chiffre_affaires_min
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: chiffre_affaires_max
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: par_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Hits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [resultats, total]
+                properties:
+                  total: { type: integer }
+                  page: { type: integer }
+                  par_page: { type: integer }
+                  resultats:
+                    type: array
+                    items: { $ref: '#/components/schemas/Company' }
+  /entreprise/comptes:
+    get:
+      operationId: pappers.financials
+      summary: Historical financials for a SIREN (up to 10 years).
+      parameters:
+        - name: siren
+          in: query
+          required: true
+          schema: { type: string, pattern: '^\d{9}$' }
+      responses:
+        '200':
+          description: Financials
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [siren, comptes_sociaux]
+                properties:
+                  siren: { type: string, pattern: '^\d{9}$' }
+                  comptes_sociaux:
+                    type: array
+                    items: { $ref: '#/components/schemas/Financials' }

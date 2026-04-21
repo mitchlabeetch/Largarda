@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: Largo Knowledge Base (Qdrant) tool
+  version: 2026-04-20.0
+  description: |
+    Vector search and upsert over the Largo-managed Qdrant collections.
+
+    Canonical upstream: https://qdrant.manuora.fr (Qdrant v1.17.1).
+
+    Collection naming follows the pattern defined in
+    `src/common/ma/constants.ts#KB_COLLECTION_SCOPES`:
+      largo_{scope}_{scopeId?}_{yyyymmdd}{rotationLetter?}
+
+    Every upsert MUST emit 1024-dim vectors produced by Mistral
+    `mistral-embed`, matching the existing corpora (see the 2026-04-20
+    audit). Deduplication is handled by the Postgres record manager
+    `pg-record-manager`; callers pass a stable `source_id` in the
+    payload and the server-side record manager skips identical chunks.
+servers:
+  - url: https://qdrant.manuora.fr
+    description: Qdrant production
+security:
+  - qdrant_key: []
+components:
+  securitySchemes:
+    qdrant_key:
+      type: apiKey
+      in: header
+      name: api-key
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    Scope:
+      type: string
+      enum: [global, deal, company, sector, news, watchlist, legacy]
+    PayloadBase:
+      type: object
+      required: [scope, source_id, chunk_index]
+      properties:
+        scope: { $ref: '#/components/schemas/Scope' }
+        scope_id: { type: string, nullable: true, description: 'Deal id / SIREN / NAF — omitted for `global` scope.' }
+        source_id:
+          {
+            type: string,
+            description: 'Stable id for the source document / URL; used by the record manager for dedup.',
+          }
+        chunk_index: { type: integer, minimum: 0 }
+        content: { type: string }
+        language: { type: string, pattern: '^[a-z]{2}(-[A-Z]{2})?$', nullable: true }
+        published_at: { type: string, format: date-time, nullable: true }
+        entity_ids: { type: array, items: { type: string } }
+    Point:
+      type: object
+      required: [id, vector, payload]
+      properties:
+        id: { type: string }
+        vector:
+          type: array
+          items: { type: number }
+          minItems: 1024
+          maxItems: 1024
+        payload: { $ref: '#/components/schemas/PayloadBase' }
+    Hit:
+      type: object
+      required: [id, score, payload]
+      properties:
+        id: { type: string }
+        score: { type: number, format: float }
+        payload: { $ref: '#/components/schemas/PayloadBase' }
+paths:
+  /collections/{collection}/points/search:
+    post:
+      operationId: kb.search
+      summary: Dense vector search over one Qdrant collection.
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema: { type: string, pattern: '^largo_[a-z][a-z0-9_]*$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vector, limit]
+              properties:
+                vector:
+                  type: array
+                  items: { type: number }
+                  minItems: 1024
+                  maxItems: 1024
+                limit: { type: integer, minimum: 1, maximum: 100, default: 8 }
+                filter:
+                  type: object
+                  description: "Qdrant filter DSL passthrough. Typical shape is { must: [{ key: 'scope_id', match: { value: '<id>' } }] }."
+                with_payload: { type: boolean, default: true }
+                score_threshold: { type: number, nullable: true }
+      responses:
+        '200':
+          description: Hits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: array
+                    items: { $ref: '#/components/schemas/Hit' }
+  /collections/{collection}/points:
+    put:
+      operationId: kb.upsert
+      summary: Upsert points into a Qdrant collection (idempotent via record manager).
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema: { type: string, pattern: '^largo_[a-z][a-z0-9_]*$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [points]
+              properties:
+                points:
+                  type: array
+                  items: { $ref: '#/components/schemas/Point' }
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      operation_id: { type: integer }
+                      status: { type: string, enum: [acknowledged, completed] }
+  /collections/{collection}/points/delete:
+    post:
+      operationId: kb.purge
+      summary: Purge points matching a payload filter.
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema: { type: string, pattern: '^largo_[a-z][a-z0-9_]*$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filter]
+              properties:
+                filter:
+                  type: object
+                  description: Qdrant filter DSL (same shape as in kb.search).
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      operation_id: { type: integer }
+                      status: { type: string }

@@ -177,9 +177,8 @@ export function useDealContext(options: UseDealContextOptions = {}): UseDealCont
   );
 
   const clearActiveDeal = useCallback(async (): Promise<void> => {
+    await ipcBridge.ma.deal.clearActive.invoke();
     setActiveDealState(null);
-    // There's no clearActive IPC call, but we can set active to null by not calling anything
-    // The active deal will be cleared on next refresh
     mutateActiveDeal();
   }, [mutateActiveDeal]);
 

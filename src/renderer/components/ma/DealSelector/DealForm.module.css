@@ -26,11 +26,11 @@
 .label {
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-text-1);
+  color: var(--text-primary);
 }
 
 .required {
-  color: rgb(var(--red-6));
+  color: var(--danger);
   margin-left: 2px;
 }
 
@@ -45,8 +45,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background-color: var(--color-fill-1);
-  border-radius: 6px;
+  background-color: var(--fill-0);
+  border-radius: var(--radius-md);
 }
 
 .partyName {
@@ -58,7 +58,7 @@
 }
 
 .removePartyButton {
-  color: rgb(var(--red-6));
+  color: var(--danger);
 }
 
 .addPartyButton {
@@ -73,11 +73,11 @@
 }
 
 .errorMessage {
-  color: rgb(var(--red-6));
+  color: var(--danger);
   font-size: 12px;
   padding: 8px;
-  background-color: rgb(var(--red-1));
-  border-radius: 4px;
+  background-color: var(--bg-3);
+  border-radius: var(--radius-md);
 }
 
 .validationErrors {
@@ -85,11 +85,11 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background-color: rgb(var(--red-1));
-  border-radius: 4px;
+  background-color: var(--bg-3);
+  border-radius: var(--radius-md);
 }
 
 .validationError {
-  color: rgb(var(--red-6));
+  color: var(--danger);
   font-size: 12px;
 }

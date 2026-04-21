@@ -1325,6 +1325,7 @@ import type {
   CreateRiskFindingInput,
   FlowiseSession,
   CreateFlowiseSessionInput,
+  FlowiseReadiness,
   MaIntegrationProvider,
   MaIntegrationConnection,
   MaIntegrationDescriptor,
@@ -1337,7 +1338,6 @@ import type {
   DueDiligenceRequest,
   DueDiligenceResult,
   ComparisonResult,
-  AnalysisProgress,
 } from '@process/services/ma/DueDiligenceService';
 
 export const ma = {
@@ -1350,6 +1350,7 @@ export const ma = {
     listActive: bridge.buildProvider<DealContext[], void>('ma.deal.list-active'),
     setActive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.set-active'),
     getActive: bridge.buildProvider<DealContext | null, void>('ma.deal.get-active'),
+    clearActive: bridge.buildProvider<void, void>('ma.deal.clear-active'),
     archive: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.archive'),
     close: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.close'),
     reactivate: bridge.buildProvider<DealContext | null, { id: string }>('ma.deal.reactivate'),
@@ -1388,6 +1389,9 @@ export const ma = {
     getByConversation: bridge.buildProvider<FlowiseSession | null, { conversationId: string }>(
       'ma.flowise-session.get-by-conversation'
     ),
+  },
+  flowise: {
+    getReadiness: bridge.buildProvider<FlowiseReadiness, void>('ma.flowise.get-readiness'),
   },
   integration: {
     listProviders: bridge.buildProvider<MaIntegrationProvider[], void>('ma.integration.list-providers'),

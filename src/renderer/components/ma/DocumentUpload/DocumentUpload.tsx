@@ -7,6 +7,7 @@
 import React, { useCallback, useState, useRef } from 'react';
 import { Upload, Progress, Button } from '@arco-design/web-react';
 import { Upload as UploadIcon, Close, FileText } from '@icon-park/react';
+import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
 import type { DocumentFormat } from '@/common/ma/types';
 import styles from './DocumentUpload.module.css';
@@ -42,6 +43,7 @@ export function DocumentUpload({
   multiple = true,
   className,
 }: DocumentUploadProps) {
+  const { t } = useTranslation('ma');
   const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
   const uploadRef = useRef<HTMLDivElement>(null);
@@ -126,7 +128,7 @@ export function DocumentUpload({
 
         return { id: document.id, filename: file.name };
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+        const errorMessage = error instanceof Error ? error.message : t('documentUpload.errors.uploadFailed');
 
         setUploadProgress((prev) => {
           const next = new Map(prev);
@@ -160,7 +162,7 @@ export function DocumentUpload({
         onSuccess();
         onUploadComplete?.([result]);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+        const errorMessage = error instanceof Error ? error.message : t('documentUpload.errors.uploadFailed');
         onError(new Error(errorMessage));
         onUploadError?.(error instanceof Error ? error : new Error(errorMessage));
       }
@@ -211,8 +213,10 @@ export function DocumentUpload({
               {item.status === 'uploading' && (
                 <Progress percent={item.progress} size='small' className={styles.progress} />
               )}
-              {item.status === 'success' && <span className={styles.successText}>Uploaded</span>}
-              {item.status === 'error' && <span className={styles.errorText}>Failed</span>}
+              {item.status === 'success' && (
+                <span className={styles.successText}>{t('documentUpload.status.uploaded')}</span>
+              )}
+              {item.status === 'error' && <span className={styles.errorText}>{t('documentUpload.status.failed')}</span>}
               <Button
                 type='text'
                 size='mini'
@@ -244,14 +248,14 @@ export function DocumentUpload({
         customRequest={handleRequest}
         autoUpload={true}
         showUploadList={false}
-        tip={<div className={styles.tip}>Supported formats: PDF, DOCX, XLSX, TXT (max 50MB)</div>}
+        tip={<div className={styles.tip}>{t('documentUpload.tip')}</div>}
       >
         <div className={styles.dropzone}>
           <div className={styles.dropzoneContent}>
             <UploadIcon className={styles.uploadIcon} />
             <div className={styles.dropzoneText}>
-              <span className={styles.primaryText}>Click or drag files to upload</span>
-              <span className={styles.secondaryText}>Support batch upload of multiple documents</span>
+              <span className={styles.primaryText}>{t('documentUpload.primaryText')}</span>
+              <span className={styles.secondaryText}>{t('documentUpload.secondaryText')}</span>
             </div>
           </div>
         </div>

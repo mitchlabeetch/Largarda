@@ -7,6 +7,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, Space } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
+import { useTranslation } from 'react-i18next';
 import type { DealContext, DealParty, TransactionType, CompanyInfo, CreateDealInput } from '@/common/ma/types';
 import styles from './DealForm.module.css';
 
@@ -25,20 +26,6 @@ interface DealFormProps {
   loading?: boolean;
 }
 
-const TRANSACTION_TYPES: { label: string; value: TransactionType }[] = [
-  { label: 'Acquisition', value: 'acquisition' },
-  { label: 'Merger', value: 'merger' },
-  { label: 'Divestiture', value: 'divestiture' },
-  { label: 'Joint Venture', value: 'joint_venture' },
-];
-
-const PARTY_ROLES: { label: string; value: DealParty['role'] }[] = [
-  { label: 'Buyer', value: 'buyer' },
-  { label: 'Seller', value: 'seller' },
-  { label: 'Target', value: 'target' },
-  { label: 'Advisor', value: 'advisor' },
-];
-
 const initialParty: DealParty = { name: '', role: 'buyer' };
 
 const initialCompanyInfo: CompanyInfo = {
@@ -48,6 +35,22 @@ const initialCompanyInfo: CompanyInfo = {
 };
 
 export function DealForm({ visible, deal, onSubmit, onClose, validateInput, loading = false }: DealFormProps) {
+  const { t } = useTranslation('ma');
+
+  const TRANSACTION_TYPES: { label: string; value: TransactionType }[] = [
+    { label: t('dealForm.transactionTypes.acquisition'), value: 'acquisition' },
+    { label: t('dealForm.transactionTypes.merger'), value: 'merger' },
+    { label: t('dealForm.transactionTypes.divestiture'), value: 'divestiture' },
+    { label: t('dealForm.transactionTypes.jointVenture'), value: 'joint_venture' },
+  ];
+
+  const PARTY_ROLES: { label: string; value: DealParty['role'] }[] = [
+    { label: t('dealForm.partyRoles.buyer'), value: 'buyer' },
+    { label: t('dealForm.partyRoles.seller'), value: 'seller' },
+    { label: t('dealForm.partyRoles.target'), value: 'target' },
+    { label: t('dealForm.partyRoles.advisor'), value: 'advisor' },
+  ];
+
   const [formData, setFormData] = useState<CreateDealInput>({
     name: '',
     parties: [{ ...initialParty }],
@@ -126,21 +129,21 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
     const errors: string[] = [];
 
     if (!formData.name?.trim()) {
-      errors.push('Deal name is required');
+      errors.push(t('dealForm.validation.dealNameRequired'));
     }
     if (!formData.parties?.length) {
-      errors.push('At least one party is required');
+      errors.push(t('dealForm.validation.atLeastOnePartyRequired'));
     }
     formData.parties?.forEach((party, index) => {
       if (!party.name?.trim()) {
-        errors.push(`Party ${index + 1}: name is required`);
+        errors.push(t('dealForm.validation.partyNameRequired', { index: index + 1 }));
       }
     });
     if (!formData.transactionType) {
-      errors.push('Transaction type is required');
+      errors.push(t('dealForm.validation.transactionTypeRequired'));
     }
     if (!formData.targetCompany?.name?.trim()) {
-      errors.push('Target company name is required');
+      errors.push(t('dealForm.validation.targetCompanyNameRequired'));
     }
 
     if (errors.length > 0) {
@@ -164,12 +167,12 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
 
   return (
     <Modal
-      title={isEditing ? 'Edit Deal' : 'Create New Deal'}
+      title={isEditing ? t('dealForm.editDeal') : t('dealForm.createNewDeal')}
       visible={visible}
       onOk={handleSubmit}
       onCancel={onClose}
-      okText={isEditing ? 'Save Changes' : 'Create Deal'}
-      cancelText='Cancel'
+      okText={isEditing ? t('dealForm.saveChanges') : t('dealForm.createDeal')}
+      cancelText={t('dealForm.cancel')}
       confirmLoading={loading}
       autoFocus={false}
       focusLock
@@ -189,56 +192,56 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
         <Form className={styles.form} layout='vertical'>
           <div className={styles.formGroup}>
             <span className={styles.label}>
-              Deal Name <span className={styles.required}>*</span>
+              {t('dealForm.fields.dealName')} <span className={styles.required}>*</span>
             </span>
             <Input
               value={formData.name}
               onChange={(value) => handleFieldChange('name', value)}
-              placeholder='e.g., Project Alpha Acquisition'
+              placeholder={t('dealForm.placeholders.dealName')}
               allowClear
             />
           </div>
 
           <div className={styles.formGroup}>
             <span className={styles.label}>
-              Transaction Type <span className={styles.required}>*</span>
+              {t('dealForm.fields.transactionType')} <span className={styles.required}>*</span>
             </span>
             <Select
               value={formData.transactionType}
               onChange={(value) => handleFieldChange('transactionType', value)}
-              placeholder='Select transaction type'
+              placeholder={t('dealForm.placeholders.transactionType')}
               options={TRANSACTION_TYPES}
             />
           </div>
 
           <div className={styles.formGroup}>
             <span className={styles.label}>
-              Target Company <span className={styles.required}>*</span>
+              {t('dealForm.fields.targetCompany')} <span className={styles.required}>*</span>
             </span>
             <Input
               value={formData.targetCompany?.name}
               onChange={(value) => handleFieldChange('targetCompany.name', value)}
-              placeholder='Company name'
+              placeholder={t('dealForm.placeholders.companyName')}
               allowClear
             />
           </div>
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <span className={styles.label}>Industry</span>
+              <span className={styles.label}>{t('dealForm.fields.industry')}</span>
               <Input
                 value={formData.targetCompany?.industry}
                 onChange={(value) => handleFieldChange('targetCompany.industry', value)}
-                placeholder='e.g., Technology'
+                placeholder={t('dealForm.placeholders.industry')}
                 allowClear
               />
             </div>
             <div className={styles.formGroup}>
-              <span className={styles.label}>Jurisdiction</span>
+              <span className={styles.label}>{t('dealForm.fields.jurisdiction')}</span>
               <Input
                 value={formData.targetCompany?.jurisdiction}
                 onChange={(value) => handleFieldChange('targetCompany.jurisdiction', value)}
-                placeholder='e.g., Delaware, USA'
+                placeholder={t('dealForm.placeholders.jurisdiction')}
                 allowClear
               />
             </div>
@@ -246,7 +249,7 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
 
           <div className={styles.formGroup}>
             <span className={styles.label}>
-              Parties <span className={styles.required}>*</span>
+              {t('dealForm.fields.parties')} <span className={styles.required}>*</span>
             </span>
             <div className={styles.partiesSection}>
               {formData.parties?.map((party, index) => (
@@ -255,7 +258,7 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
                     className={styles.partyName}
                     value={party.name}
                     onChange={(value) => handlePartyChange(index, 'name', value)}
-                    placeholder='Party name'
+                    placeholder={t('dealForm.placeholders.partyName')}
                     allowClear
                   />
                   <Select
@@ -275,7 +278,7 @@ export function DealForm({ visible, deal, onSubmit, onClose, validateInput, load
                 </div>
               ))}
               <Button type='secondary' icon={<Plus />} onClick={handleAddParty} className={styles.addPartyButton}>
-                Add Party
+                {t('dealForm.addParty')}
               </Button>
             </div>
           </div>

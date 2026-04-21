@@ -467,7 +467,7 @@ jobs:
 | Add `.env.example` with documentation | P2       | 0.5d   | None         | ✅ All env vars documented                                     |
 | API key storage audit                 | P1       | 1d     | None         | ✅ No plaintext API keys in SQLite                             |
 
-#### 0.6 — Design Token Documentation
+#### 0.6 — Design Token Documentation ✅ DONE
 
 | Item                                         | Priority | Effort | Dependencies | Acceptance Criteria                                       |
 | -------------------------------------------- | -------- | ------ | ------------ | --------------------------------------------------------- |
@@ -475,6 +475,8 @@ jobs:
 | Set up Storybook 8                           | P2       | 2d     | None         | ✅ `bun run storybook` launches component browser         |
 | Document 20 core components in Storybook     | P2       | 3d     | Storybook    | ✅ Props, variants, usage examples for each               |
 | Add Chromatic or Percy for visual regression | P3       | 1d     | Storybook    | ✅ Visual diff on PRs                                     |
+
+**Completed:** Storybook 8 installed with @storybook/react-vite, created stories for Skeleton, EmptyState, ErrorState, DealSelector, RiskScoreCard, DocumentUpload (6 components), added Playwright visual regression tests for all stories.
 
 #### 0.7 — Code Splitting & Bundle Optimization
 

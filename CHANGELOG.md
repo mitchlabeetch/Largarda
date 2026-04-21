@@ -81,3 +81,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   ecosystems, all with dedicated Conventional Commit prefixes.
 - **ADR 0006** documenting the security CI pipeline decisions, deferred
   alternatives (CodeQL, Snyk/Socket), and escalation path for `bun audit`.
+
+### Added (Completer pass W0)
+
+- **Design system base components** (`src/renderer/components/base/`): Skeleton and EmptyState
+  components with consistent API contracts, supporting card and text variants, and
+  customizable icons, titles, and descriptions for empty state scenarios.
+- **RiskScoreCard design system integration** — replaced Arco Design's Spin and Empty
+  with Skeleton and EmptyState base components for consistent loading and empty states
+  across the application.
+- **Format helpers** (`src/common/utils/format/`): currency, number, date, siren, and siret
+  formatting utilities with fr-FR locale defaults and EUR currency support.
+- **useLargoFormat hook** (`src/renderer/hooks/useLargoFormat.ts`): React hook that provides
+  locale-aware formatting functions based on the active i18n language.
+- **M&A component i18n scaffolding** — added i18n keys for DealSelector, DealForm,
+  DealContextPage, DocumentUpload, and RiskScoreCard components to en-US and fr-FR
+  locale files under the `ma.*` namespace.

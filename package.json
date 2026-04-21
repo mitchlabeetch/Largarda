@@ -66,7 +66,9 @@
     "server:resetpass": "NODE_ENV=development bun dist-server/server.mjs --resetpass",
     "server:resetpass:prod": "NODE_ENV=production bun dist-server/server.mjs --resetpass",
     "build:renderer:web": "bunx vite build --config vite.renderer.config.ts",
-    "build:server": "node scripts/build-server.mjs"
+    "build:server": "node scripts/build-server.mjs",
+    "storybook": "storybook dev -p 6006",
+    "storybook:test": "test-storybook"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -162,6 +164,13 @@
     "@electron/notarize": "^3.1.0",
     "@playwright/test": "^1.58.2",
     "@sentry/vite-plugin": "^5.1.1",
+    "@storybook/addon-essentials": "8.4.0",
+    "@storybook/addon-interactions": "8.4.0",
+    "@storybook/addon-links": "8.4.0",
+    "@storybook/blocks": "8.4.0",
+    "@storybook/react": "8.4.0",
+    "@storybook/react-vite": "8.4.0",
+    "@storybook/test": "8.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -194,6 +203,7 @@
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
     "patch-package": "^8.0.0",
+    "storybook": "8.4.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
     "typescript": "^5.8.3",
