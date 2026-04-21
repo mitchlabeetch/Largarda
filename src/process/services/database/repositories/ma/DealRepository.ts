@@ -233,6 +233,73 @@ export class DealRepository {
   async reactivate(id: string): Promise<IQueryResult<DealContext>> {
     return this.update(id, { status: 'active' });
   }
+
+  /**
+   * Get the active deal from durable storage
+   * Returns the deal with is_active = 1, or null if no active deal exists
+   */
+  async getActiveDeal(): Promise<IQueryResult<DealContext | null>> {
+    try {
+      const db = await getDatabase();
+      const driver = db.getDriver();
+
+      const row = driver.prepare('SELECT * FROM ma_deals WHERE is_active = 1').get() as IMaDealRow | undefined;
+
+      return {
+        success: true,
+        data: row ? rowToDeal(row) : null,
+      };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message, data: null };
+    }
+  }
+
+  /**
+   * Set a deal as the active deal (durable)
+   * Clears is_active from all other deals and sets it to 1 for the specified deal
+   */
+  async setActiveDeal(id: string): Promise<IQueryResult<DealContext>> {
+    try {
+      const db = await getDatabase();
+      const driver = db.getDriver();
+
+      // First, verify the deal exists
+      const dealResult = await this.get(id);
+      if (!dealResult.success || !dealResult.data) {
+        return { success: false, error: dealResult.error ?? 'Deal not found' };
+      }
+
+      // Clear is_active from all deals
+      driver.prepare('UPDATE ma_deals SET is_active = 0').run();
+
+      // Set is_active to 1 for the specified deal
+      driver.prepare('UPDATE ma_deals SET is_active = 1, updated_at = ? WHERE id = ?').run(Date.now(), id);
+
+      return { success: true, data: dealResult.data };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Clear the active deal (durable)
+   * Sets is_active = 0 for all deals
+   */
+  async clearActiveDeal(): Promise<IQueryResult<void>> {
+    try {
+      const db = await getDatabase();
+      const driver = db.getDriver();
+
+      driver.prepare('UPDATE ma_deals SET is_active = 0').run();
+
+      return { success: true, data: undefined };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
+    }
+  }
 }
 
 // Singleton instance

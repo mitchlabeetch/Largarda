@@ -17,19 +17,6 @@ type MessageState = {
 const REMEMBER_ME_KEY = 'rememberMe';
 const REMEMBERED_EMAIL_KEY = 'rememberedEmail';
 
-/** Native display name for each supported language code */
-const LANGUAGE_NATIVE_NAMES: Record<string, string> = {
-  'fr-FR': 'Français',
-  'en-US': 'English',
-  'zh-CN': '简体中文',
-  'zh-TW': '繁體中文',
-  'ja-JP': '日本語',
-  'ko-KR': '한국어',
-  'tr-TR': 'Türkçe',
-  'ru-RU': 'Русский',
-  'uk-UA': 'Українська',
-};
-
 const deobfuscate = (text: string): string => {
   try {
     // Try direct base64 decode first (new format)
@@ -143,27 +130,6 @@ const LoginPage: React.FC = () => {
     [clearMessageLater]
   );
 
-  const supportedLanguages = useMemo(
-    () =>
-      SUPPORTED_LANGUAGES.map((code) => ({
-        code,
-        label: LANGUAGE_NATIVE_NAMES[code] ?? code,
-      })),
-    []
-  );
-
-  const handleLanguageChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextLanguage = event.target.value;
-    changeLanguage(nextLanguage).catch((error: Error) => {
-      console.error('Failed to change language:', error);
-    });
-  }, []);
-
-  const handleGoogleLogin = useCallback(() => {
-    // Pre-wired Google OAuth — redirect to backend OAuth endpoint
-    window.location.href = '/api/auth/google';
-  }, []);
-
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
@@ -229,24 +195,9 @@ const LoginPage: React.FC = () => {
       <BinaryGrass />
 
       <div className='login-page__card'>
-        <label className='login-page__lang-select-wrapper' htmlFor='lang-select'>
-          <select
-            id='lang-select'
-            className='login-page__lang-select'
-            value={i18n.language}
-            onChange={handleLanguageChange}
-          >
-            {supportedLanguages.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <div className='login-page__header'>
           <div className='login-page__logo'>
-            <img src={loginLogo} alt={t('login.brand')} />
+            <img src='/logargo.png' alt={t('login.brand')} />
           </div>
           <h1 className='login-page__title'>{t('login.brand')}</h1>
           <p className='login-page__subtitle'>{t('login.subtitle')}</p>
@@ -378,22 +329,9 @@ const LoginPage: React.FC = () => {
           </div>
         </form>
 
-        <div className='login-page__separator'>
-          <div className='login-page__separator-line' />
-          <span className='login-page__separator-text'>{t('login.separator')}</span>
-          <div className='login-page__separator-line' />
-        </div>
-
-        <button type='button' className='login-page__google-btn' onClick={handleGoogleLogin}>
-          <GoogleIcon />
-          <span>{t('login.loginWithGoogle')}</span>
-        </button>
-
         <div className='login-page__footer'>
           <div className='login-page__footer-content'>
-            <span>{t('login.footerPrimary')}</span>
-            <span className='login-page__footer-divider'>•</span>
-            <span>{t('login.footerSecondary')}</span>
+            <span>Mon jardin avec Largo</span>
           </div>
         </div>
       </div>

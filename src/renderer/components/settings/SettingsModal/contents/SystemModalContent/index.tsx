@@ -7,7 +7,6 @@
 import { ipcBridge } from '@/common';
 import type { IStartOnBootStatus } from '@/common/adapter/ipcBridge';
 import { ConfigStorage } from '@/common/config/storage';
-import LanguageSwitcher from '@/renderer/components/settings/LanguageSwitcher';
 import { AUTO_PREVIEW_OFFICE_FILES_SWR_KEY } from '@/renderer/hooks/system/useAutoPreviewOfficeFilesEnabled';
 import { COMMAND_QUEUE_ENABLED_SWR_KEY } from '@/renderer/hooks/system/useCommandQueueEnabled';
 import { iconColors } from '@/renderer/styles/colors';
@@ -240,7 +239,6 @@ const SystemModalContent: React.FC = () => {
   }, [systemInfo, form]);
 
   const preferenceItems = [
-    { key: 'language', label: t('settings.language'), component: <LanguageSwitcher /> },
     {
       key: 'startOnBoot',
       label: t('settings.startOnBoot'),

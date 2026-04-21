@@ -6,6 +6,9 @@
  * main.ts and standalone.ts in the same process would silently break the bridge.
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 // register-node MUST be the first import — registers NodePlatformServices before any module-level code
 import './common/platform/register-node';
 

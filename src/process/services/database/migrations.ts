@@ -1496,7 +1496,7 @@ const migration_v28: IMigration = {
     db.exec('DROP TABLE IF EXISTS ma_chatflow_registry');
 
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_flowise_chunk_id');
-    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_chunk_index');
+    db.exec('DROP INDEX IF NOT EXISTS idx_ma_documents_chunks_chunk_index');
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_deal_id');
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_document_id');
     db.exec('DROP TABLE IF EXISTS ma_documents_chunks');
@@ -1533,6 +1533,47 @@ const migration_v28: IMigration = {
   },
 };
 
+const migration_v29: IMigration = {
+  version: 29,
+  name: 'Add durable active deal persistence to ma_deals',
+  up: (db) => {
+    // Add is_active column to ma_deals table for durable active deal tracking
+    db.exec(`ALTER TABLE ma_deals ADD COLUMN is_active INTEGER DEFAULT 0`);
+
+    // Create index for efficient active deal lookup
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_deals_is_active ON ma_deals(is_active)');
+
+    console.log('[Migration v29] Added is_active column to ma_deals for durable active deal persistence');
+  },
+  down: (db) => {
+    // SQLite doesn't support DROP COLUMN directly, need to recreate table
+    db.exec(
+      `CREATE TABLE ma_deals_backup AS SELECT id, name, parties, transaction_type, target_company, status, extra, created_at, updated_at FROM ma_deals`
+    );
+    db.exec('DROP TABLE ma_deals');
+    db.exec(`CREATE TABLE ma_deals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      parties TEXT NOT NULL,
+      transaction_type TEXT NOT NULL,
+      target_company TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      extra TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_deals_status ON ma_deals(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_deals_created_at ON ma_deals(created_at)');
+    db.exec(
+      `INSERT INTO ma_deals SELECT id, name, parties, transaction_type, target_company, status, extra, created_at, updated_at FROM ma_deals_backup`
+    );
+    db.exec('DROP TABLE ma_deals_backup');
+    db.exec('DROP INDEX IF EXISTS idx_ma_deals_is_active');
+
+    console.log('[Migration v29] Rolled back: Removed is_active column from ma_deals');
+  },
+};
+
 /**
  * All migrations in order
  */
@@ -1542,7 +1583,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
-  migration_v25, migration_v26, migration_v27, migration_v28,
+  migration_v25, migration_v26, migration_v27, migration_v28, migration_v29,
 ];
 
 /**

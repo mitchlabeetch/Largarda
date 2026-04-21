@@ -10,6 +10,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  padding-bottom: 50vh;
   font-family:
     'Plus Jakarta Sans',
     -apple-system,
@@ -19,9 +20,9 @@
     'Helvetica Neue',
     Arial,
     sans-serif;
-  overflow: hidden;
+  overflow-y: auto;
 
-  /* Teal-to-off-white mesh gradient */
+  /* Warm garden gradient */
   background:
     radial-gradient(ellipse at 20% 0%, rgba(93, 184, 163, 0.45) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(72, 166, 150, 0.3) 0%, transparent 45%),
@@ -30,7 +31,33 @@
 }
 
 body.login-page-active {
-  overflow: hidden;
+  overflow-y: auto;
+}
+
+/* Mascot — idle pet floating beside the card */
+.login-page__mascot {
+  position: absolute;
+  bottom: 12%;
+  left: 8%;
+  z-index: 0;
+  opacity: 0.55;
+  pointer-events: none;
+  animation: login-mascot-float 6s ease-in-out infinite;
+}
+
+.login-page__mascot img {
+  width: 120px;
+  height: 120px;
+}
+
+@keyframes login-mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 /* Glassmorphic card */
@@ -39,11 +66,13 @@ body.login-page-active {
   z-index: 1;
   width: 100%;
   max-width: 380px;
-  background: rgba(255, 255, 255, 0.72);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow:
     0 8px 32px rgba(93, 184, 163, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.06);
@@ -62,44 +91,6 @@ body.login-page-active {
   }
 }
 
-/* Language selector */
-.login-page__lang-select-wrapper {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  font-size: 12px;
-  color: #5a7a72;
-}
-
-.login-page__lang-select {
-  min-width: 130px;
-  padding: 5px 10px;
-  border: 1px solid rgba(93, 184, 163, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #3a6b60;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.login-page__lang-select:hover,
-.login-page__lang-select:focus {
-  border-color: #5db8a3;
-  box-shadow: 0 0 0 3px rgba(93, 184, 163, 0.15);
-  outline: none;
-}
-
-.login-page__lang-select option {
-  color: #333;
-}
-
 /* Header section */
 .login-page__header {
   text-align: center;
@@ -114,8 +105,8 @@ body.login-page-active {
 
 .login-page__logo svg,
 .login-page__logo img {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   animation: login-pulse 4s infinite ease-in-out;
   filter: drop-shadow(0 2px 8px rgba(93, 184, 163, 0.25));
 }
@@ -346,17 +337,6 @@ body.login-page-active {
   gap: 10px;
 }
 
-.login-page__google-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(93, 184, 163, 0.4);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.login-page__google-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
 
 /* Spinner */
 .login-page__spinner {
@@ -448,7 +428,12 @@ body.login-page-active {
 
   .login-page__logo svg,
   .login-page__logo img {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .login-page__mascot img {
+    width: 80px;
+    height: 80px;
   }
 }

@@ -101,6 +101,31 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const { username, password } = req.body;
 
+      // Test credential bypass — skip DB when LARGO_TEST_USER / LARGO_TEST_PWD match
+      // Only active when both env vars are set; never available in production without explicit opt-in
+      const testUser = process.env.LARGO_TEST_USER;
+      const testPwd = process.env.LARGO_TEST_PWD;
+      if (testUser && testPwd && username === testUser && password === testPwd) {
+        const testUserId = `test_${testUser}`;
+        const token = await AuthService.generateToken({ id: testUserId, username: testUser });
+
+        res.cookie(AUTH_CONFIG.COOKIE.NAME, token, {
+          ...getCookieOptions(),
+          maxAge: AUTH_CONFIG.TOKEN.COOKIE_MAX_AGE,
+        });
+
+        res.json({
+          success: true,
+          message: 'Login successful (test)',
+          user: {
+            id: testUserId,
+            username: testUser,
+          },
+          token,
+        });
+        return;
+      }
+
       // Get user from database
       const user = await UserRepository.findByUsername(username);
       if (!user) {

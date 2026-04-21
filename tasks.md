@@ -743,6 +743,68 @@ Blocking items:
 These waves are eligible for immediate work. They reflect current code truth and
 current launch blockers.
 
+### 6.1 Current audited status
+
+- Wave 0 is complete.
+- Batch 1A is complete and auditor-corrected.
+- Batch 1B is complete and auditor-corrected.
+- The remaining active work starts at Batch 1C.
+- No later wave should be promoted ahead of the active lane just because code
+  already exists on disk. Reachability, truthfulness, and compliance still come
+  first.
+
+### 6.2 Remaining-roadmap async topology
+
+Use these lanes to parallelize without collision:
+
+- `contract-seed`: first batch in a wave that is allowed to touch shared
+  serialization points, seed locale namespaces, or establish extension slots.
+- `process-domain`: process services, repositories, workers, migrations, and
+  domain truth.
+- `renderer-surface`: page, component, and hook work inside wave-owned
+  renderer islands.
+- `shell-surface`: router, layout, navigation, breadcrumbs, home, and command
+  entry.
+- `ai-runtime`: Flowise, catalog, prompt, provenance, observability, and
+  feature-to-flow mapping.
+- `integration-surface`: external integrations, sync semantics, readiness, and
+  failure UX.
+- `audit-harness`: tests, evidence capture, and `docs/audit/**`.
+
+### 6.3 Remaining-wave serialization law
+
+The earlier Wave 1A and 1B audit exposed four rules that now apply to every
+unfinished wave:
+
+- Contract-seed batches may touch shared serialization points. Later batches in
+  the same wave must consume those seeded contracts instead of widening scope.
+- Route tests must render real routes. A test that only asserts string literals
+  is not accepted as route coverage.
+- Hook tests must execute hooks. A test that only inspects source text is not
+  accepted as hook coverage.
+- A batch owning `src/common/adapter/ipcBridge.ts`,
+  `src/process/bridge/maBridge.ts`, router entry files, migrations, or locale
+  files may not widen scope with unrelated additions.
+
+### 6.4 Prompt packet contract
+
+Every unfinished batch below is written to be copied into a synced coder agent.
+Each packet must be treated as a hard write-scope contract.
+
+Each batch packet includes:
+
+- lane
+- dependency and parallelism rule
+- exact owned scope
+- exact forbidden scope
+- implementation contract
+- required tests
+- handoff artifact requirements
+- abort and escalate triggers
+
+If an agent needs to edit a forbidden shared file, it should stop and return a
+delta request instead of silently widening scope.
+
 ## Wave 0 - Roadmap reset and audit scaffolding
 
 ### Goal
@@ -752,7 +814,7 @@ keeping the active lane grounded in current code.
 
 ### Status
 
-Completed by this rewrite.
+Completed by the roadmap rewrites and accepted as the execution baseline.
 
 ### Deliverables
 
@@ -763,7 +825,8 @@ Completed by this rewrite.
 
 ### Auditor note expectation
 
-Wave 0 can be closed once this file is accepted and future work references it.
+Wave 0 is closed. It should only be reopened if this roadmap loses feature
+memory, execution discipline, or auditable structure.
 
 ## Wave 1 - Reachability, bridge truth, and durable active context
 
@@ -772,169 +835,238 @@ Wave 0 can be closed once this file is accepted and future work references it.
 Make the existing M&A product reachable, structurally honest, and durable before
 deeper UX or feature expansion begins.
 
-### Why this is active now
+### Current status
 
-- pages exist but are stranded
-- hooks express contracts the process bridge does not fully satisfy
-- active deal is still stored as global process state
-- DD runtime selection should stop relying on raw flow identifiers
+- 1A complete: route entry is no longer stranded and the landing flow is
+  keyboard-safe.
+- 1B complete: readiness and clear-active bridge truth are no longer dead
+  contracts.
+- 1C pending: active deal still needs durable storage ownership.
+- 1D pending: DD runtime still needs catalog-backed flow truth and full
+  provenance.
+
+### Async execution plan
+
+- `1C` runs in `process-domain`.
+- `1D` runs in `ai-runtime`.
+- `1C` and `1D` may run in parallel only if neither batch edits
+  `src/common/ma/types.ts`, migrations, or bridge contracts.
+- If either batch needs a shared type or bridge change, serialize through a
+  short contract note first, then merge one batch before the other starts.
 
 ### Batch 1A - Route and shell entry wiring
 
-- Owner scope:
-  - `src/renderer/components/layout/Router.tsx`
-  - `src/renderer/pages/ma/**`
-  - any new M&A entry or layout files created under `src/renderer/pages/ma/`
-- Must not touch:
-  - `src/common/adapter/ipcBridge.ts`
-  - `src/process/bridge/maBridge.ts`
-- Can run with:
-  - Batch 1B
-- Objective:
-  - Register `/ma/*` routes for the already shipped M&A pages
-  - Add a minimal but compliant M&A entry layout if necessary
-  - Provide a stable default route for the M&A area
-- Architecture requirements:
-  - No fake shell state that will need to be thrown away in Wave 3
-  - Keep router changes minimal and explicit
-  - If a new layout file is introduced, make it a stable shell entry rather
-    than a temporary wrapper
-- UI/UX requirements:
-  - Provide at least a meaningful empty or landing state
-  - Respect landmark structure and page-title semantics
-  - Do not introduce raw interactive HTML
-- Deliverables:
-  - route registration
-  - M&A default entry
-  - page access for Deal Context and Due Diligence
-- Success criteria:
-  - a user can navigate to routed M&A pages
-  - stranded pages are no longer stranded
-  - routing does not depend on temporary hacks
-- Required tests:
-  - route smoke tests for `/ma/*`
-  - renderer test showing M&A default route resolves
-- Auditor close-out:
-  - verify route registration in code
-  - verify page files are reachable through router
-  - verify no temporary shell comments like "remove later" are carrying core
-    navigation behavior
+- Status:
+  - completed and auditor-corrected
+- Keep protected by regression:
+  - `/ma`, `/ma/deal-context`, and `/ma/due-diligence` remain truly reachable
+  - landing interactions remain keyboard accessible
+  - route tests must keep rendering the real router
 
 ### Batch 1B - Shared IPC truth pass
 
-- Owner scope:
-  - `src/common/adapter/ipcBridge.ts`
-  - `src/process/bridge/maBridge.ts`
-  - `src/renderer/hooks/ma/useFlowiseReadiness.ts`
-  - `src/renderer/hooks/ma/useDealContext.ts`
-- Must not touch:
-  - `src/renderer/components/layout/Router.tsx`
-- Can run with:
-  - Batch 1A
-- Objective:
-  - Register a process-side Flowise readiness provider
-  - Expose clear-active-deal end to end
-  - Remove contract drift between shared bridge definition, process providers,
-    and renderer consumers
-- Architecture requirements:
-  - Every shared method added or changed must have a matching provider
-  - Hooks should consume only real registered channels
-  - Contract names should remain M&A-specific and not leak unrelated app semantics
-- UI/UX requirements:
-  - readiness state should be usable by the renderer without guesswork
-  - clear-active behavior should support later shell UX without needing another
-    contract rewrite
-- Deliverables:
-  - readiness provider
-  - clear-active bridge method
-  - contract alignment across shared, process, and renderer layers
-- Success criteria:
-  - `useFlowiseReadiness` no longer points at a dead contract
-  - active deal clearing is explicitly bridged
-  - no M&A hook references a missing bridge provider
-- Required tests:
-  - bridge tests for readiness and clear-active
-  - hook tests for readiness and active-deal clearing behavior
-- Auditor close-out:
-  - compare shared bridge methods against process registrations
-  - verify hook tests would fail if the provider disappeared
+- Status:
+  - completed and auditor-corrected
+- Keep protected by regression:
+  - Flowise readiness remains process-backed
+  - clear-active remains fully bridged
+  - hook tests continue to execute real hook behavior instead of source-text
+    inspection
 
 ### Batch 1C - Durable active deal persistence
 
-- Owner scope:
-  - `src/process/services/ma/DealContextService.ts`
-  - repositories or migrations only if needed for durable state
-  - `src/common/ma/types.ts` only if state shape changes require it
+- Lane:
+  - `process-domain`
 - Depends on:
-  - Batch 1B if the bridge contract changes
+  - completed Batch 1B
 - Can run with:
-  - none
-- Objective:
-  - Replace global active-deal storage with a durable mechanism
-- Architecture requirements:
-  - No `global` or process-memory-only persistence for core user context
-  - Durable state must have a clear storage owner
-  - Any migration or repository change must be explicit and tested
-- UI/UX requirements:
-  - Active deal should survive the app lifecycle in the way the product intends
-  - Clear-active behavior should leave the UI in a coherent no-active-deal state
-- Deliverables:
-  - durable active-deal storage
-  - service updates
-  - bridge alignment if needed
+  - Batch 1D if no shared type or bridge edits are needed
+- Owns:
+  - `src/process/services/ma/DealContextService.ts`
+  - one new or existing repository under
+    `src/process/services/database/repositories/ma/**` if required
+  - migrations only if durable storage truly requires a schema addition
+- Must not touch:
+  - `src/renderer/**`
+  - `src/common/adapter/ipcBridge.ts`
+  - `src/process/bridge/maBridge.ts`
+  - `src/common/ma/types.ts` unless a separate serialization note explicitly
+    unlocks it
+- Implementation contract:
+  - Remove all process-global active-deal storage.
+  - Pick one durable owner for active-deal state and make restore semantics
+    explicit.
+  - Keep clear-active behavior first-class and idempotent.
+  - Restore behavior must not create a phantom active deal if the referenced
+    deal no longer exists.
+  - Service semantics must stay compatible with the already-corrected hook and
+    bridge surface unless a contract note says otherwise.
 - Success criteria:
-  - `(global as any).__maActiveDealId` is gone
-  - active deal survives where the product intends it to survive
-  - clear-active behavior remains consistent after restart or service reload
+  - `(global as any).__maActiveDealId` and equivalent memory-only state are gone
+  - active deal survives restart or service recreation according to product
+    intent
+  - clear-active leaves durable storage empty and restores a no-active-deal
+    state cleanly
+  - delete, archive, and close flows do not leave corrupt active-deal pointers
 - Required tests:
-  - persistence tests for active deal
-  - service tests for clear-active and restore-active flows
-- Auditor close-out:
-  - search owned scope for `__maActiveDealId`
-  - verify tests cover restore and clear semantics
+  - service tests for set-active, restore-active, clear-active, and missing-deal
+    recovery
+  - repository or migration tests if new persistence is introduced
+  - focused regression proving the old global persistence path cannot silently
+    return
+- Handoff artifact:
+  - list chosen storage owner
+  - list restore order and fallback rules
+  - list commands run
+  - residual risks if schema work was avoided deliberately
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 1 / Batch 1C: durable active deal persistence.
+
+Goal:
+- Replace process-global active-deal state with a durable restore/clear model.
+
+Read first:
+- src/process/services/ma/DealContextService.ts
+- src/process/services/database/repositories/ma/**
+- tests/unit/process/services/ma/**
+
+Write only:
+- src/process/services/ma/DealContextService.ts
+- one repository or migration island if truly required
+
+Do not edit:
+- src/renderer/**
+- src/common/adapter/ipcBridge.ts
+- src/process/bridge/maBridge.ts
+- src/common/ma/types.ts unless you stop and request serialization
+
+Implementation requirements:
+- remove every remaining global active-deal persistence path
+- define one durable owner and one restore path
+- keep clear-active idempotent
+- handle deleted or archived deals explicitly
+- do not add placeholder fallback logic or TODO comments as behavior
+
+Tests required:
+- restore-active happy path
+- clear-active happy path
+- stale-pointer recovery path
+- persistence proof that would fail if global state came back
+
+Return with:
+- files changed
+- storage owner chosen
+- commands run
+- remaining risks
+
+Abort and escalate if:
+- you need to change bridge contracts
+- you need shared type changes
+- you need a migration that collides with another active batch
+```
 
 ### Batch 1D - DD flow catalog runtime adoption
 
-- Owner scope:
+- Lane:
+  - `ai-runtime`
+- Depends on:
+  - completed Batch 1B
+- Can run with:
+  - Batch 1C if shared types and bridge files remain untouched
+- Owns:
   - `src/process/services/ma/DueDiligenceService.ts`
   - `src/common/ma/flowise/**`
-  - `src/common/ma/types.ts`
-- Depends on:
-  - Batch 1B if request contracts change
-- Can run with:
-  - none
-- Objective:
-  - Replace raw free-form runtime flow selection with catalog-backed flow keys
-  - Capture enough provenance to know which flow and prompt version drove a DD run
-- Architecture requirements:
-  - Catalog must become runtime truth, not just doc or test truth
-  - Invalid flow keys must fail clearly
-  - Provenance shape must be persistable and inspectable
-- UI/UX requirements:
-  - Errors for invalid or unavailable flow choices should be explainable upstream
-- Deliverables:
-  - flow-key based runtime selection
-  - provenance capture for DD runs
+  - narrowly scoped provenance helpers under `src/common/ma/**` if a new file is
+    enough
+- Must not touch:
+  - `src/renderer/**`
+  - `src/common/adapter/ipcBridge.ts`
+  - `src/process/bridge/maBridge.ts`
+  - broad unrelated Flowise runtime code outside the DD selection path
+- Implementation contract:
+  - Make flow catalog metadata the runtime truth for DD.
+  - Replace free-form `flowId` trust with validated `flowKey` selection for
+    normal execution.
+  - Capture enough provenance to know which flow family and prompt version
+    produced each DD output.
+  - Invalid or missing flow keys must fail clearly and testably.
+  - Preserve current behavior only where it is intentionally needed for
+    migration or backward compatibility, and document it.
 - Success criteria:
-  - DD no longer trusts arbitrary free-form flow IDs for normal execution
-  - flow selection failures are validated and test-covered
-  - DD persistence carries flow or prompt provenance fields as intended
+  - DD no longer accepts arbitrary raw runtime flow IDs as the normal execution
+    path
+  - provenance is persistable and inspectable
+  - tests prove catalog metadata participates in execution
 - Required tests:
-  - DD tests for invalid flow key rejection
-  - DD tests proving catalog metadata attaches to execution
-- Auditor close-out:
-  - search for free-form `flowId` usage in runtime DD execution
-  - verify provenance is asserted by tests rather than comments
+  - invalid flow-key rejection
+  - execution path proving catalog resolution is used
+  - provenance attachment test covering flow key and prompt version metadata
+- Handoff artifact:
+  - list runtime catalog fields now treated as truth
+  - list any temporary compatibility branch and sunset expectation
+  - commands run
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 1 / Batch 1D: DD flow catalog runtime adoption.
+
+Goal:
+- Make the Flowise catalog the runtime truth for DD selection and provenance.
+
+Read first:
+- src/process/services/ma/DueDiligenceService.ts
+- src/common/ma/flowise/**
+- tests/unit/process/services/ma/**
+- tests/unit/maFlowiseCatalog.test.ts
+
+Write only:
+- src/process/services/ma/DueDiligenceService.ts
+- src/common/ma/flowise/**
+- one small shared provenance helper file only if needed
+
+Do not edit:
+- src/renderer/**
+- src/common/adapter/ipcBridge.ts
+- src/process/bridge/maBridge.ts
+- broad Flowise runtime plumbing outside DD selection
+
+Implementation requirements:
+- validate flow selection through catalog-backed keys
+- reject invalid keys clearly
+- attach flow and prompt provenance to DD outputs
+- avoid free-form flowId trust in the normal path
+- keep compatibility code minimal and explicit
+
+Tests required:
+- invalid key rejection
+- catalog resolution path
+- provenance persistence or attachment
+
+Return with:
+- files changed
+- catalog fields used as runtime truth
+- commands run
+- compatibility notes if any
+
+Abort and escalate if:
+- you need renderer changes
+- you need bridge contract changes
+- you need to widen into generic Flowise config work that belongs to Wave 9
+```
 
 ### Wave 1 close-out
 
 Wave 1 is complete only when:
 
-- `/ma/*` is reachable
-- Flowise readiness is a real bridged provider
+- `/ma/*` remains reachable
+- Flowise readiness remains a real bridged provider
 - active deal is durable and clearable
 - DD flow selection is catalog-backed
-- `docs/audit/` contains the wave note
+- `docs/audit/` contains the wave note with regression references for 1A and 1B
 
 ## Wave 2 - Real document pipeline and honest DD handoff
 
@@ -948,133 +1080,302 @@ Replace upload and DD placeholder behavior with real renderer-to-process truth.
 - upload provenance is weak
 - DD renderer states do not fully represent backend truth
 
+### Async execution plan
+
+- `2A` is the contract-seed batch. It owns process truth, bridge progress, and
+  provenance semantics. It must merge first.
+- `2B` and `2C` may run in parallel after `2A` lands.
+- `2D` is `audit-harness` and runs last.
+- `2B` owns upload renderer islands.
+- `2C` owns DD renderer islands.
+- `2B` may not edit locale files after `2A`; if it needs new keys, it returns a
+  locale delta request instead of colliding with `2C`.
+
 ### Batch 2A - Process-side ingestion and progress contract
 
-- Owner scope:
+- Lane:
+  - `contract-seed`
+- Owns:
   - `src/process/bridge/maBridge.ts`
   - `src/process/services/ma/DocumentProcessor.ts`
   - `src/process/worker/ma/**`
-  - document-related repositories if required
-  - `src/common/adapter/ipcBridge.ts` only if event contracts change
-- Can run with:
-  - none
-- Objective:
-  - Define the real upload, process, progress, and failure contract
-  - Persist truthful provenance or canonical source metadata
-- Architecture requirements:
-  - Progress must originate from process execution, not renderer timers
-  - Success, partial failure, and failure states should be explicit
-  - Provenance semantics must be documented in persistence and bridge code
-- UI/UX requirements:
-  - Contract should support future localized progress and error surfaces without
-    another backend rewrite
-- Deliverables:
-  - bridge progress contract
-  - source metadata persistence or canonical replacement
-  - process-state transition coverage
+  - document repositories if provenance fields or state transitions change
+  - `src/common/adapter/ipcBridge.ts` only for document event contracts
+- Must not touch:
+  - `src/renderer/**`
+  - unrelated M&A bridge families
+- Implementation contract:
+  - progress must come from real process execution
+  - success, partial failure, cancellation, and failure must be explicit
+  - source metadata must be truthful or replaced with a clearly named canonical
+    field
+  - upload and processing states must be replayable by the renderer
 - Success criteria:
-  - process emits trustworthy progress and error states
-  - document records no longer depend on `file.name` as fake provenance
-  - renderer can subscribe to actual processing truth
+  - renderer can subscribe to real progress and terminal states
+  - stored provenance no longer depends on `file.name` as the only source path
+  - processor and bridge semantics are stable enough for `2B` and `2C` to build
+    on without reopening process truth
 - Required tests:
-  - extend `tests/unit/process/services/ma/DocumentProcessor.test.ts`
+  - document processor lifecycle tests
   - bridge tests for progress, success, and failure events
-  - repository tests for provenance persistence if fields change
-- Auditor close-out:
-  - search owned scope for fake timer-based progress
-  - verify success, progress, and failure states are all represented
+  - repository tests if persisted provenance shape changes
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 2 / Batch 2A: process-side ingestion and progress contract.
+
+Goal:
+- turn upload and processing into a real process-backed state machine that the
+  renderer can trust.
+
+Read first:
+- src/process/services/ma/DocumentProcessor.ts
+- src/process/bridge/maBridge.ts
+- src/process/worker/ma/**
+- tests/unit/process/services/ma/DocumentProcessor.test.ts
+
+Write only:
+- process-side document and worker files
+- document bridge contracts
+- document repository fields if needed
+
+Do not edit:
+- src/renderer/**
+- unrelated M&A bridge families
+
+Implementation requirements:
+- emit truthful progress from process work
+- define terminal states explicitly
+- persist canonical provenance or honest source metadata
+- keep event semantics compatible and testable
+
+Tests required:
+- progress path
+- success path
+- failure path
+- partial or cancellation path if supported
+
+Return with:
+- state machine summary
+- bridge events added or changed
+- fields added or renamed
+- commands run
+
+Abort and escalate if:
+- renderer work seems required to fake success
+- you need broad schema changes beyond document ownership
+```
 
 ### Batch 2B - Renderer upload lifecycle rewrite
 
-- Owner scope:
-  - `src/renderer/components/ma/DocumentUpload/**`
-  - `src/renderer/hooks/ma/useDocuments.ts`
-  - `src/renderer/services/i18n/locales/*/ma.json`
+- Lane:
+  - `renderer-surface`
 - Depends on:
   - Batch 2A
 - Can run with:
   - Batch 2C
-- Objective:
-  - Remove fake progress and weak provenance assumptions from upload UX
-  - Fully localize validation, progress, empty, and error copy
-- Architecture requirements:
-  - Renderer must consume process contract rather than fabricate state
-  - Hook should not insert fake source metadata into persisted records
-- UI/UX requirements:
-  - no emoji
-  - keyboard-friendly upload affordance
-  - clear empty, validation, loading, and failure states
-- Deliverables:
-  - rewritten upload state handling
-  - localized copy
-  - progress/error rendering bound to real process events
+- Owns:
+  - `src/renderer/components/ma/DocumentUpload/**`
+  - `src/renderer/hooks/ma/useDocuments.ts`
+- Must not touch:
+  - `src/process/**`
+  - `src/common/adapter/ipcBridge.ts`
+  - locale files after the seed contract is frozen
+- Implementation contract:
+  - consume the real process contract instead of fabricating progress
+  - remove fake timers and weak provenance assumptions
+  - support loading, validation, progress, success, partial failure, and full
+    failure states
+  - keep upload affordances keyboard-first and AGENTS compliant
+  - route all user-facing copy through locale keys that already exist or through
+    a returned locale delta request
 - Success criteria:
-  - no `setTimeout`-driven fake upload progress remains
-  - no document is created with `originalPath: file.name` as the sole source
-  - upload state and backend state reconcile correctly
+  - no `setTimeout`-driven fake progress remains
+  - no renderer-created fake provenance remains
+  - upload hook and component reconcile with process truth cleanly
 - Required tests:
-  - component tests for validation and progress rendering
-  - hook tests for lifecycle transitions
-  - i18n type generation and locale validation
-- Auditor close-out:
-  - search owned scope for `setTimeout`
-  - search owned scope for `originalPath: file.name`
-  - search owned scope for hardcoded upload copy
+  - DOM tests for validation, progress, success, and failure
+  - hook tests for lifecycle transitions and cleanup behavior
+  - i18n validation if locale keys were seeded earlier in the wave
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 2 / Batch 2B: renderer upload lifecycle rewrite.
+
+Goal:
+- remove placeholder upload behavior and bind the upload UI to the real process
+  contract from 2A.
+
+Read first:
+- src/renderer/components/ma/DocumentUpload/**
+- src/renderer/hooks/ma/useDocuments.ts
+- the merged 2A bridge contract
+
+Write only:
+- upload renderer files
+- upload hook files
+
+Do not edit:
+- src/process/**
+- src/common/adapter/ipcBridge.ts
+- locale files unless the wave owner explicitly unlocked them
+
+Implementation requirements:
+- no fake timer progress
+- no originalPath=file.name fallback persistence behavior
+- clear loading, empty, validation, partial-failure, and failure states
+- keyboard-safe upload affordance
+- localized user-facing copy
+
+Tests required:
+- validation state
+- progress state
+- terminal error state
+- hook cleanup and state transition coverage
+
+Return with:
+- files changed
+- user-visible states implemented
+- commands run
+- any locale delta request that still remains
+
+Abort and escalate if:
+- 2A contract is insufficient
+- you need to reopen process truth
+- you need shared locale edits that collide with another batch
+```
 
 ### Batch 2C - Due diligence runtime UX hardening
 
-- Owner scope:
-  - `src/renderer/pages/ma/DueDiligence/**`
-  - `src/renderer/hooks/ma/useDueDiligence.ts`
+- Lane:
+  - `renderer-surface`
 - Depends on:
   - Batch 2A
-  - readiness support from Wave 1
+  - Wave 1 readiness and catalog truth
 - Can run with:
   - Batch 2B
-- Objective:
-  - Make DD loading, readiness, missing-document, and failure behavior honest
-- Architecture requirements:
-  - DD hook should honor readiness and document-state prerequisites
-  - Renderer should not imply analysis is available before backend truth says so
-- UI/UX requirements:
-  - readiness-off state
-  - no-documents state
-  - processing state
-  - failure state
-  - success state
-  - `aria-live` for progress or streaming output where appropriate
-- Deliverables:
-  - truthful DD page and hook behavior
-  - localized user-facing states
+- Owns:
+  - `src/renderer/pages/ma/DueDiligence/**`
+  - `src/renderer/hooks/ma/useDueDiligence.ts`
+- Must not touch:
+  - `src/process/**`
+  - upload renderer files
+  - locale files after the seed contract is frozen
+- Implementation contract:
+  - DD must represent readiness-off, no-docs, processing, failure, and success
+    states truthfully
+  - prerequisites must be visible, not inferred silently
+  - progress or streaming output must use accessible announcements where needed
+  - errors must distinguish readiness, data, and analysis faults
 - Success criteria:
-  - DD does not proceed silently against missing prerequisites
-  - user can distinguish readiness errors from data or analysis errors
-  - renderer state maps to backend truth
+  - DD never looks available when prerequisites are missing
+  - user can tell why DD is blocked or failed
+  - renderer state maps to backend state without guesswork
 - Required tests:
-  - page tests for readiness-off, no-docs, loading, error, and success states
+  - page tests for readiness-off, no-docs, loading, error, and success
   - hook tests for lifecycle transitions
-- Auditor close-out:
-  - verify at least one unhappy path is covered
-  - verify readiness and document prerequisites are visible to the user
+  - `aria-live` assertions where async output changes
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 2 / Batch 2C: due diligence runtime UX hardening.
+
+Goal:
+- make the DD page honest about readiness, prerequisites, progress, and
+  failure.
+
+Read first:
+- src/renderer/pages/ma/DueDiligence/**
+- src/renderer/hooks/ma/useDueDiligence.ts
+- the merged 2A contract and Wave 1 readiness/catalog behavior
+
+Write only:
+- DD renderer files
+- DD hook files
+
+Do not edit:
+- src/process/**
+- upload renderer files
+- locale files unless explicitly unlocked
+
+Implementation requirements:
+- expose blocked-by-readiness state
+- expose blocked-by-no-documents state
+- expose processing and failure states distinctly
+- use accessible announcements for async changes
+- keep all copy localized
+
+Tests required:
+- readiness-off
+- no-docs
+- loading or processing
+- failure
+- success
+
+Return with:
+- files changed
+- states covered
+- commands run
+- any follow-up risk for Wave 3 compliance sweep
+
+Abort and escalate if:
+- the 2A contract cannot support truthful DD state
+- you need to reopen bridge or process files
+```
 
 ### Batch 2D - Wave integration close-out
 
-- Owner scope:
-  - tests and audit docs only
+- Lane:
+  - `audit-harness`
 - Depends on:
   - Batches 2A through 2C
-- Can run with:
-  - none
-- Objective:
-  - close the loop with route-to-upload-to-DD regression evidence
-- Deliverables:
-  - wave audit note
-  - focused regression test additions
-- Success criteria:
-  - wave note explains remaining DD or upload risks if any
+- Owns:
+  - `tests/unit/renderer/**`
+  - `tests/unit/process/**`
+  - `docs/audit/**`
+- Must not touch:
+  - product source outside regression fixes approved by the auditor
+- Implementation contract:
+  - prove route-to-upload-to-DD truth with focused regression coverage
+  - write the wave note with commands, risks, and unlock statement
 - Required tests:
-  - route-to-hook or route-to-component regression coverage for the new upload
-    and DD lifecycle
+  - route-to-component or route-to-hook regression for upload to DD flow
+  - at least one unhappy path and one happy path
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 2 / Batch 2D: integration close-out and audit note.
+
+Goal:
+- lock the route-to-upload-to-DD behavior behind regression tests and produce
+  the audit artifact.
+
+Read first:
+- all merged Wave 2 batches
+- docs/audit existing notes if any
+
+Write only:
+- regression tests
+- docs/audit/**
+
+Do not edit:
+- source files unless a failing test proves a tiny regression fix is required
+
+Implementation requirements:
+- add the smallest high-value regression harness
+- reference actual commands run
+- record remaining risk honestly
+
+Return with:
+- audit note path
+- commands run
+- tests added
+- explicit statement whether Wave 3 is unlocked
+```
 
 ### Wave 2 close-out
 
@@ -1093,135 +1394,251 @@ Wave 2 is complete only when:
 Bring the shipped M&A renderer surface into compliance with AGENTS, design
 system, accessibility, and formatting rules.
 
-### Why this is active now
+### Async execution plan
 
-- current routed surfaces would be poor launch candidates even once reachable
-- hardcoded copy, raw buttons, emoji, token drift, and formatting drift remain
+- `3A` is the contract-seed batch. It owns locale namespaces, shared formatters,
+  and any shared label helpers. It must land first.
+- `3B` and `3C` may run in parallel after `3A`.
+- `3B` owns deal workspace renderer islands.
+- `3C` owns upload, risk, and DD renderer islands.
+- `3D` runs last as `audit-harness`.
+- `3B` and `3C` must not touch locale files. If `3A` missed keys, they return a
+  locale delta instead of colliding.
 
 ### Batch 3A - Shared compliance foundations
 
-- Owner scope:
+- Lane:
+  - `contract-seed`
+- Owns:
   - `src/renderer/services/i18n/locales/*/ma.json`
   - any new shared formatter files
-  - any new shared M&A status or empty-state helpers
-- Can run with:
-  - none
-- Objective:
-  - Create shared locale-aware formatters and move common M&A labels out of
-    component-local maps
-- Architecture requirements:
-  - formatting helpers should be shared, testable, and renderer-safe
-  - locale additions must be typed and validated
-- UI/UX requirements:
-  - formatters should cover dates, numbers, money, and identifiers needed now
-  - shared labels should reduce repeated hardcoded strings across pages
-- Deliverables:
-  - shared format helpers
-  - shared label or state helpers as needed
-  - locale updates for already shipped screens
+  - any new shared M&A label, state, or token helper files
+- Must not touch:
+  - page-specific renderer islands outside shared helpers
+- Implementation contract:
+  - seed all locale namespaces needed by `3B` and `3C`
+  - create shared locale-aware formatters for dates, numbers, money, and visible
+    identifiers already in the shipped surface
+  - move reusable label maps and empty-state labels into shared helpers
 - Success criteria:
-  - M&A UI no longer relies directly on browser-default date or number helpers
-    where shared formatting is expected
-  - shipped M&A screen copy is representable through locale files
+  - later batches can consume seeded locale keys without editing locale files
+  - shipped M&A surfaces have a shared formatter path instead of browser-default
+    formatting shortcuts
 - Required tests:
   - formatter unit tests
   - i18n type generation
   - i18n validation script
-- Auditor close-out:
-  - search M&A renderer scope for direct `toLocaleDateString()` and
-    `toLocaleString()` usage that should have been replaced
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 3 / Batch 3A: shared compliance foundations.
+
+Goal:
+- seed locale keys and shared formatters so later compliance batches can work in
+  parallel without touching shared locale files.
+
+Read first:
+- src/renderer/services/i18n/locales/*/ma.json
+- current M&A pages and components that still hardcode labels or formatting
+
+Write only:
+- locale files
+- shared formatter or label helper files
+
+Do not edit:
+- deal workspace page logic
+- upload/DD page logic
+
+Implementation requirements:
+- add shared formatters for dates, numbers, money, and identifiers now visible
+- seed all keys needed by the deal, upload, risk, and DD surfaces
+- move reusable label maps out of component files where practical
+
+Tests required:
+- formatter tests
+- i18n:types
+- check-i18n
+
+Return with:
+- keys seeded
+- helper files added
+- commands run
+- list of later batches that can now proceed without locale collisions
+```
 
 ### Batch 3B - Deal workspace compliance sweep
 
-- Owner scope:
-  - `src/renderer/components/ma/DealSelector/**`
-  - `src/renderer/components/ma/DealForm/**`
-  - `src/renderer/pages/ma/DealContext/**`
+- Lane:
+  - `renderer-surface`
 - Depends on:
   - Batch 3A
 - Can run with:
   - Batch 3C
-- Objective:
-  - Fix AGENTS and design-system violations on the deal workspace surfaces
-- Architecture requirements:
-  - keep page logic readable and avoid another round of one-off helpers
-- UI/UX requirements:
+- Owns:
+  - `src/renderer/components/ma/DealSelector/**`
+  - `src/renderer/components/ma/DealForm/**`
+  - `src/renderer/pages/ma/DealContext/**`
+- Must not touch:
+  - locale files
+  - upload, risk, or DD renderer islands
+- Implementation contract:
   - replace raw interactive HTML with Arco
-  - remove emoji
-  - localize all user copy
-  - replace hardcoded semantic colors with tokens
+  - remove emoji and hardcoded semantic colors
+  - consume seeded locale keys
+  - use shared formatters where visible dates, numbers, or money appear
   - remove `transition: all`
-  - ensure actions have accessible names
-- Deliverables:
-  - compliant DealSelector
-  - compliant DealForm
-  - compliant DealContext page
-- Success criteria:
-  - no raw `<button>` remains in owned scope
-  - no emoji remains in owned scope
-  - no hardcoded user-facing copy remains in owned scope
-  - no hardcoded semantic hex colors remain in owned scope
-  - all critical actions are keyboard and screen-reader discoverable
+  - make critical actions discoverable by keyboard and screen readers
 - Required tests:
-  - DOM tests for localized labels and accessible actions
-  - DOM tests for tab or section behavior where present
-- Auditor close-out:
-  - search owned scope for `<button`
-  - search owned scope for emoji literals
-  - search owned scope for `transition: all`
-  - search owned scope for hardcoded semantic hex colors
+  - DOM tests for accessible actions and localized labels
+  - focus or tab behavior tests where the page owns section switching
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 3 / Batch 3B: deal workspace compliance sweep.
+
+Goal:
+- bring DealSelector, DealForm, and DealContext into AGENTS, token, i18n, and
+  a11y compliance.
+
+Read first:
+- the merged 3A helpers and locale keys
+- src/renderer/components/ma/DealSelector/**
+- src/renderer/components/ma/DealForm/**
+- src/renderer/pages/ma/DealContext/**
+
+Write only:
+- deal workspace renderer files
+
+Do not edit:
+- locale files
+- upload/risk/DD files
+- process or bridge code
+
+Implementation requirements:
+- no raw interactive HTML
+- no emoji
+- no hardcoded copy
+- no hardcoded semantic colors
+- no transition: all
+- use shared formatters and shared labels
+
+Tests required:
+- accessible action coverage
+- localized text coverage
+- section or tab behavior if present
+
+Return with:
+- files changed
+- violations removed
+- commands run
+- remaining gaps, if any
+```
 
 ### Batch 3C - Upload and DD compliance sweep
 
-- Owner scope:
-  - `src/renderer/components/ma/DocumentUpload/**`
-  - `src/renderer/components/ma/RiskScoreCard/**`
-  - `src/renderer/pages/ma/DueDiligence/**`
+- Lane:
+  - `renderer-surface`
 - Depends on:
   - Batch 3A
 - Can run with:
   - Batch 3B
-- Objective:
-  - Bring upload, risk, and DD surfaces into design-system and accessibility
-    compliance
-- Architecture requirements:
-  - consolidate shared labels or formatter use instead of repeating maps
-- UI/UX requirements:
-  - replace emoji category or empty-state glyphs
-  - localize category labels, severity labels, and helper copy
-  - use semantic tokens for risk display
-  - expose progress through accessible announcements where needed
+- Owns:
+  - `src/renderer/components/ma/DocumentUpload/**`
+  - `src/renderer/components/ma/RiskScoreCard/**`
+  - `src/renderer/pages/ma/DueDiligence/**`
+- Must not touch:
+  - locale files
+  - deal workspace renderer islands
+- Implementation contract:
+  - remove emoji category or empty-state glyphs
+  - replace semantic colors with tokens
+  - localize category, severity, helper, and empty-state copy
   - remove `transition: all`
-- Deliverables:
-  - compliant DocumentUpload
-  - compliant RiskScoreCard
-  - compliant DueDiligence page
-- Success criteria:
-  - no hardcoded semantic text or color tokens remain in owned scope
-  - progress and results are accessible
-  - empty states follow shared or at least consistent M&A patterns
+  - ensure progress and async changes remain accessible
 - Required tests:
-  - DOM tests for risk-card empty, populated, and localized states
-  - accessibility-focused DD tests for progress announcements
-- Auditor close-out:
-  - search owned scope for emoji
-  - search owned scope for hardcoded category or severity labels
-  - search owned scope for hardcoded semantic colors
+  - risk-card empty and populated localized tests
+  - DD accessibility tests for async output
+  - upload empty or validation state tests if compliance changes affect them
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 3 / Batch 3C: upload and DD compliance sweep.
+
+Goal:
+- make DocumentUpload, RiskScoreCard, and DueDiligence fully compliant with the
+  design system, i18n, and accessibility rules seeded by 3A.
+
+Read first:
+- merged 3A helpers
+- src/renderer/components/ma/DocumentUpload/**
+- src/renderer/components/ma/RiskScoreCard/**
+- src/renderer/pages/ma/DueDiligence/**
+
+Write only:
+- upload, risk, and DD renderer files
+
+Do not edit:
+- locale files
+- deal workspace files
+- process or bridge files
+
+Implementation requirements:
+- remove emoji
+- remove hardcoded semantic colors
+- consume shared formatters and labels
+- keep async states accessible
+- keep copy localized
+
+Tests required:
+- risk-card localized states
+- DD async accessibility coverage
+- any upload state affected by the compliance rewrite
+
+Return with:
+- files changed
+- violations removed
+- commands run
+- any follow-up deltas for shared helpers
+```
 
 ### Batch 3D - Wave integration close-out
 
-- Owner scope:
-  - tests and audit docs only
+- Lane:
+  - `audit-harness`
 - Depends on:
   - Batches 3A through 3C
-- Objective:
-  - prove the routed M&A surface now satisfies minimum AGENTS and UX rules
-- Deliverables:
-  - wave audit note
-  - compliance evidence summary
+- Owns:
+  - `tests/unit/renderer/**`
+  - `docs/audit/**`
+- Implementation contract:
+  - prove the routed M&A surface now meets minimum AGENTS and UX rules
+  - capture grep or search evidence for removed violation classes
 - Required tests:
   - route and component tests touching the upgraded screens
   - global merge gate
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 3 / Batch 3D: compliance close-out and audit note.
+
+Goal:
+- verify that the upgraded M&A renderer surface now satisfies the minimum
+  interaction, localization, formatting, and a11y rules.
+
+Write only:
+- regression tests
+- docs/audit/**
+
+Return with:
+- audit note path
+- searches or grep evidence used
+- commands run
+- statement whether Wave 4 is unlocked
+```
 
 ### Wave 3 close-out
 
@@ -1240,15 +1657,19 @@ Wave 3 is complete only when:
 Resolve the ambiguity around existing process-side capabilities and add durable
 regression protection for the active M&A surface.
 
-### Why this is active now
+### Async execution plan
 
-- process-side services exist that the product surface does not clearly expose
-- without a decision wave, the repo will keep accumulating half-exposed features
-- route and hook progress from Waves 1 to 3 needs stronger regression coverage
+- `4A` is the contract-seed and decision batch. It owns keep, defer, or remove
+  decisions and the shared bridge or type contract for kept capabilities.
+- `4B` cannot start until `4A` lands.
+- `4C` starts after `4B` stabilizes and owns the regression harness and audit
+  note.
 
 ### Batch 4A - Capability disposition and contract pass
 
-- Owner scope:
+- Lane:
+  - `contract-seed`
+- Owns:
   - `src/process/services/ma/CompanyEnrichmentService.ts`
   - `src/process/services/ma/ContactService.ts`
   - `src/process/services/ma/WatchlistService.ts`
@@ -1256,83 +1677,152 @@ regression protection for the active M&A surface.
   - `src/process/bridge/maBridge.ts`
   - `src/common/adapter/ipcBridge.ts`
   - `src/common/ma/types.ts`
-- Can run with:
-  - none
-- Objective:
-  - Decide for each existing process-side capability whether it is:
-    - kept and surfaced now
-    - intentionally deferred
-    - removed if misleading and unused
-- Architecture requirements:
-  - no more ambiguous half-exposed service ownership
-  - bridge contracts should exist only for capabilities the product intends to
-    surface
-- UI/UX requirements:
-  - every kept capability needs a discoverability plan and later renderer owner
-- Deliverables:
-  - keep, defer, or remove decisions
-  - bridge and type updates for kept capabilities
-- Success criteria:
-  - no major M&A process service remains in an undefined product state
-  - every kept capability has a named renderer path or a concrete next-wave owner
+- Must not touch:
+  - renderer surfaces except for naming the future owner path in the note
+- Implementation contract:
+  - classify each capability as keep now, defer intentionally, or remove
+  - remove ambiguous half-exposed bridge surface
+  - if a capability is kept, define the renderer entry path and test owner
+  - if a capability is deferred, record why and what re-entry wave owns it
 - Required tests:
-  - extend service and bridge tests for every kept active capability
-- Auditor close-out:
-  - include a keep/defer/remove table in the wave note
+  - service and bridge tests for every kept active capability
+  - explicit keep/defer/remove table in the audit note
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 4 / Batch 4A: capability disposition and contract pass.
+
+Goal:
+- stop the process-side M&A services from living in an ambiguous half-exposed
+  state.
+
+Read first:
+- CompanyEnrichmentService.ts
+- ContactService.ts
+- WatchlistService.ts
+- NativeIntegrationService.ts
+- current M&A bridge contracts
+
+Write only:
+- the owned process services
+- maBridge.ts
+- ipcBridge.ts
+- shared M&A types if truly needed
+
+Do not edit:
+- renderer surfaces
+
+Implementation requirements:
+- classify each capability: keep now, defer, or remove
+- align bridge contracts to the keep set only
+- leave a concrete renderer-owner path for each kept feature
+
+Tests required:
+- kept capability service tests
+- bridge tests for kept capabilities
+
+Return with:
+- keep/defer/remove table
+- files changed
+- commands run
+- explicit handoff to 4B
+```
 
 ### Batch 4B - Renderer surfacing for kept capabilities
 
-- Owner scope:
-  - renderer files for any capabilities marked kept by Batch 4A
-  - `src/renderer/services/i18n/locales/*/ma.json`
+- Lane:
+  - `renderer-surface`
 - Depends on:
   - Batch 4A
-- Can run with:
-  - Batch 4C once contracts stabilize
-- Objective:
-  - Expose kept capabilities through coherent M&A UI
-- Architecture requirements:
-  - new surfaces must fit the routed M&A shell, not become detached islands
-- UI/UX requirements:
-  - localized empty, loading, and error states
-  - accessibility and token compliance from the start
-- Deliverables:
-  - renderer surfaces for kept contacts, watchlists, enrichment, or integration
-    flows as decided in 4A
-- Success criteria:
-  - every kept capability is actually discoverable through UI
-  - no kept feature remains process-only at wave end
+- Owns:
+  - renderer files for capabilities marked kept by 4A
+  - locale keys only if 4A explicitly seeded them
+- Must not touch:
+  - process service classification again
+- Implementation contract:
+  - surface kept capabilities through the routed M&A area
+  - use localized empty, loading, and error states
+  - keep accessibility and token compliance from the start
+  - make discoverability explicit from M&A entry points rather than hidden deep
+    links
 - Required tests:
-  - route, hook, and component tests for the new kept capabilities
-  - i18n validation
-- Auditor close-out:
-  - verify discoverability from routed M&A entry points
+  - route, hook, and component tests for every kept surfaced capability
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 4 / Batch 4B: renderer surfacing for kept capabilities.
+
+Goal:
+- make every capability that 4A marked kept discoverable and usable from the
+  routed M&A area.
+
+Read first:
+- the merged 4A keep/defer/remove table
+- seeded contracts and any seeded locale keys
+
+Write only:
+- renderer files for kept capabilities
+
+Do not edit:
+- process service classification
+- bridge contracts unless a failing contract bug is proven and approved
+
+Implementation requirements:
+- coherent entry points
+- localized empty/loading/error states
+- AGENTS-compliant interactions
+- no process-only kept features left hidden
+
+Tests required:
+- discoverability from routed entry points
+- key state coverage for each kept capability
+
+Return with:
+- files changed
+- kept capabilities surfaced
+- commands run
+- any remaining intentionally deferred work
+```
 
 ### Batch 4C - Regression harness and audit close-out
 
-- Owner scope:
-  - `tests/unit/renderer/**`
-  - `tests/unit/process/**`
-  - `tests/e2e/**` if the repo already has suitable harnesses
-  - `docs/audit/**`
+- Lane:
+  - `audit-harness`
 - Depends on:
   - Batches 4A and 4B
-- Can run with:
-  - Batch 4B once final routes and hooks stabilize
-- Objective:
-  - Protect the active M&A surface area from regression
-- Deliverables:
-  - regression coverage for routes, active deal, readiness, upload, DD, and any
-    kept capabilities from 4A
-  - wave audit note
-- Success criteria:
-  - the active M&A surface is guarded by both process and renderer tests
-  - the audit note makes the next starting state obvious
+- Owns:
+  - `tests/unit/renderer/**`
+  - `tests/unit/process/**`
+  - `tests/e2e/**` if suitable harness exists already
+  - `docs/audit/**`
+- Implementation contract:
+  - lock the active M&A core behind process and renderer regression coverage
+  - make the next starting state obvious for Wave 5
 - Required tests:
+  - routes, active-deal truth, readiness, upload, DD, and kept capability
+    coverage
   - global merge gate
-  - targeted route, hook, and component tests for the active surface
-- Auditor close-out:
-  - verify the wave note references actual test execution and actual remaining risks
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 4 / Batch 4C: regression harness and close-out.
+
+Goal:
+- protect the active M&A core and record exactly what is still parked.
+
+Write only:
+- tests
+- docs/audit/**
+
+Return with:
+- audit note path
+- regression areas covered
+- commands run
+- explicit statement that Waves 1 to 4 are or are not fully closed
+```
 
 ### Wave 4 close-out
 
@@ -1344,9 +1834,36 @@ Wave 4 is complete only when:
 
 ## 7. Parked expansion lane (preserved feature inventory with re-entry gates)
 
-These waves preserve inherited feature scope from the superseded plan. They are
-not deleted. They are explicitly parked until the active lane is complete
+These waves preserve inherited feature scope from the superseded roadmap. They
+are not deleted. They are explicitly parked until the active lane is complete
 enough to support them safely.
+
+### 7.1 Curated promotion order after the active lane
+
+Use this order to maximize reuse and minimize scope collisions:
+
+1. Wave 5 first, because it establishes the durable data spine.
+2. Wave 6 and Wave 9 next, because shell/workbench and AI platform binding can
+   advance in parallel once Wave 5 foundations and Waves 1 to 4 close.
+3. Wave 7 and Wave 8 after Wave 6, because document generation and CRM
+   discoverability depend on the shell and surfaced capabilities.
+4. Wave 10 after Waves 5, 6, and 9, because analytics and daily brief need
+   data, shell routes, and AI/feed provenance.
+5. Wave 11 after the product surface and data spine are stable enough to secure.
+6. Wave 12 once launch scope is explicitly frozen.
+7. Wave 13 only after launch metrics exist.
+
+### 7.2 Parked-wave batch law
+
+For parked waves, the `A` batch is normally the contract-seed batch. It owns any
+shared serialization point the later batches need.
+
+Later parked-wave batches should follow this rule:
+
+- consume the seed batch contract
+- stay inside their owned island
+- return a contract delta request if the seed is insufficient
+- do not reopen router, bridge, migration, or locale ownership casually
 
 ## Wave 5 - Data-intelligence foundations
 
@@ -1355,77 +1872,218 @@ enough to support them safely.
 Add durable data-intelligence foundations for French company research and
 enrichment.
 
-### Why parked
-
-Current launch blockers are still in routing, bridge truth, upload truth, and
-UI compliance. Bringing in new data planes before the active lane closes would
-multiply ambiguity.
-
 ### Re-entry prerequisites
 
 - Waves 1 through 4 closed by audit note
 - clear shell ownership for company and research surfaces
 - explicit canonical-source policy for each data field family
 
-### Candidate batches
+### No-loss scope checklist
 
-#### 5A - M&A data spine schema and repositories
+- durable company entity storage
+- contact and watchlist durable storage
+- cache tables for fetched intelligence
+- SIRENE ingestion
+- data.gouv.fr ingestion
+- Pappers integration
+- provenance-aware company merges
+- contact and watchlist maturation
+- stale-data and source-disagreement UX preserved for future surfaces
 
-- Candidate scope:
-  - schema and migrations
-  - repositories for companies, contacts, watchlists, and cache tables
-- Deliverables:
-  - durable storage for company and market-intelligence entities
-- Success criteria:
-  - source-backed schema and repositories exist with tests
-- Tests:
-  - repository and migration tests
+### Async execution plan
 
-#### 5B - SIRENE and data.gouv.fr ingestion layer
+- `5A` is the contract-seed batch. It owns schema, migrations, repositories, and
+  source canonicality primitives.
+- `5B` and `5C` may run in parallel after `5A`.
+- `5D` starts after `5A` and may run in parallel with `5B` and `5C` if it does
+  not need migration changes.
 
-- Candidate scope:
-  - process services or MCP services for SIRENE and data.gouv.fr
-- Deliverables:
-  - live fetch or ingestion layer
-  - cache or reconciliation logic
-- Success criteria:
-  - source-specific fields are testable and mergeable
-- Tests:
-  - service tests
-  - source normalization tests
+### Batch 5A - M&A data spine schema and repositories
 
-#### 5C - Pappers and enrichment convergence
+- Lane:
+  - `contract-seed`
+- Owns:
+  - `src/process/services/database/{schema,migrations}.ts`
+  - repositories for companies, contacts, watchlists, and intelligence caches
+  - shared persistence types if required
+- Must not touch:
+  - renderer surfaces
+  - source-specific ingestion logic beyond minimal contracts
+- Implementation contract:
+  - define durable storage for company, contact, watchlist, source cache, and
+    provenance-bearing merge results
+  - make canonical-source policy explicit at the schema or repository layer
+  - seed write APIs that later ingestion batches can use without reopening schema
+- Required tests:
+  - migration tests
+  - repository CRUD tests
+  - persistence tests for provenance and freshness metadata
 
-- Candidate scope:
-  - Pappers integration
-  - company enrichment reconciliation
-- Deliverables:
-  - field-level merge policy
-  - provenance-aware company profile
-- Success criteria:
-  - multi-source merge rules are explicit and covered
-- Tests:
+#### Feed-ready agent prompt
+
+```text
+You own Wave 5 / Batch 5A: M&A data spine schema and repositories.
+
+Goal:
+- create the durable storage and repository contract for company intelligence,
+  contacts, watchlists, and source caches.
+
+Write only:
+- schema and migrations
+- relevant repositories
+- narrow shared persistence types if needed
+
+Do not edit:
+- renderer surfaces
+- source-specific ingestion behavior beyond contract hooks
+
+Required outcomes:
+- canonical-source policy is explicit
+- provenance and freshness fields are durable
+- later ingestion batches can build without reopening schema casually
+
+Tests:
+- migration tests
+- repository tests
+- provenance/freshness persistence tests
+```
+
+### Batch 5B - SIRENE and data.gouv.fr ingestion layer
+
+- Lane:
+  - `process-domain`
+- Depends on:
+  - Batch 5A
+- Can run with:
+  - Batch 5C
+  - Batch 5D if no schema change is needed
+- Owns:
+  - source services, normalization helpers, and cache reconciliation for SIRENE
+    and data.gouv.fr
+- Must not touch:
+  - migrations
+  - renderer surfaces
+- Implementation contract:
+  - fetch, normalize, cache, and merge source payloads into the 5A data spine
+  - preserve source-specific evidence and freshness
+  - make mismatch and stale semantics explicit
+- Required tests:
+  - normalization tests
+  - service tests for fetch, cache, stale refresh, and merge behavior
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 5 / Batch 5B: SIRENE and data.gouv.fr ingestion.
+
+Goal:
+- ingest and normalize French company data into the data spine without hiding
+  source evidence.
+
+Write only:
+- source services
+- normalization helpers
+- cache reconciliation code
+
+Do not edit:
+- schema or migrations
+- renderer files
+
+Tests:
+- normalization coverage
+- fetch/cache coverage
+- merge and stale-data coverage
+```
+
+### Batch 5C - Pappers and enrichment convergence
+
+- Lane:
+  - `process-domain`
+- Depends on:
+  - Batch 5A
+- Can run with:
+  - Batch 5B
+  - Batch 5D if no shared repository change is needed
+- Owns:
+  - Pappers integration and multi-source enrichment convergence
+- Must not touch:
+  - migrations
+  - renderer surfaces
+- Implementation contract:
+  - define field-level merge rules between Pappers and other sources
+  - keep source-specific evidence inspectable
+  - make disagreements and precedence transparent
+- Required tests:
   - merge-rule tests
+  - source disagreement tests
 
-#### 5D - Contacts and watchlists maturation
+#### Feed-ready agent prompt
 
-- Candidate scope:
-  - contact and watchlist renderer and process maturation
-- Deliverables:
-  - end-to-end CRUD
-  - enrichment or refresh cron alignment
-- Success criteria:
-  - contacts and watchlists are no longer ambiguous partials
-- Tests:
+```text
+You own Wave 5 / Batch 5C: Pappers and enrichment convergence.
+
+Goal:
+- add Pappers-backed enrichment and explicit merge rules without obscuring
+  provenance.
+
+Write only:
+- Pappers integration files
+- merge and enrichment helpers
+
+Do not edit:
+- schema or migrations
+- renderer files
+
+Tests:
+- merge precedence
+- disagreement handling
+- provenance retention
+```
+
+### Batch 5D - Contacts and watchlists maturation
+
+- Lane:
+  - `renderer-surface` plus `integration-surface`
+- Depends on:
+  - Batch 5A
+  - Wave 4 keep/defer decisions
+- Can run with:
+  - Batch 5B
+  - Batch 5C
+- Owns:
+  - contact and watchlist process and renderer maturation inside the scope marked
+    kept by Wave 4
+- Must not touch:
+  - migrations after 5A unless reopened intentionally
+- Implementation contract:
+  - finish CRUD and refresh semantics for contacts and watchlists
+  - align scheduled refresh behavior with explicit user-visible state
+  - avoid zombie features or hidden partial flows
+- Required tests:
   - CRUD tests
-  - scheduled-job tests as appropriate
+  - refresh or scheduled-job tests where retained
+  - route or component tests for surfaced flows
 
-### UI/UX guidance for Wave 5
+#### Feed-ready agent prompt
 
-- Company research surfaces should show source provenance clearly
-- Stale or missing data should be explained explicitly
-- Source disagreement should not be hidden
-- Large company profiles should support structured scanning, not just long forms
+```text
+You own Wave 5 / Batch 5D: contacts and watchlists maturation.
+
+Goal:
+- finish the kept contact and watchlist feature set into explicit end-to-end
+  workflows.
+
+Write only:
+- contact and watchlist owned files
+
+Do not edit:
+- migrations unless the wave owner explicitly reopens them
+
+Tests:
+- CRUD coverage
+- refresh/schedule coverage where applicable
+- renderer discoverability coverage
+```
 
 ## Wave 6 - M&A shell and analytical workbench surfaces
 
@@ -1433,17 +2091,12 @@ multiply ambiguity.
 
 Expand the routed M&A shell into a coherent analytical workspace.
 
-### Why parked
-
-Wave 1 only needs minimal route entry; the richer shell should wait until active
-deal, DD, and compliance foundations are stable.
-
 ### Re-entry prerequisites
 
-- Waves 1 through 4 closed
+- Waves 1 through 5 closed
 - clear discoverability plan for every surface that enters the shell
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - `MaLayout`
 - M&A top bar
@@ -1454,54 +2107,197 @@ deal, DD, and compliance foundations are stable.
 - valuation workbench
 - company profile aggregator UI
 - sector overview or intelligence page
+- shell landmarks, skip navigation, and responsive behavior
 
-### Candidate batches
+### Async execution plan
 
-#### 6A - Stable M&A shell
+- `6A` is the contract-seed and shell batch. It owns router entry, shared shell
+  slots, breadcrumbs, and shell locale namespaces.
+- `6B`, `6C`, and `6D` may run in parallel after `6A`.
+- `6B` owns command palette and quick-jump behavior.
+- `6C` owns valuation workbench.
+- `6D` owns company and sector analytical pages.
 
-- Deliverables:
-  - layout, top bar, active-deal badge, breadcrumbs, shell landmarks
-- Success criteria:
-  - routed M&A pages feel like one product area
-- Tests:
+### Batch 6A - Stable M&A shell
+
+- Lane:
+  - `shell-surface`
+- Owns:
+  - router entry for expanded M&A shell
+  - new `MaLayout` or equivalent shell files
+  - shell landmarks, breadcrumbs, top bar, active-deal indicator, home route
+  - shell locale namespaces
+- Must not touch:
+  - valuation or research feature logic beyond slot contracts
+- Implementation contract:
+  - create the stable shell that later surfaces plug into
+  - own breadcrumbs, active-deal indicator, top-level route map, and layout
+    slots
+  - make shell discoverability and responsive degradation explicit
+- Required tests:
   - route and shell DOM tests
+  - keyboard and landmark tests
 
-#### 6B - Command palette
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - jump surface for deals, companies, docs, analyses, glossary, and later reports
-- Success criteria:
-  - predictable keyboard navigation and search semantics
-- Tests:
-  - keyboard and search-result DOM tests
+```text
+You own Wave 6 / Batch 6A: stable M&A shell.
 
-#### 6C - Valuation workbench page
+Goal:
+- turn the routed M&A area into one coherent shell with home, top bar,
+  active-deal indicator, breadcrumbs, and extension slots.
 
-- Deliverables:
-  - page that turns existing valuation engine into user-facing workflows
-- Success criteria:
-  - valuation assumptions and outputs are inspectable and formatted correctly
-- Tests:
+Write only:
+- router and shell files
+- shell locale namespaces
+
+Do not edit:
+- valuation internals
+- company research internals
+- command palette search logic
+
+Tests:
+- shell route coverage
+- landmark and keyboard coverage
+- active-deal indicator behavior
+```
+
+### Batch 6B - Command palette
+
+- Lane:
+  - `shell-surface`
+- Depends on:
+  - Batch 6A
+- Can run with:
+  - Batch 6C
+  - Batch 6D
+- Owns:
+  - command palette UI, lookup indexing, and keyboard interaction under shell
+    extension slots seeded by 6A
+- Must not touch:
+  - router entry
+  - shell layout scaffolding
+- Implementation contract:
+  - quick jump to deals, companies, docs, analyses, glossary, and future reports
+  - respect active-deal context where relevant
+  - keep keyboard behavior predictable and accessible
+- Required tests:
+  - keyboard invocation tests
+  - search-result and navigation-result tests
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 6 / Batch 6B: command palette.
+
+Goal:
+- add a keyboard-first jump surface for the M&A shell seeded by 6A.
+
+Write only:
+- command palette files
+- shell extension slots owned by 6B
+
+Do not edit:
+- router entry
+- shell scaffolding from 6A
+
+Tests:
+- open/close keyboard flow
+- result filtering
+- navigation target assertions
+```
+
+### Batch 6C - Valuation workbench page
+
+- Lane:
+  - `renderer-surface`
+- Depends on:
+  - Batch 6A
+- Can run with:
+  - Batch 6B
+  - Batch 6D
+- Owns:
+  - valuation route, page, and workbench UI using existing valuation engines
+- Must not touch:
+  - shell router scaffolding outside seeded slots
+  - company research pages
+- Implementation contract:
+  - expose assumptions, outputs, caveats, and formatting clearly
+  - keep computed vs hand-entered values distinguishable
+  - preserve room for later report generation without creating separate shadow
+    logic
+- Required tests:
   - page state tests
   - formatter tests
+  - assumptions-to-output rendering tests
 
-#### 6D - Company and sector analytical pages
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - company profile page
-  - sector overview or intelligence page
-- Success criteria:
-  - sources, merge rules, and sector semantics are visible and actionable
-- Tests:
-  - route and component tests
+```text
+You own Wave 6 / Batch 6C: valuation workbench.
 
-### UI/UX guidance for Wave 6
+Goal:
+- turn the existing valuation engine into a user-facing analytical workbench.
 
-- Shell should prioritize active context, navigation, and scanning
-- Valuation should present assumptions, outputs, and caveats without visual
-  overload
-- Company research should distinguish canonical fields from source-specific
-  evidence
+Write only:
+- valuation route and page files
+
+Do not edit:
+- shell scaffolding
+- company or sector pages
+
+Tests:
+- assumptions rendering
+- output rendering
+- caveat or empty-state coverage
+```
+
+### Batch 6D - Company and sector analytical pages
+
+- Lane:
+  - `renderer-surface`
+- Depends on:
+  - Batch 6A
+  - Wave 5 data spine
+- Can run with:
+  - Batch 6B
+  - Batch 6C
+- Owns:
+  - company profile route and page
+  - sector overview or intelligence route and page
+- Must not touch:
+  - shell scaffolding outside seeded slots
+  - valuation page logic
+- Implementation contract:
+  - show canonical fields, source-specific evidence, freshness, and disagreement
+  - keep structured scanning easy for large profiles
+  - distinguish company profile data from sector intelligence views
+- Required tests:
+  - route tests
+  - source/freshness/disagreement rendering tests
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 6 / Batch 6D: company and sector analytical pages.
+
+Goal:
+- surface the Wave 5 data spine through research-friendly company and sector
+  pages.
+
+Write only:
+- company page files
+- sector page files
+
+Do not edit:
+- shell scaffolding
+- valuation page
+
+Tests:
+- route coverage
+- provenance/freshness rendering
+- disagreement or missing-data coverage
+```
 
 ## Wave 7 - Document automation and report generation
 
@@ -1509,18 +2305,13 @@ deal, DD, and compliance foundations are stable.
 
 Turn the document and analysis layers into reusable drafting and export flows.
 
-### Why parked
-
-Current document and DD truth must close first. Otherwise generated outputs
-would inherit weak provenance and unstable UX.
-
 ### Re-entry prerequisites
 
-- Waves 1 through 4 closed
+- Waves 1 through 6 closed
 - document pipeline and DD truth stable
 - clear template and export architecture
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - template registry
 - report-generator core
@@ -1530,51 +2321,150 @@ would inherit weak provenance and unstable UX.
 - teaser generator
 - IM generator
 - valuation report generator
+- provenance-aware review and export states
 
-### Candidate batches
+### Async execution plan
 
-#### 7A - Template registry and report core
+- `7A` is the contract-seed batch. It owns template registry, generator core,
+  export architecture, and seeded review-state conventions.
+- `7B`, `7C`, and `7D` may run in parallel after `7A`.
 
-- Deliverables:
-  - stable generation architecture
-  - template discovery model
-- Success criteria:
-  - document generators share one core rather than bespoke scattered pipelines
-- Tests:
+### Batch 7A - Template registry and report core
+
+- Lane:
+  - `contract-seed`
+- Owns:
+  - generation core
+  - template registry
+  - export and review state contracts
+- Must not touch:
+  - specific document template content beyond seeded contracts
+- Implementation contract:
+  - one shared generation core, not scattered bespoke pipelines
+  - provenance tags for hand-entered, computed, and AI-assisted content
+  - explicit review-before-export model
+- Required tests:
   - generator-core tests
+  - template registry tests
 
-#### 7B - Early legal or checklist outputs
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - NDA, LOI, and DD checklist generation
-- Success criteria:
-  - outputs are based on explicit inputs and provenance
-- Tests:
+```text
+You own Wave 7 / Batch 7A: template registry and report core.
+
+Goal:
+- create one reusable document-generation backbone for later NDA, LOI, DD,
+  teaser, IM, and valuation outputs.
+
+Write only:
+- generation core files
+- template registry files
+- review/export contract files
+
+Tests:
+- generator-core coverage
+- registry lookup coverage
+- provenance labeling coverage
+```
+
+### Batch 7B - Early legal or checklist outputs
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batch 7A
+- Can run with:
+  - Batch 7C
+  - Batch 7D
+- Owns:
+  - NDA, LOI, and DD checklist generation built on 7A
+- Implementation contract:
+  - explicit inputs
+  - provenance-aware output sections
+  - reviewable drafts before export
+- Required tests:
   - template rendering tests
+  - required-input validation tests
 
-#### 7C - Marketing or deal-pack outputs
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 7 / Batch 7B: NDA, LOI, and DD checklist generation.
+
+Goal:
+- build early legal and checklist outputs on the shared generation core from 7A.
+
+Tests:
+- template rendering
+- input validation
+- provenance visibility
+```
+
+### Batch 7C - Marketing or deal-pack outputs
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batch 7A
+- Can run with:
+  - Batch 7B
+  - Batch 7D
+- Owns:
   - teaser and IM generation
-- Success criteria:
-  - output structure is consistent and reviewable
-- Tests:
+- Implementation contract:
+  - structure must be consistent, inspectable, and reviewable
+  - output should distinguish computed and narrative sections
+- Required tests:
   - rendering tests
+  - structure-consistency tests
 
-#### 7D - Valuation report output
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - valuation report generator
-- Success criteria:
-  - report references underlying valuation assumptions and results correctly
-- Tests:
+```text
+You own Wave 7 / Batch 7C: teaser and IM generation.
+
+Goal:
+- create marketing and deal-pack outputs on the 7A generation core with
+  reviewable structure and provenance.
+
+Tests:
+- rendering coverage
+- structure consistency coverage
+```
+
+### Batch 7D - Valuation report output
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batch 7A
+  - Wave 6C valuation workbench
+- Can run with:
+  - Batch 7B
+  - Batch 7C
+- Owns:
+  - valuation report generation
+- Implementation contract:
+  - report must reference underlying valuation assumptions and results faithfully
+  - caveats and assumption ranges must stay visible
+- Required tests:
   - report-content tests
+  - assumption-linkage tests
 
-### UI/UX guidance for Wave 7
+#### Feed-ready agent prompt
 
-- Generated documents must expose provenance and source confidence
-- Users should understand whether content is hand-entered, computed, or AI-assisted
-- Review and export states should be explicit
+```text
+You own Wave 7 / Batch 7D: valuation report generation.
+
+Goal:
+- generate valuation reports that faithfully reflect the valuation workbench
+  assumptions, outputs, and caveats.
+
+Tests:
+- report content coverage
+- assumption linkage coverage
+- missing-assumption error coverage
+```
 
 ## Wave 8 - CRM, pipeline, and communications
 
@@ -1582,61 +2472,116 @@ would inherit weak provenance and unstable UX.
 
 Evolve M&A collaboration around deals, contacts, and outbound communications.
 
-### Why parked
-
-The underlying M&A shell and data capabilities must be coherent before
-expanding into communication-heavy workflows.
-
 ### Re-entry prerequisites
 
 - Waves 1 through 6 closed
 - contacts and watchlists clearly surfaced
 - shell navigation stable
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - contacts experience
-- Kanban deal pipeline
-- WhatsApp integration
+- stage-aware deal pipeline
 - email integration
 - Pipedrive integration
+- WhatsApp or approved messaging integration
+- readiness and compliance-aware send/sync semantics
 
-### Candidate batches
+### Async execution plan
 
-#### 8A - Contacts and pipeline UI
+- `8A` is the contract-seed batch for contacts and pipeline UX.
+- `8B` and `8C` may run in parallel after `8A` if they stay inside their
+  integration islands.
 
-- Deliverables:
+### Batch 8A - Contacts and pipeline UI
+
+- Lane:
+  - `shell-surface` plus `renderer-surface`
+- Owns:
   - contact surfaces
-  - stage-aware deal pipeline or Kanban
-- Success criteria:
-  - pipeline state is clear and testable
-- Tests:
-  - route and interaction tests
+  - stage-aware pipeline or Kanban flows
+  - pipeline state semantics for later integrations
+- Must not touch:
+  - external integration bridges outside seeded hooks
+- Required tests:
+  - route tests
+  - interaction tests
+  - stage-transition tests
 
-#### 8B - Email and CRM integrations
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 8 / Batch 8A: contacts and pipeline UI.
+
+Goal:
+- create coherent contact and deal-pipeline surfaces that later integrations can
+  attach to without rewriting the core UX.
+
+Tests:
+- route coverage
+- stage transition coverage
+- keyboard and accessibility coverage for pipeline interactions
+```
+
+### Batch 8B - Email and CRM integrations
+
+- Lane:
+  - `integration-surface`
+- Depends on:
+  - Batch 8A
+- Can run with:
+  - Batch 8C
+- Owns:
   - email flows
   - Pipedrive bridge or integration
-- Success criteria:
-  - integration readiness and failure states are user-visible
-- Tests:
-  - service and bridge tests
+- Required tests:
+  - service tests
+  - bridge tests
+  - readiness and error-path tests
 
-#### 8C - Messaging integration
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - WhatsApp or similar messaging surface as approved
-- Success criteria:
-  - integration is behind explicit readiness and compliance expectations
-- Tests:
+```text
+You own Wave 8 / Batch 8B: email and CRM integrations.
+
+Goal:
+- add email and CRM sync flows with clear readiness, failure, and retry
+  semantics.
+
+Tests:
+- service coverage
+- bridge coverage
+- readiness and failure-state coverage
+```
+
+### Batch 8C - Messaging integration
+
+- Lane:
+  - `integration-surface`
+- Depends on:
+  - Batch 8A
+- Can run with:
+  - Batch 8B
+- Owns:
+  - WhatsApp or other approved messaging integration
+- Required tests:
   - service and error-path tests
+  - compliance gating tests if message sending has policy restrictions
 
-### UI/UX guidance for Wave 8
+#### Feed-ready agent prompt
 
-- Communication history must not bury deal context
-- Integration readiness must be visible before sending or syncing
-- Pipeline drag or stage changes must remain keyboard and accessibility friendly
+```text
+You own Wave 8 / Batch 8C: messaging integration.
+
+Goal:
+- add the approved messaging surface behind explicit readiness, policy, and
+  failure semantics.
+
+Tests:
+- service coverage
+- failure coverage
+- policy/readiness coverage
+```
 
 ## Wave 9 - AI platform binding, RAG, and ops hardening
 
@@ -1644,77 +2589,146 @@ expanding into communication-heavy workflows.
 
 Finish the deeper AI platform work that sits beyond current DD runtime truth.
 
-### Why parked
-
-Wave 1 and Wave 2 close the immediate DD truth gap. This wave handles the
-broader platformization work that should follow stable core behavior.
-
 ### Re-entry prerequisites
 
-- Waves 1 through 4 closed
+- Waves 1 through 6 closed
 - DD catalog, readiness, and provenance stable
 - decision on which AI-driven features enter the next product scope
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - Flowise runtime config and health surface
 - Flowise production bootstrap alignment
-- knowledge-base or RAG ingestion pipeline
+- knowledge-base or RAG ingestion
 - feature-to-chatflow catalog
 - prompt versioning
 - observability and span export
-- `web.*` tool family
-- `news.*` tool family
+- `web.*` tool family if retained
+- `news.*` tool family if retained
 - secret hygiene and production config hardening
 
-### Candidate batches
+### Async execution plan
 
-#### 9A - Runtime config and health surface
+- `9A` is the contract-seed batch for runtime config and readiness surfaces.
+- `9B` and `9C` may run in parallel after `9A`.
+- `9D` runs last because it cross-cuts observability, tools, and secrets.
 
-- Deliverables:
-  - settings and runtime visibility for Flowise endpoint or readiness
-- Success criteria:
-  - production binding is not hidden in source
-- Tests:
-  - settings and readiness tests
+### Batch 9A - Runtime config and health surface
 
-#### 9B - Knowledge-base and ingestion plane
+- Lane:
+  - `contract-seed`
+- Owns:
+  - settings and runtime visibility for Flowise endpoint, auth, and readiness
+  - config precedence documentation in code
+- Required tests:
+  - settings tests
+  - readiness tests
+  - config precedence tests
 
-- Deliverables:
-  - KB ingestion and retrieval architecture
-- Success criteria:
-  - ingestion provenance and source controls are explicit
-- Tests:
-  - ingestion and retrieval tests
+#### Feed-ready agent prompt
 
-#### 9C - Feature-to-flow registry and prompt versioning
+```text
+You own Wave 9 / Batch 9A: runtime config and health surface.
 
-- Deliverables:
+Goal:
+- make Flowise production binding visible, configurable, and testable instead
+  of hidden in source assumptions.
+
+Tests:
+- settings coverage
+- readiness coverage
+- config precedence coverage
+```
+
+### Batch 9B - Knowledge-base and ingestion plane
+
+- Lane:
+  - `ai-runtime`
+- Depends on:
+  - Batch 9A
+- Can run with:
+  - Batch 9C
+- Owns:
+  - KB ingestion, retrieval, provenance, and source controls
+- Required tests:
+  - ingestion tests
+  - retrieval tests
+  - provenance and freshness tests
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 9 / Batch 9B: knowledge-base and ingestion plane.
+
+Goal:
+- build a provenance-aware ingestion and retrieval layer for knowledge-backed AI
+  features.
+
+Tests:
+- ingestion coverage
+- retrieval coverage
+- provenance/freshness coverage
+```
+
+### Batch 9C - Feature-to-flow registry and prompt versioning
+
+- Lane:
+  - `ai-runtime`
+- Depends on:
+  - Batch 9A
+- Can run with:
+  - Batch 9B
+- Owns:
   - catalog-backed mapping for AI features beyond DD
-  - prompt-version capture
-- Success criteria:
-  - every AI feature knows which flow or prompt family it uses
-- Tests:
+  - prompt-version capture and persistence
+- Required tests:
   - registry tests
   - provenance tests
 
-#### 9D - Observability, tools, and secret hygiene
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 9 / Batch 9C: feature-to-flow registry and prompt versioning.
+
+Goal:
+- ensure every AI feature knows exactly which flow family and prompt version it
+  is using.
+
+Tests:
+- registry coverage
+- prompt-version coverage
+- provenance persistence coverage
+```
+
+### Batch 9D - Observability, tools, and secret hygiene
+
+- Lane:
+  - `ai-runtime` plus `integration-surface`
+- Depends on:
+  - Batches 9A through 9C
+- Owns:
   - observability integration
-  - `web.*` and `news.*` families if retained
+  - retained `web.*` and `news.*` tool families
   - production-ready secret access plan
-- Success criteria:
-  - failures are debuggable and environment config is no longer ad hoc
-- Tests:
-  - error-path and config tests
+- Required tests:
+  - error-path tests
+  - config tests
+  - observability surface tests
 
-### UI/UX guidance for Wave 9
+#### Feed-ready agent prompt
 
-- AI configuration should not feel like an internal admin panel unless that is
-  explicitly the product choice
-- Source provenance and readiness should be understandable by operators and
-  by end users when it blocks them
+```text
+You own Wave 9 / Batch 9D: observability, retained tools, and secret hygiene.
+
+Goal:
+- make AI failures debuggable and secrets/config handling explicit and
+  production-safe.
+
+Tests:
+- error-path coverage
+- config coverage
+- observability surface coverage
+```
 
 ## Wave 10 - Analytics, comparables, daily brief, and reporting
 
@@ -1723,61 +2737,111 @@ broader platformization work that should follow stable core behavior.
 Add market-intelligence and analytics surfaces once the shell, data, and AI
 planes are ready.
 
-### Why parked
-
-These are valuable but high-surface-area features. They should be built on a
-stable foundation rather than on partial routes and placeholder state.
-
 ### Re-entry prerequisites
 
 - Waves 5, 6, and 9 sufficiently advanced
 - clear dashboard information architecture
 - source and freshness rules for comparables and feeds
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - dashboard and widgets
 - comparables DB
 - market-intelligence feeds
 - daily brief
 - custom reporting engine
+- source-aware scanability and per-widget resilience
 
-### Candidate batches
+### Async execution plan
 
-#### 10A - Dashboard shell
+- `10A` is the contract-seed batch for the dashboard shell, widget contract, and
+  routed analytics entry.
+- `10B` and `10C` may run in parallel after `10A`.
 
-- Deliverables:
-  - dashboard route and widget model
-- Success criteria:
-  - widgets have loading, empty, and error states
-- Tests:
-  - route and widget-state tests
+### Batch 10A - Dashboard shell
 
-#### 10B - Comparables and feeds
+- Lane:
+  - `shell-surface`
+- Owns:
+  - dashboard route
+  - widget container contract
+  - analytics shell locale and layout slots
+- Required tests:
+  - route tests
+  - widget loading, empty, and error tests
 
-- Deliverables:
+#### Feed-ready agent prompt
+
+```text
+You own Wave 10 / Batch 10A: dashboard shell.
+
+Goal:
+- create the routed dashboard shell and widget contract for later analytics
+  batches.
+
+Tests:
+- dashboard route coverage
+- widget state coverage
+```
+
+### Batch 10B - Comparables and feeds
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batch 10A
+- Can run with:
+  - Batch 10C
+- Owns:
   - comparables surface
-  - market or news feed ingestion
-- Success criteria:
-  - provenance and freshness visible
-- Tests:
+  - market or news feed ingestion and display
+- Required tests:
   - table and feed tests
+  - freshness and provenance tests
 
-#### 10C - Daily brief and reporting
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 10 / Batch 10B: comparables and feeds.
+
+Goal:
+- surface comparables and market feeds with visible provenance and freshness.
+
+Tests:
+- comparables table coverage
+- feed item coverage
+- freshness/provenance coverage
+```
+
+### Batch 10C - Daily brief and reporting
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batch 10A
+- Can run with:
+  - Batch 10B
+- Owns:
   - daily brief page
   - custom reporting engine
-- Success criteria:
-  - summary outputs are navigable and traceable
-- Tests:
-  - report and brief rendering tests
+- Required tests:
+  - brief rendering tests
+  - report generation or rendering tests
 
-### UI/UX guidance for Wave 10
+#### Feed-ready agent prompt
 
-- Analytics should emphasize scanability and source trust
-- Widgets should be individually resilient
-- Daily brief should be readable, not dashboard-shaped
+```text
+You own Wave 10 / Batch 10C: daily brief and reporting.
+
+Goal:
+- produce navigable, traceable daily brief and reporting surfaces that do not
+  bury provenance.
+
+Tests:
+- brief coverage
+- report coverage
+- navigation or drill-down coverage
+```
 
 ## Wave 11 - Enterprise and compliance
 
@@ -1786,18 +2850,13 @@ stable foundation rather than on partial routes and placeholder state.
 Introduce organization-grade controls, auditability, encryption, and regulated
 workflows after the product core is stable.
 
-### Why parked
-
-Security and compliance scope should not be layered on top of ambiguous feature
-state or placeholder routing.
-
 ### Re-entry prerequisites
 
 - core product routes and state are stable
 - data spine exists
 - threat model and retention expectations are documented
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - RBAC
 - audit log
@@ -1805,43 +2864,94 @@ state or placeholder routing.
 - OS keychain integration
 - GDPR tools
 - VDR
+- blast-radius clarity for destructive compliance actions
 
-### Candidate batches
+### Async execution plan
 
-#### 11A - RBAC and audit log
+- `11A` runs first and seeds permission and audit semantics.
+- `11B` follows and owns encryption and secret storage.
+- `11C` follows after `11A` and `11B` stabilize.
 
-- Deliverables:
+### Batch 11A - RBAC and audit log
+
+- Lane:
+  - `contract-seed`
+- Owns:
   - user roles
-  - audit persistence and viewer
-- Success criteria:
-  - core actions are attributable and permissioned
-- Tests:
-  - permission and audit tests
+  - audit persistence
+  - audit viewer contracts
+- Required tests:
+  - permission tests
+  - audit log tests
 
-#### 11B - Encryption and secret storage
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 11 / Batch 11A: RBAC and audit log.
+
+Goal:
+- make core actions attributable and permissioned before deeper compliance work
+  lands.
+
+Tests:
+- permission coverage
+- audit persistence coverage
+- audit viewer coverage
+```
+
+### Batch 11B - Encryption and secret storage
+
+- Lane:
+  - `process-domain`
+- Depends on:
+  - Batch 11A
+- Owns:
   - at-rest protections
   - managed local secret storage
-- Success criteria:
-  - sensitive data handling is explicit
-- Tests:
-  - encryption and migration tests
+- Required tests:
+  - encryption tests
+  - migration tests
+  - key storage tests
 
-#### 11C - GDPR and VDR
+#### Feed-ready agent prompt
 
-- Deliverables:
+```text
+You own Wave 11 / Batch 11B: encryption and secret storage.
+
+Goal:
+- make sensitive data handling explicit, encrypted, and operationally supported.
+
+Tests:
+- encryption coverage
+- migration coverage
+- secret storage coverage
+```
+
+### Batch 11C - GDPR and VDR
+
+- Lane:
+  - `renderer-surface` plus `process-domain`
+- Depends on:
+  - Batches 11A and 11B
+- Owns:
   - erasure, export, retention, and data-room workflows
-- Success criteria:
-  - regulated actions are explicit and reviewable
-- Tests:
+- Required tests:
   - compliance workflow tests
+  - destructive action safety tests
 
-### UI/UX guidance for Wave 11
+#### Feed-ready agent prompt
 
-- Destructive actions need two-step clarity
-- Export and retention decisions should be transparent
-- Compliance tools must explain blast radius before execution
+```text
+You own Wave 11 / Batch 11C: GDPR and VDR workflows.
+
+Goal:
+- add explicit, reviewable regulated workflows for export, erasure, retention,
+  and data-room handling.
+
+Tests:
+- compliance workflow coverage
+- destructive-action safety coverage
+```
 
 ## Wave 12 - Release program and launch hardening
 
@@ -1849,18 +2959,13 @@ state or placeholder routing.
 
 Convert the matured product into a releasable program.
 
-### Why parked
-
-Release work before product truth closes tends to create documentation and CI
-noise without reducing current execution risk.
-
 ### Re-entry prerequisites
 
 - product scope for launch agreed
 - critical active and selected parked waves completed
 - release owner identified
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - performance budgets
 - docs and extension SDK work
@@ -1872,49 +2977,99 @@ noise without reducing current execution risk.
 - platform signing
 - auto-update
 - beta program
-- production release
+- production release evidence
 
-### Candidate batches
+### Async execution plan
 
-#### 12A - Performance and memory budget work
+- `12A` and `12B` may run in parallel once launch scope is frozen.
+- `12C` starts after shell and core product flows are stable enough for final
+  polish.
+- `12D` runs last because it packages security, distribution, and release proof.
 
-- Deliverables:
-  - measured budgets and fixes
-- Tests:
+### Batch 12A - Performance and memory budget work
+
+- Lane:
+  - `audit-harness` plus `process-domain`
+- Required tests or evidence:
   - benchmark or profiling evidence
 
-#### 12B - Documentation and extension surface
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - technical and user docs
-  - extension documentation if still relevant
-- Tests:
+```text
+You own Wave 12 / Batch 12A: performance and memory budgets.
+
+Goal:
+- define and meet measured performance and memory budgets for the launch scope.
+
+Evidence:
+- benchmarks or profiling results
+- fixes tied to measured hotspots
+```
+
+### Batch 12B - Documentation and extension surface
+
+- Lane:
+  - `audit-harness`
+- Required tests or evidence:
   - doc build or verification as appropriate
 
-#### 12C - Polish, onboarding, and feedback
+#### Feed-ready agent prompt
 
-- Deliverables:
-  - final first-run flow
-  - feedback capture
-  - UX polish sweep
-- Tests:
-  - end-to-end and a11y evidence
+```text
+You own Wave 12 / Batch 12B: documentation and extension surface.
 
-#### 12D - Security, release, and distribution
+Goal:
+- provide the technical and user documentation needed for the frozen launch
+  scope, plus extension documentation if still in scope.
 
-- Deliverables:
-  - pen test follow-up
-  - signing
-  - updater
-  - beta and release evidence
-- Tests:
+Evidence:
+- doc verification or build results
+```
+
+### Batch 12C - Polish, onboarding, and feedback
+
+- Lane:
+  - `renderer-surface`
+- Required tests or evidence:
+  - end-to-end and accessibility evidence
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 12 / Batch 12C: polish, onboarding, and feedback.
+
+Goal:
+- finish first-run onboarding, supportive feedback capture, and the final polish
+  sweep without masking structural issues.
+
+Evidence:
+- end-to-end coverage
+- accessibility verification
+- screenshots of first-run and feedback flows
+```
+
+### Batch 12D - Security, release, and distribution
+
+- Lane:
+  - `audit-harness` plus `integration-surface`
+- Required tests or evidence:
   - release checklist evidence
+  - pen-test follow-up evidence
 
-### UI/UX guidance for Wave 12
+#### Feed-ready agent prompt
 
-- onboarding must connect directly to real product value
-- feedback should be supportive, not noisy
-- release polishing should remove rough edges without masking structural issues
+```text
+You own Wave 12 / Batch 12D: security, release, and distribution.
+
+Goal:
+- complete signing, updater, beta, and release evidence with security follow-up
+  closed or explicitly accepted.
+
+Evidence:
+- release checklist
+- signing/updater proof
+- pen-test follow-up proof
+```
 
 ## Wave 13 - Post-launch platform enrichment
 
@@ -1923,46 +3078,91 @@ noise without reducing current execution risk.
 Evaluate infrastructure accelerators and platform attachments after baseline
 launch is stable.
 
-### Why parked
-
-These are useful only after the local baseline is reliable and measurable.
-
 ### Re-entry prerequisites
 
 - launch baseline stable
 - rollback plan for each accelerator
 - cost, performance, and operational benefit understood
 
-### Candidate features preserved from the superseded roadmap
+### No-loss scope checklist
 
 - MetaMCP federation
 - Browserless backend
 - RSSHub backend
 - Infisical secret spine
 - Langfuse observability
+- reversibility and measurement for every accelerator
 
-### Candidate batches
+### Async execution plan
 
-#### 13A - Tool federation and MetaMCP
+- `13A` and `13B` may run in parallel if they do not reopen the same config
+  layer.
+- `13C` follows once retained secret and observability choices are clear.
 
-- Success criteria:
-  - federation can be toggled and audited
-- Tests:
-  - generator or compatibility tests
+### Batch 13A - Tool federation and MetaMCP
 
-#### 13B - Alternative web and news backends
+- Lane:
+  - `integration-surface`
+- Required tests or evidence:
+  - compatibility or generator tests
+  - toggle and rollback proof
 
-- Success criteria:
-  - fallback remains available
-- Tests:
+#### Feed-ready agent prompt
+
+```text
+You own Wave 13 / Batch 13A: tool federation and MetaMCP.
+
+Goal:
+- add federation only if it is measurable, toggleable, and auditable.
+
+Evidence:
+- compatibility coverage
+- toggle and rollback proof
+```
+
+### Batch 13B - Alternative web and news backends
+
+- Lane:
+  - `integration-surface`
+- Required tests or evidence:
   - backend contract tests
+  - fallback proof
 
-#### 13C - Secret spine and LLM observability
+#### Feed-ready agent prompt
 
-- Success criteria:
-  - production-grade secret and tracing integrations are reversible and measurable
-- Tests:
+```text
+You own Wave 13 / Batch 13B: alternative web and news backends.
+
+Goal:
+- add alternative web/news backends without losing a safe fallback path.
+
+Evidence:
+- backend contract coverage
+- fallback and disable proof
+```
+
+### Batch 13C - Secret spine and LLM observability
+
+- Lane:
+  - `ai-runtime`
+- Required tests or evidence:
   - config and trace-surface tests
+  - reversibility proof
+
+#### Feed-ready agent prompt
+
+```text
+You own Wave 13 / Batch 13C: secret spine and LLM observability.
+
+Goal:
+- add post-launch secret and tracing accelerators only if they remain reversible
+  and operationally measurable.
+
+Evidence:
+- config coverage
+- trace-surface coverage
+- rollback proof
+```
 
 ## 8. Cross-cutting gates, testing matrix, and success metrics
 

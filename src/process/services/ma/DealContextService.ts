@@ -8,41 +8,12 @@
  * DealContextService
  * Manages deal-specific context and persistence across sessions.
  * Provides CRUD operations, active deal management, and deal archiving.
+ * Active deal persistence is durable via database (ma_deals.is_active column).
  */
 
 import type { DealContext, CreateDealInput, UpdateDealInput, DealStatus } from '@/common/ma/types';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
 import type { IQueryResult, IPaginatedResult } from '@process/services/database/types';
-
-// ============================================================================
-// Active Deal Persistence
-// ============================================================================
-
-const ACTIVE_DEAL_KEY = 'ma_active_deal_id';
-
-/**
- * Get the active deal ID from persistent storage
- */
-function getStoredActiveDealId(): string | null {
-  try {
-    // Use electron-store or similar for persistence
-    // For now, use a simple approach with process.env or global
-    return (global as any).__maActiveDealId ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Store the active deal ID in persistent storage
- */
-function setStoredActiveDealId(id: string | null): void {
-  try {
-    (global as any).__maActiveDealId = id;
-  } catch {
-    // Ignore storage errors
-  }
-}
 
 // ============================================================================
 // DealContextService Class
@@ -51,10 +22,10 @@ function setStoredActiveDealId(id: string | null): void {
 /**
  * Service for managing deal context across the application.
  * Handles CRUD operations, active deal management, and persistence.
+ * Active deal state is stored durably in the database via DealRepository.
  */
 export class DealContextService {
   private repository: DealRepository;
-  private activeDealCache: DealContext | null = null;
 
   constructor(repository?: DealRepository) {
     this.repository = repository ?? new DealRepository();
@@ -92,28 +63,18 @@ export class DealContextService {
    * Update a deal
    */
   async updateDeal(id: string, updates: UpdateDealInput): Promise<IQueryResult<DealContext>> {
-    const result = await this.repository.update(id, updates);
-
-    // Invalidate cache if the updated deal is the active deal
-    if (result.success && result.data) {
-      const activeId = await this.getActiveDealId();
-      if (activeId === id) {
-        this.activeDealCache = result.data;
-      }
-    }
-
-    return result;
+    return this.repository.update(id, updates);
   }
 
   /**
    * Delete a deal
+   * If deleting the active deal, clears the active deal state durably
    */
   async deleteDeal(id: string): Promise<IQueryResult<boolean>> {
     // If deleting the active deal, clear the active deal
-    const activeId = await this.getActiveDealId();
-    if (activeId === id) {
-      await this.clearActiveDeal();
-      this.activeDealCache = null;
+    const activeResult = await this.repository.getActiveDeal();
+    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+      await this.repository.clearActiveDeal();
     }
 
     return this.repository.delete(id);
@@ -145,65 +106,35 @@ export class DealContextService {
 
   /**
    * Set a deal as the active deal
+   * Uses durable storage via repository
    */
   async setActiveDeal(id: string): Promise<IQueryResult<DealContext>> {
-    // Verify the deal exists
-    const dealResult = await this.repository.get(id);
-    if (!dealResult.success || !dealResult.data) {
-      return { success: false, error: dealResult.error ?? 'Deal not found' };
-    }
-
-    // Store the active deal ID
-    setStoredActiveDealId(id);
-
-    // Update cache
-    this.activeDealCache = dealResult.data;
-
-    return { success: true, data: dealResult.data };
+    return this.repository.setActiveDeal(id);
   }
 
   /**
    * Get the active deal
+   * Uses durable storage via repository
    */
   async getActiveDeal(): Promise<IQueryResult<DealContext | null>> {
-    // Check cache first
-    if (this.activeDealCache) {
-      return { success: true, data: this.activeDealCache };
-    }
-
-    // Get from storage
-    const activeId = getStoredActiveDealId();
-    if (!activeId) {
-      return { success: true, data: null };
-    }
-
-    // Fetch from repository
-    const result = await this.repository.get(activeId);
-    if (result.success) {
-      this.activeDealCache = result.data;
-    }
-
-    return result;
+    return this.repository.getActiveDeal();
   }
 
   /**
    * Get the active deal ID
+   * Uses durable storage via repository
    */
   async getActiveDealId(): Promise<string | null> {
-    // Check cache first
-    if (this.activeDealCache) {
-      return this.activeDealCache.id;
-    }
-
-    return getStoredActiveDealId();
+    const result = await this.repository.getActiveDeal();
+    return result.success && result.data ? result.data.id : null;
   }
 
   /**
    * Clear the active deal
+   * Uses durable storage via repository, idempotent
    */
   async clearActiveDeal(): Promise<void> {
-    setStoredActiveDealId(null);
-    this.activeDealCache = null;
+    await this.repository.clearActiveDeal();
   }
 
   /**
@@ -220,38 +151,27 @@ export class DealContextService {
 
   /**
    * Archive a deal
-   * When archiving, if it's the active deal, clear the active deal
+   * When archiving, if it's the active deal, clears the active deal state durably
    */
   async archiveDeal(id: string): Promise<IQueryResult<DealContext>> {
-    const activeId = await this.getActiveDealId();
-
     // If archiving the active deal, clear active first
-    if (activeId === id) {
-      await this.clearActiveDeal();
+    const activeResult = await this.repository.getActiveDeal();
+    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+      await this.repository.clearActiveDeal();
     }
 
-    const result = await this.repository.archive(id);
-
-    // If no active deal set, try to set another active deal
-    if (!activeId) {
-      const dealsResult = await this.repository.getActiveDeals();
-      if (dealsResult.success && dealsResult.data.length > 0) {
-        await this.setActiveDeal(dealsResult.data[0].id);
-      }
-    }
-
-    return result;
+    return this.repository.archive(id);
   }
 
   /**
    * Close a deal
+   * When closing, if it's the active deal, clears the active deal state durably
    */
   async closeDeal(id: string): Promise<IQueryResult<DealContext>> {
-    const activeId = await this.getActiveDealId();
-
     // If closing the active deal, clear active first
-    if (activeId === id) {
-      await this.clearActiveDeal();
+    const activeResult = await this.repository.getActiveDeal();
+    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+      await this.repository.clearActiveDeal();
     }
 
     return this.repository.close(id);

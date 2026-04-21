@@ -29,6 +29,15 @@ import { DealRepository } from '@process/services/database/repositories/ma/DealR
 import { createFloWiseConnection, FloWiseError } from '@process/agent/flowise/FloWiseConnection';
 import type { FloWiseConnection } from '@process/agent/flowise/FloWiseConnection';
 import type { IQueryResult } from '@process/services/database/types';
+import {
+  isFlowKey,
+  resolveFlowSpec,
+  isFlowCallableInProd,
+  KNOWN_FLOW_KEYS,
+  FLOW_CATALOG,
+  type FlowKey,
+  type FlowSpec,
+} from '@/common/ma/flowise';
 
 // ============================================================================
 // Types
@@ -41,13 +50,21 @@ export interface DueDiligenceRequest {
   documentIds: string[];
   analysisTypes: AnalysisType[];
   options?: {
-    flowId?: string;
+    flowKey?: FlowKey;
     skipCache?: boolean;
     timeout?: number;
     useFlowise?: boolean;
     flowiseBaseUrl?: string;
     flowiseApiKey?: string;
   };
+}
+
+export interface FlowProvenance {
+  flowKey: FlowKey;
+  flowId: string;
+  promptVersionId: string;
+  flowDescription: string;
+  resolvedAt: number;
 }
 
 export interface DueDiligenceResult {
@@ -60,6 +77,7 @@ export interface DueDiligenceResult {
   recommendations: string[];
   generatedAt: number;
   analysisId: string;
+  flowProvenance?: FlowProvenance;
 }
 
 export interface ComparisonResult {
@@ -512,22 +530,79 @@ export class DueDiligenceService {
     return this.flowiseConnection;
   }
 
+  /**
+   * Validate and resolve a flow key through the catalog.
+   * Returns the FlowSpec with resolved flowId and prompt version.
+   * Throws if the key is invalid or the flow is not callable in production.
+   */
+  private validateAndResolveFlowKey(flowKey: string | undefined): FlowSpec | null {
+    if (!flowKey || flowKey === '') {
+      throw new Error(`Invalid flowKey "${flowKey ?? 'undefined'}". Known keys: ${KNOWN_FLOW_KEYS.join(', ')}`);
+    }
+
+    // Validate the key is a known flow key
+    if (!isFlowKey(flowKey)) {
+      throw new Error(`Invalid flowKey "${flowKey}". Known keys: ${KNOWN_FLOW_KEYS.join(', ')}`);
+    }
+
+    // Resolve the spec from the catalog
+    const spec = resolveFlowSpec(flowKey);
+
+    // Check if flow is callable in production
+    if (!isFlowCallableInProd(spec)) {
+      throw new Error(
+        `Flow "${flowKey}" is not callable in production (status: ${spec.status}). Only authored and deployed flows can be used.`
+      );
+    }
+
+    return spec;
+  }
+
+  /**
+   * Create flow provenance record from a resolved spec.
+   */
+  private createFlowProvenance(spec: FlowSpec): FlowProvenance {
+    return {
+      flowKey: spec.key,
+      flowId: spec.id,
+      promptVersionId: spec.promptVersionId,
+      flowDescription: spec.description,
+      resolvedAt: Date.now(),
+    };
+  }
+
   // ============================================================================
   // Analysis Execution
   // ============================================================================
 
   /**
    * Execute due diligence analysis.
-   * If useFlowise is true and flowId is provided, uses Flowise for AI-powered analysis.
-   * Otherwise, falls back to local pattern-based analysis.
+   * If useFlowise is true and flowKey is provided, validates the key through the catalog
+   * and uses Flowise for AI-powered analysis. Otherwise, falls back to local pattern-based analysis.
    */
   async analyze(request: DueDiligenceRequest): Promise<IQueryResult<DueDiligenceResult>> {
     try {
-      // Create analysis record
+      // Validate and resolve flow key if provided
+      let flowSpec: FlowSpec | null = null;
+      let flowProvenance: FlowProvenance | undefined;
+
+      if (request.options?.useFlowise && request.options?.flowKey !== undefined) {
+        try {
+          flowSpec = this.validateAndResolveFlowKey(request.options.flowKey);
+          if (flowSpec) {
+            flowProvenance = this.createFlowProvenance(flowSpec);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return { success: false, error: message };
+        }
+      }
+
+      // Create analysis record with resolved flowId
       const analysisInput: CreateAnalysisInput = {
         dealId: request.dealId,
         type: 'due_diligence',
-        flowId: request.options?.flowId,
+        flowId: flowSpec?.id,
         input: {
           documentIds: request.documentIds,
           analysisTypes: request.analysisTypes,
@@ -561,14 +636,14 @@ export class DueDiligenceService {
 
         let risks: RiskFinding[];
 
-        // Use Flowise if configured
-        if (request.options?.useFlowise && request.options?.flowId) {
+        // Use Flowise if configured with a valid flow spec
+        if (flowSpec) {
           this.reportProgress(analysis.id, 'analyzing', 30, 'Running Flowise analysis');
           risks = await this.analyzeWithFlowise(
             analysis.id,
             documents,
             dealContext,
-            request.options.flowId,
+            flowSpec.id,
             request.options.flowiseBaseUrl,
             request.options.flowiseApiKey
           );
@@ -618,6 +693,7 @@ export class DueDiligenceService {
           recommendations,
           generatedAt: Date.now(),
           analysisId: analysis.id,
+          flowProvenance,
         };
 
         await this.analysisRepo.markCompleted(analysis.id, {
@@ -804,6 +880,23 @@ export class DueDiligenceService {
       const risksResult = await this.analysisRepo.getRiskFindings(id);
       const risks = risksResult.success ? risksResult.data : [];
 
+      // Reconstruct flow provenance if flowId was used
+      let flowProvenance: FlowProvenance | undefined;
+      if (analysis.flowId) {
+        // Try to find the flow spec by flowId (reverse lookup for backward compatibility)
+        // In production, we should store flowKey directly, but for now we reconstruct
+        const spec = (Object.values(FLOW_CATALOG) as FlowSpec[]).find((s) => s.id === analysis.flowId);
+        if (spec) {
+          flowProvenance = {
+            flowKey: spec.key,
+            flowId: spec.id,
+            promptVersionId: spec.promptVersionId,
+            flowDescription: spec.description,
+            resolvedAt: analysis.completedAt ?? Date.now(),
+          };
+        }
+      }
+
       const result: DueDiligenceResult = {
         id: `dd_${analysis.id}`,
         dealId: analysis.dealId,
@@ -814,6 +907,7 @@ export class DueDiligenceService {
         recommendations: analysis.result.recommendations as string[],
         generatedAt: analysis.completedAt ?? Date.now(),
         analysisId: analysis.id,
+        flowProvenance,
       };
 
       return { success: true, data: result };
@@ -838,6 +932,21 @@ export class DueDiligenceService {
           const risksResult = await this.analysisRepo.getRiskFindings(analysis.id);
           const risks = risksResult.success ? risksResult.data : [];
 
+          // Reconstruct flow provenance if flowId was used
+          let flowProvenance: FlowProvenance | undefined;
+          if (analysis.flowId) {
+            const spec = (Object.values(FLOW_CATALOG) as FlowSpec[]).find((s) => s.id === analysis.flowId);
+            if (spec) {
+              flowProvenance = {
+                flowKey: spec.key,
+                flowId: spec.id,
+                promptVersionId: spec.promptVersionId,
+                flowDescription: spec.description,
+                resolvedAt: analysis.completedAt ?? Date.now(),
+              };
+            }
+          }
+
           results.push({
             id: `dd_${analysis.id}`,
             dealId: analysis.dealId,
@@ -848,6 +957,7 @@ export class DueDiligenceService {
             recommendations: analysis.result.recommendations as string[],
             generatedAt: analysis.completedAt ?? Date.now(),
             analysisId: analysis.id,
+            flowProvenance,
           });
         }
       }
@@ -961,11 +1071,33 @@ export class DueDiligenceService {
    * Supports both Flowise streaming and local analysis.
    */
   async *streamAnalysis(request: DueDiligenceRequest): AsyncIterable<AnalysisProgress> {
-    // Create analysis record
+    // Validate and resolve flow key if provided
+    let flowSpec: FlowSpec | null = null;
+    let flowProvenance: FlowProvenance | undefined;
+
+    if (request.options?.useFlowise && request.options?.flowKey) {
+      try {
+        flowSpec = this.validateAndResolveFlowKey(request.options.flowKey);
+        if (flowSpec) {
+          flowProvenance = this.createFlowProvenance(flowSpec);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        yield {
+          analysisId: 'error',
+          stage: 'error',
+          progress: 0,
+          message,
+        };
+        return;
+      }
+    }
+
+    // Create analysis record with resolved flowId
     const analysisInput: CreateAnalysisInput = {
       dealId: request.dealId,
       type: 'due_diligence',
-      flowId: request.options?.flowId,
+      flowId: flowSpec?.id,
       input: {
         documentIds: request.documentIds,
         analysisTypes: request.analysisTypes,
@@ -1024,8 +1156,8 @@ export class DueDiligenceService {
 
       let risks: RiskFinding[];
 
-      // Use Flowise streaming if configured
-      if (request.options?.useFlowise && request.options?.flowId) {
+      // Use Flowise streaming if configured with a valid flow spec
+      if (flowSpec) {
         yield {
           analysisId: analysis.id,
           stage: 'analyzing',
@@ -1038,7 +1170,7 @@ export class DueDiligenceService {
           analysis.id,
           documents,
           dealContext,
-          request.options.flowId,
+          flowSpec.id,
           request.options.flowiseBaseUrl,
           request.options.flowiseApiKey
         )) {

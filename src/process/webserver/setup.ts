@@ -70,6 +70,10 @@ const CSRF_SECRET = getCsrfSecret();
  * Configure basic middleware for Express app
  */
 export function setupBasicMiddleware(app: Express): void {
+  // Trust first proxy so express-rate-limit can read X-Forwarded-For safely
+  // 信任第一层代理，使 express-rate-limit 能安全读取 X-Forwarded-For
+  app.set('trust proxy', 1);
+
   // 请求体解析器
   // Body parsers
   app.use(express.json({ limit: '10mb' }));
