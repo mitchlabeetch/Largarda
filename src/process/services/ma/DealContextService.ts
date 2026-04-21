@@ -71,13 +71,15 @@ export class DealContextService {
    * If deleting the active deal, clears the active deal state durably
    */
   async deleteDeal(id: string): Promise<IQueryResult<boolean>> {
-    // If deleting the active deal, clear the active deal
     const activeResult = await this.repository.getActiveDeal();
-    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+    const isActiveDeal = activeResult.success && activeResult.data?.id === id;
+    const deleteResult = await this.repository.delete(id);
+
+    if (deleteResult.success && deleteResult.data && isActiveDeal) {
       await this.repository.clearActiveDeal();
     }
 
-    return this.repository.delete(id);
+    return deleteResult;
   }
 
   /**
@@ -154,13 +156,15 @@ export class DealContextService {
    * When archiving, if it's the active deal, clears the active deal state durably
    */
   async archiveDeal(id: string): Promise<IQueryResult<DealContext>> {
-    // If archiving the active deal, clear active first
     const activeResult = await this.repository.getActiveDeal();
-    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+    const isActiveDeal = activeResult.success && activeResult.data?.id === id;
+    const archiveResult = await this.repository.archive(id);
+
+    if (archiveResult.success && archiveResult.data && isActiveDeal) {
       await this.repository.clearActiveDeal();
     }
 
-    return this.repository.archive(id);
+    return archiveResult;
   }
 
   /**
@@ -168,13 +172,15 @@ export class DealContextService {
    * When closing, if it's the active deal, clears the active deal state durably
    */
   async closeDeal(id: string): Promise<IQueryResult<DealContext>> {
-    // If closing the active deal, clear active first
     const activeResult = await this.repository.getActiveDeal();
-    if (activeResult.success && activeResult.data && activeResult.data.id === id) {
+    const isActiveDeal = activeResult.success && activeResult.data?.id === id;
+    const closeResult = await this.repository.close(id);
+
+    if (closeResult.success && closeResult.data && isActiveDeal) {
       await this.repository.clearActiveDeal();
     }
 
-    return this.repository.close(id);
+    return closeResult;
   }
 
   /**

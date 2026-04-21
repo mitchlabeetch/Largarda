@@ -4,23 +4,63 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DueDiligenceService, type DueDiligenceRequest } from '@process/services/ma/DueDiligenceService';
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
-import { KNOWN_FLOW_KEYS, FLOW_CATALOG, type FlowKey } from '@/common/ma/flowise';
+import { FLOW_CATALOG, KNOWN_FLOW_KEYS, type FlowKey } from '@/common/ma/flowise';
+import type { FlowProvenance } from '@process/services/ma/DueDiligenceService';
 
-// Mock repositories
 vi.mock('@process/services/database/repositories/ma/AnalysisRepository');
 vi.mock('@process/services/database/repositories/ma/DocumentRepository');
 vi.mock('@process/services/database/repositories/ma/DealRepository');
 
+type MockAnalysisRepo = {
+  create: ReturnType<typeof vi.fn>;
+  markRunning: ReturnType<typeof vi.fn>;
+  markCompleted: ReturnType<typeof vi.fn>;
+  markError: ReturnType<typeof vi.fn>;
+  getRiskFindings: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  listByDeal: ReturnType<typeof vi.fn>;
+  createRiskFindings: ReturnType<typeof vi.fn>;
+};
+
+type MockDocumentRepo = {
+  get: ReturnType<typeof vi.fn>;
+};
+
+type MockDealRepo = {
+  get: ReturnType<typeof vi.fn>;
+};
+
+type ServiceInternals = {
+  analyzeWithFlowise: (...args: unknown[]) => Promise<{
+    risks: unknown[];
+    executionSource: 'flowise' | 'local_fallback';
+  }>;
+};
+
+const DEFAULT_FLOW_PROVENANCE: FlowProvenance = {
+  flowKey: 'ma.dd.analysis',
+  flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
+  promptVersionId: '2026-04-20.0',
+  flowDescription: 'Risk-categorised due-diligence pass over a deal corpus.',
+  resolvedAt: 1_712_345_678_901,
+};
+
 describe('DueDiligenceService - Catalog Integration', () => {
   let service: DueDiligenceService;
-  let mockAnalysisRepo: any;
-  let mockDocumentRepo: any;
-  let mockDealRepo: any;
+  let mockAnalysisRepo: MockAnalysisRepo;
+  let mockDocumentRepo: MockDocumentRepo;
+  let mockDealRepo: MockDealRepo;
+
+  const baseRequest: DueDiligenceRequest = {
+    dealId: 'deal-1',
+    documentIds: ['doc-1'],
+    analysisTypes: ['due_diligence'],
+  };
 
   beforeEach(() => {
     mockAnalysisRepo = {
@@ -47,12 +87,26 @@ describe('DueDiligenceService - Catalog Integration', () => {
     service = new DueDiligenceService(mockAnalysisRepo, mockDocumentRepo, mockDealRepo);
   });
 
-  describe('Invalid key rejection', () => {
+  const setupCompletedAnalysis = (flowId?: string): void => {
+    mockDocumentRepo.get.mockResolvedValue({
+      success: true,
+      data: { id: 'doc-1', filename: 'test.txt', textContent: 'Test content' },
+    });
+    mockDealRepo.get.mockResolvedValue({ success: true, data: null });
+    mockAnalysisRepo.create.mockResolvedValue({
+      success: true,
+      data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence', flowId },
+    });
+    mockAnalysisRepo.markRunning.mockResolvedValue({ success: true });
+    mockAnalysisRepo.markCompleted.mockResolvedValue({ success: true });
+    mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
+    mockAnalysisRepo.createRiskFindings.mockResolvedValue({ success: true, data: [] });
+  };
+
+  describe('invalid key rejection', () => {
     it('rejects an unknown flow key with clear error message', async () => {
       const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
+        ...baseRequest,
         options: {
           useFlowise: true,
           flowKey: 'ma.not.a.real.key' as FlowKey,
@@ -67,41 +121,24 @@ describe('DueDiligenceService - Catalog Integration', () => {
       expect(result.error).toContain('Known keys');
     });
 
-    it('rejects a non-string flow key', async () => {
+    it('requires flowKey when Flowise execution is explicitly requested', async () => {
       const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
+        ...baseRequest,
         options: {
           useFlowise: true,
-          flowKey: undefined as any,
         },
       };
 
-      // When flowKey is undefined, it should not use Flowise
-      // This is a valid case - it falls back to local analysis
-      mockDocumentRepo.get.mockResolvedValue({
-        success: true,
-        data: { id: 'doc-1', filename: 'test.txt', textContent: 'test' },
-      });
-      mockDealRepo.get.mockResolvedValue({ success: true, data: null });
-      mockAnalysisRepo.create.mockResolvedValue({
-        success: true,
-        data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence' },
-      });
-      mockAnalysisRepo.markRunning.mockResolvedValue(undefined);
-      mockAnalysisRepo.markCompleted.mockResolvedValue(undefined);
-      mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
-
       const result = await service.analyze(request);
 
-      expect(result.success).toBe(true);
-      expect(result.data?.flowProvenance).toBeUndefined();
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid flowKey');
+      expect(result.error).toContain('undefined');
     });
   });
 
-  describe('Catalog resolution path', () => {
-    it('resolves a valid flow key to its flow spec', async () => {
+  describe('catalog resolution path', () => {
+    it('resolves a valid flow key to its flow spec', () => {
       const validKey: FlowKey = 'ma.dd.analysis';
       const spec = FLOW_CATALOG[validKey];
 
@@ -112,160 +149,165 @@ describe('DueDiligenceService - Catalog Integration', () => {
       expect(spec.status).toBe('authored');
     });
 
-    it('uses resolved flowId when calling Flowise', async () => {
-      const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
+    it('stores the resolved flowId when Flowise execution is requested', async () => {
+      setupCompletedAnalysis('96da0c29-c819-4d3a-8391-b8c571c3ba4e');
+      vi.spyOn(service as unknown as ServiceInternals, 'analyzeWithFlowise').mockResolvedValue({
+        risks: [],
+        executionSource: 'flowise',
+      });
+
+      const result = await service.analyze({
+        ...baseRequest,
         options: {
           useFlowise: true,
           flowKey: 'ma.dd.analysis',
         },
-      };
-
-      mockDocumentRepo.get.mockResolvedValue({
-        success: true,
-        data: { id: 'doc-1', filename: 'test.txt', textContent: 'test' },
       });
-      mockDealRepo.get.mockResolvedValue({ success: true, data: null });
-      mockAnalysisRepo.create.mockResolvedValue({
-        success: true,
-        data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence' },
-      });
-      mockAnalysisRepo.markRunning.mockResolvedValue(undefined);
-      mockAnalysisRepo.markError.mockResolvedValue(undefined);
-      mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
 
-      // Mock the Flowise connection to throw an error (since we're not actually calling Flowise)
-      // This will trigger the fallback to local analysis
-      const result = await service.analyze(request);
-
-      // Verify that the analysis was created with the resolved flowId
+      expect(result.success).toBe(true);
       expect(mockAnalysisRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
         })
       );
     });
-
-    it('rejects draft flows in production context', async () => {
-      // Note: All current flows are 'authored', not 'draft'
-      // This test verifies the validation logic works
-      const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
-        options: {
-          useFlowise: true,
-          flowKey: 'ma.dd.analysis',
-        },
-      };
-
-      // Since ma.dd.analysis is 'authored' (callable in prod), this should succeed
-      // If we had a draft flow, it would be rejected
-      mockDocumentRepo.get.mockResolvedValue({
-        success: true,
-        data: { id: 'doc-1', filename: 'test.txt', textContent: 'test' },
-      });
-      mockDealRepo.get.mockResolvedValue({ success: true, data: null });
-      mockAnalysisRepo.create.mockResolvedValue({
-        success: true,
-        data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence' },
-      });
-      mockAnalysisRepo.markRunning.mockResolvedValue(undefined);
-      mockAnalysisRepo.markError.mockResolvedValue(undefined);
-      mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
-
-      const result = await service.analyze(request);
-
-      // Should not fail due to status check since it's 'authored'
-      expect(mockAnalysisRepo.create).toHaveBeenCalled();
-    });
   });
 
-  describe('Provenance attachment', () => {
-    it('attaches flow provenance to analysis result', async () => {
-      const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
+  describe('provenance persistence and attribution', () => {
+    it('persists flow provenance when Flowise actually produced the analysis', async () => {
+      setupCompletedAnalysis('96da0c29-c819-4d3a-8391-b8c571c3ba4e');
+      vi.spyOn(service as unknown as ServiceInternals, 'analyzeWithFlowise').mockResolvedValue({
+        risks: [],
+        executionSource: 'flowise',
+      });
+
+      const result = await service.analyze({
+        ...baseRequest,
         options: {
           useFlowise: true,
           flowKey: 'ma.dd.analysis',
         },
-      };
-
-      mockDocumentRepo.get.mockResolvedValue({
-        success: true,
-        data: { id: 'doc-1', filename: 'test.txt', textContent: 'test' },
       });
-      mockDealRepo.get.mockResolvedValue({ success: true, data: null });
-      mockAnalysisRepo.create.mockResolvedValue({
-        success: true,
-        data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence' },
+
+      expect(result.success).toBe(true);
+      expect(result.data?.flowProvenance).toBeDefined();
+      expect(result.data?.flowProvenance?.flowKey).toBe('ma.dd.analysis');
+
+      const persistedPayload = mockAnalysisRepo.markCompleted.mock.calls[0][1] as Record<string, unknown>;
+      expect(persistedPayload.executionSource).toBe('flowise');
+      expect(persistedPayload.flowProvenance).toMatchObject({
+        flowKey: 'ma.dd.analysis',
+        flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
+        promptVersionId: '2026-04-20.0',
       });
-      mockAnalysisRepo.markRunning.mockResolvedValue(undefined);
-      mockAnalysisRepo.markError.mockResolvedValue(undefined);
-      mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
-
-      const result = await service.analyze(request);
-
-      if (result.success && result.data) {
-        // Note: Since Flowise will fail (not actually connected), it falls back to local analysis
-        // In that case, flowProvenance should be undefined
-        // This test verifies the structure when it IS attached
-        expect(result.data.flowProvenance).toBeDefined();
-        expect(result.data.flowProvenance?.flowKey).toBe('ma.dd.analysis');
-        expect(result.data.flowProvenance?.flowId).toBe('96da0c29-c819-4d3a-8391-b8c571c3ba4e');
-        expect(result.data.flowProvenance?.promptVersionId).toBe('2026-04-20.0');
-        expect(result.data.flowProvenance?.flowDescription).toBe(
-          'Risk-categorised due-diligence pass over a deal corpus.'
-        );
-        expect(result.data.flowProvenance?.resolvedAt).toBeGreaterThan(0);
-      }
     });
 
-    it('omits provenance when using local analysis (no flowKey)', async () => {
-      const request: DueDiligenceRequest = {
-        dealId: 'deal-1',
-        documentIds: ['doc-1'],
-        analysisTypes: ['due_diligence'],
+    it('omits flow provenance when Flowise falls back to local analysis', async () => {
+      setupCompletedAnalysis('96da0c29-c819-4d3a-8391-b8c571c3ba4e');
+      vi.spyOn(service as unknown as ServiceInternals, 'analyzeWithFlowise').mockResolvedValue({
+        risks: [],
+        executionSource: 'local_fallback',
+      });
+
+      const result = await service.analyze({
+        ...baseRequest,
+        options: {
+          useFlowise: true,
+          flowKey: 'ma.dd.analysis',
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.flowProvenance).toBeUndefined();
+
+      const persistedPayload = mockAnalysisRepo.markCompleted.mock.calls[0][1] as Record<string, unknown>;
+      expect(persistedPayload.executionSource).toBe('local_fallback');
+      expect(persistedPayload.flowProvenance).toBeUndefined();
+    });
+
+    it('records local execution source when Flowise is not requested', async () => {
+      setupCompletedAnalysis();
+
+      const result = await service.analyze({
+        ...baseRequest,
         options: {
           useFlowise: false,
         },
-      };
+      });
 
-      mockDocumentRepo.get.mockResolvedValue({
+      expect(result.success).toBe(true);
+      expect(result.data?.flowProvenance).toBeUndefined();
+
+      const persistedPayload = mockAnalysisRepo.markCompleted.mock.calls[0][1] as Record<string, unknown>;
+      expect(persistedPayload.executionSource).toBe('local');
+    });
+  });
+
+  describe('read-path provenance reconstruction', () => {
+    it('prefers persisted provenance on completed analyses', async () => {
+      mockAnalysisRepo.get.mockResolvedValue({
         success: true,
-        data: { id: 'doc-1', filename: 'test.txt', textContent: 'test' },
+        data: {
+          id: 'analysis-1',
+          dealId: 'deal-1',
+          type: 'due_diligence',
+          status: 'completed',
+          flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
+          completedAt: Date.now(),
+          result: {
+            riskScores: { financial: 50, legal: 30, operational: 20, regulatory: 15, reputational: 10 },
+            overallRiskScore: 35,
+            summary: 'Test summary',
+            recommendations: ['Test recommendation'],
+            executionSource: 'flowise',
+            flowProvenance: DEFAULT_FLOW_PROVENANCE,
+          },
+        },
       });
-      mockDealRepo.get.mockResolvedValue({ success: true, data: null });
-      mockAnalysisRepo.create.mockResolvedValue({
-        success: true,
-        data: { id: 'analysis-1', dealId: 'deal-1', type: 'due_diligence', flowId: null },
-      });
-      mockAnalysisRepo.markRunning.mockResolvedValue(undefined);
-      mockAnalysisRepo.markCompleted.mockResolvedValue(undefined);
       mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
 
-      const result = await service.analyze(request);
+      const result = await service.getAnalysis('analysis-1');
+
+      expect(result.success).toBe(true);
+      expect(result.data?.flowProvenance).toEqual(DEFAULT_FLOW_PROVENANCE);
+    });
+
+    it('does not reconstruct provenance for persisted local fallback records', async () => {
+      mockAnalysisRepo.get.mockResolvedValue({
+        success: true,
+        data: {
+          id: 'analysis-1',
+          dealId: 'deal-1',
+          type: 'due_diligence',
+          status: 'completed',
+          flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
+          completedAt: Date.now(),
+          result: {
+            riskScores: { financial: 50, legal: 30, operational: 20, regulatory: 15, reputational: 10 },
+            overallRiskScore: 35,
+            summary: 'Test summary',
+            recommendations: ['Test recommendation'],
+            executionSource: 'local_fallback',
+          },
+        },
+      });
+      mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
+
+      const result = await service.getAnalysis('analysis-1');
 
       expect(result.success).toBe(true);
       expect(result.data?.flowProvenance).toBeUndefined();
     });
 
-    it('reconstructs provenance from stored flowId in getAnalysis', async () => {
-      const analysisId = 'analysis-1';
-      const flowId = '96da0c29-c819-4d3a-8391-b8c571c3ba4e';
-
+    it('reconstructs provenance from flowId for legacy analyses without persisted metadata', async () => {
       mockAnalysisRepo.get.mockResolvedValue({
         success: true,
         data: {
-          id: analysisId,
+          id: 'analysis-1',
           dealId: 'deal-1',
           type: 'due_diligence',
           status: 'completed',
-          flowId,
+          flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
           completedAt: Date.now(),
           result: {
             riskScores: { financial: 50, legal: 30, operational: 20, regulatory: 15, reputational: 10 },
@@ -277,18 +319,14 @@ describe('DueDiligenceService - Catalog Integration', () => {
       });
       mockAnalysisRepo.getRiskFindings.mockResolvedValue({ success: true, data: [] });
 
-      const result = await service.getAnalysis(analysisId);
+      const result = await service.getAnalysis('analysis-1');
 
       expect(result.success).toBe(true);
-      expect(result.data?.flowProvenance).toBeDefined();
       expect(result.data?.flowProvenance?.flowKey).toBe('ma.dd.analysis');
-      expect(result.data?.flowProvenance?.flowId).toBe(flowId);
-      expect(result.data?.flowProvenance?.promptVersionId).toBe('2026-04-20.0');
+      expect(result.data?.flowProvenance?.flowId).toBe('96da0c29-c819-4d3a-8391-b8c571c3ba4e');
     });
 
-    it('reconstructs provenance from stored flowId in listAnalyses', async () => {
-      const flowId = '96da0c29-c819-4d3a-8391-b8c571c3ba4e';
-
+    it('returns persisted provenance from listAnalyses', async () => {
       mockAnalysisRepo.listByDeal.mockResolvedValue({
         success: true,
         data: [
@@ -297,13 +335,15 @@ describe('DueDiligenceService - Catalog Integration', () => {
             dealId: 'deal-1',
             type: 'due_diligence',
             status: 'completed',
-            flowId,
+            flowId: '96da0c29-c819-4d3a-8391-b8c571c3ba4e',
             completedAt: Date.now(),
             result: {
               riskScores: { financial: 50, legal: 30, operational: 20, regulatory: 15, reputational: 10 },
               overallRiskScore: 35,
               summary: 'Test summary',
               recommendations: ['Test recommendation'],
+              executionSource: 'flowise',
+              flowProvenance: DEFAULT_FLOW_PROVENANCE,
             },
           },
         ],
@@ -313,19 +353,17 @@ describe('DueDiligenceService - Catalog Integration', () => {
       const result = await service.listAnalyses('deal-1');
 
       expect(result.success).toBe(true);
-      expect(result.data?.[0].flowProvenance).toBeDefined();
-      expect(result.data?.[0].flowProvenance?.flowKey).toBe('ma.dd.analysis');
-      expect(result.data?.[0].flowProvenance?.flowId).toBe(flowId);
+      expect(result.data?.[0].flowProvenance).toEqual(DEFAULT_FLOW_PROVENANCE);
     });
   });
 
-  describe('Known flow keys', () => {
+  describe('known flow keys', () => {
     it('includes all DD-related flow keys', () => {
       expect(KNOWN_FLOW_KEYS).toContain('ma.dd.analysis');
       expect(KNOWN_FLOW_KEYS).toContain('ma.dd.risk.drill');
     });
 
-    it('validates each known flow key exists in catalog', () => {
+    it('validates each known flow key exists in the catalog', () => {
       for (const key of KNOWN_FLOW_KEYS) {
         expect(FLOW_CATALOG[key]).toBeDefined();
         expect(FLOW_CATALOG[key].key).toBe(key);

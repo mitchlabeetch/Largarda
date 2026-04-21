@@ -391,4 +391,55 @@ describe('DealContextService - Durable Active Deal Persistence', () => {
       expect(isActive).toBe(false);
     });
   });
+
+  describe('active deal preservation on mutation failure', () => {
+    it('keeps the active deal when deleting the active deal fails', async () => {
+      const dealId = await createTestDeal('Deal 1');
+      await service.setActiveDeal(dealId);
+
+      vi.spyOn(repository, 'delete').mockResolvedValue({
+        success: false,
+        error: 'delete failed',
+        data: false,
+      });
+
+      const result = await service.deleteDeal(dealId);
+      expect(result.success).toBe(false);
+
+      const activeResult = await service.getActiveDeal();
+      expect(activeResult.data?.id).toBe(dealId);
+    });
+
+    it('keeps the active deal when archiving the active deal fails', async () => {
+      const dealId = await createTestDeal('Deal 1');
+      await service.setActiveDeal(dealId);
+
+      vi.spyOn(repository, 'archive').mockResolvedValue({
+        success: false,
+        error: 'archive failed',
+      });
+
+      const result = await service.archiveDeal(dealId);
+      expect(result.success).toBe(false);
+
+      const activeResult = await service.getActiveDeal();
+      expect(activeResult.data?.id).toBe(dealId);
+    });
+
+    it('keeps the active deal when closing the active deal fails', async () => {
+      const dealId = await createTestDeal('Deal 1');
+      await service.setActiveDeal(dealId);
+
+      vi.spyOn(repository, 'close').mockResolvedValue({
+        success: false,
+        error: 'close failed',
+      });
+
+      const result = await service.closeDeal(dealId);
+      expect(result.success).toBe(false);
+
+      const activeResult = await service.getActiveDeal();
+      expect(activeResult.data?.id).toBe(dealId);
+    });
+  });
 });

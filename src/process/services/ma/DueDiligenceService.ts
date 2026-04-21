@@ -80,6 +80,23 @@ export interface DueDiligenceResult {
   flowProvenance?: FlowProvenance;
 }
 
+type AnalysisExecutionSource = 'flowise' | 'local' | 'local_fallback';
+
+interface FlowiseAnalysisOutcome {
+  risks: RiskFinding[];
+  executionSource: Extract<AnalysisExecutionSource, 'flowise' | 'local_fallback'>;
+}
+
+interface PersistedDueDiligencePayload {
+  risks: string[];
+  riskScores: Record<RiskCategory, number>;
+  overallRiskScore: number;
+  summary: string;
+  recommendations: string[];
+  executionSource: AnalysisExecutionSource;
+  flowProvenance?: FlowProvenance;
+}
+
 export interface ComparisonResult {
   dealIds: string[];
   deals: DealComparison[];
@@ -571,6 +588,96 @@ export class DueDiligenceService {
     };
   }
 
+  /**
+   * Build the persisted due diligence payload stored on the analysis record.
+   */
+  private buildPersistedAnalysisPayload(
+    risks: RiskFinding[],
+    riskScores: Record<RiskCategory, number>,
+    overallRiskScore: number,
+    summary: string,
+    recommendations: string[],
+    executionSource: AnalysisExecutionSource,
+    flowProvenance?: FlowProvenance
+  ): PersistedDueDiligencePayload {
+    return {
+      risks: risks.map((risk) => risk.id),
+      riskScores,
+      overallRiskScore,
+      summary,
+      recommendations,
+      executionSource,
+      ...(flowProvenance ? { flowProvenance } : {}),
+    };
+  }
+
+  /**
+   * Extract execution mode persisted with an analysis result.
+   */
+  private extractExecutionSource(result: Record<string, unknown> | undefined): AnalysisExecutionSource | undefined {
+    const executionSource = result?.executionSource;
+    if (executionSource === 'flowise' || executionSource === 'local' || executionSource === 'local_fallback') {
+      return executionSource;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract persisted flow provenance, keeping a best-effort catalog fallback for legacy rows.
+   */
+  private extractFlowProvenance(
+    result: Record<string, unknown> | undefined,
+    flowId: string | undefined,
+    completedAt: number | undefined
+  ): FlowProvenance | undefined {
+    const persistedProvenance = result?.flowProvenance;
+    if (this.isFlowProvenance(persistedProvenance)) {
+      return persistedProvenance;
+    }
+
+    const executionSource = this.extractExecutionSource(result);
+    if (executionSource === 'local' || executionSource === 'local_fallback') {
+      return undefined;
+    }
+
+    if (!flowId) {
+      return undefined;
+    }
+
+    const spec = (Object.values(FLOW_CATALOG) as FlowSpec[]).find((candidate) => candidate.id === flowId);
+    if (!spec) {
+      return undefined;
+    }
+
+    return {
+      flowKey: spec.key,
+      flowId: spec.id,
+      promptVersionId: spec.promptVersionId,
+      flowDescription: spec.description,
+      resolvedAt: completedAt ?? Date.now(),
+    };
+  }
+
+  /**
+   * Narrow unknown persisted metadata to FlowProvenance.
+   */
+  private isFlowProvenance(value: unknown): value is FlowProvenance {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const record = value as Record<string, unknown>;
+    return (
+      typeof record.flowKey === 'string' &&
+      isFlowKey(record.flowKey) &&
+      typeof record.flowId === 'string' &&
+      typeof record.promptVersionId === 'string' &&
+      typeof record.flowDescription === 'string' &&
+      typeof record.resolvedAt === 'number'
+    );
+  }
+
   // ============================================================================
   // Analysis Execution
   // ============================================================================
@@ -584,14 +691,10 @@ export class DueDiligenceService {
     try {
       // Validate and resolve flow key if provided
       let flowSpec: FlowSpec | null = null;
-      let flowProvenance: FlowProvenance | undefined;
 
-      if (request.options?.useFlowise && request.options?.flowKey !== undefined) {
+      if (request.options?.useFlowise) {
         try {
           flowSpec = this.validateAndResolveFlowKey(request.options.flowKey);
-          if (flowSpec) {
-            flowProvenance = this.createFlowProvenance(flowSpec);
-          }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           return { success: false, error: message };
@@ -635,11 +738,12 @@ export class DueDiligenceService {
         const dealContext = dealResult.success ? dealResult.data : null;
 
         let risks: RiskFinding[];
+        let executionSource: AnalysisExecutionSource = 'local';
 
         // Use Flowise if configured with a valid flow spec
         if (flowSpec) {
           this.reportProgress(analysis.id, 'analyzing', 30, 'Running Flowise analysis');
-          risks = await this.analyzeWithFlowise(
+          const flowiseOutcome = await this.analyzeWithFlowise(
             analysis.id,
             documents,
             dealContext,
@@ -647,6 +751,8 @@ export class DueDiligenceService {
             request.options.flowiseBaseUrl,
             request.options.flowiseApiKey
           );
+          risks = flowiseOutcome.risks;
+          executionSource = flowiseOutcome.executionSource;
         } else {
           // Fall back to local pattern-based analysis
           risks = await this.analyzeLocally(analysis.id, documents);
@@ -681,6 +787,17 @@ export class DueDiligenceService {
         // Generate summary and recommendations
         const summary = generateSummary(storedRisks, categoryScores);
         const recommendations = generateRecommendations(storedRisks);
+        const flowProvenance =
+          flowSpec && executionSource === 'flowise' ? this.createFlowProvenance(flowSpec) : undefined;
+        const persistedResult = this.buildPersistedAnalysisPayload(
+          storedRisks,
+          categoryScores,
+          overallScore,
+          summary,
+          recommendations,
+          executionSource,
+          flowProvenance
+        );
 
         // Update analysis with results
         const result: DueDiligenceResult = {
@@ -696,13 +813,7 @@ export class DueDiligenceService {
           flowProvenance,
         };
 
-        await this.analysisRepo.markCompleted(analysis.id, {
-          risks: storedRisks.map((r) => r.id),
-          riskScores: categoryScores,
-          overallRiskScore: overallScore,
-          summary,
-          recommendations,
-        });
+        await this.analysisRepo.markCompleted(analysis.id, persistedResult);
 
         this.reportProgress(analysis.id, 'complete', 100, 'Analysis complete');
 
@@ -729,9 +840,8 @@ export class DueDiligenceService {
     flowId: string,
     flowiseBaseUrl?: string,
     flowiseApiKey?: string
-  ): Promise<RiskFinding[]> {
+  ): Promise<FlowiseAnalysisOutcome> {
     const connection = this.initializeFlowiseConnection(flowiseBaseUrl, flowiseApiKey);
-    const risks: RiskFinding[] = [];
 
     // Build context from documents
     const documentContext = documents
@@ -748,20 +858,21 @@ export class DueDiligenceService {
     try {
       // Execute Flowise flow
       const result = await connection.executeFlow(flowId, flowInput);
-
-      // Parse Flowise response
-      const parsedRisks = this.parseFlowiseRiskResponse(result, analysisId, documents);
-      risks.push(...parsedRisks);
+      return {
+        risks: this.parseFlowiseRiskResponse(result, analysisId, documents),
+        executionSource: 'flowise',
+      };
     } catch (error) {
       // If Flowise fails, fall back to local analysis
       if (error instanceof FloWiseError && error.recoverable) {
         console.warn('Flowise analysis failed, falling back to local analysis:', error.message);
-        return this.analyzeLocally(analysisId, documents).then((localRisks) => localRisks);
+        return {
+          risks: await this.analyzeLocally(analysisId, documents),
+          executionSource: 'local_fallback',
+        };
       }
       throw error;
     }
-
-    return risks;
   }
 
   /**
@@ -880,22 +991,7 @@ export class DueDiligenceService {
       const risksResult = await this.analysisRepo.getRiskFindings(id);
       const risks = risksResult.success ? risksResult.data : [];
 
-      // Reconstruct flow provenance if flowId was used
-      let flowProvenance: FlowProvenance | undefined;
-      if (analysis.flowId) {
-        // Try to find the flow spec by flowId (reverse lookup for backward compatibility)
-        // In production, we should store flowKey directly, but for now we reconstruct
-        const spec = (Object.values(FLOW_CATALOG) as FlowSpec[]).find((s) => s.id === analysis.flowId);
-        if (spec) {
-          flowProvenance = {
-            flowKey: spec.key,
-            flowId: spec.id,
-            promptVersionId: spec.promptVersionId,
-            flowDescription: spec.description,
-            resolvedAt: analysis.completedAt ?? Date.now(),
-          };
-        }
-      }
+      const flowProvenance = this.extractFlowProvenance(analysis.result, analysis.flowId, analysis.completedAt);
 
       const result: DueDiligenceResult = {
         id: `dd_${analysis.id}`,
@@ -932,20 +1028,7 @@ export class DueDiligenceService {
           const risksResult = await this.analysisRepo.getRiskFindings(analysis.id);
           const risks = risksResult.success ? risksResult.data : [];
 
-          // Reconstruct flow provenance if flowId was used
-          let flowProvenance: FlowProvenance | undefined;
-          if (analysis.flowId) {
-            const spec = (Object.values(FLOW_CATALOG) as FlowSpec[]).find((s) => s.id === analysis.flowId);
-            if (spec) {
-              flowProvenance = {
-                flowKey: spec.key,
-                flowId: spec.id,
-                promptVersionId: spec.promptVersionId,
-                flowDescription: spec.description,
-                resolvedAt: analysis.completedAt ?? Date.now(),
-              };
-            }
-          }
+          const flowProvenance = this.extractFlowProvenance(analysis.result, analysis.flowId, analysis.completedAt);
 
           results.push({
             id: `dd_${analysis.id}`,
@@ -1073,14 +1156,10 @@ export class DueDiligenceService {
   async *streamAnalysis(request: DueDiligenceRequest): AsyncIterable<AnalysisProgress> {
     // Validate and resolve flow key if provided
     let flowSpec: FlowSpec | null = null;
-    let flowProvenance: FlowProvenance | undefined;
 
-    if (request.options?.useFlowise && request.options?.flowKey) {
+    if (request.options?.useFlowise) {
       try {
         flowSpec = this.validateAndResolveFlowKey(request.options.flowKey);
-        if (flowSpec) {
-          flowProvenance = this.createFlowProvenance(flowSpec);
-        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         yield {
@@ -1155,6 +1234,7 @@ export class DueDiligenceService {
       const dealContext = dealResult.success ? dealResult.data : null;
 
       let risks: RiskFinding[];
+      let executionSource: AnalysisExecutionSource = 'local';
 
       // Use Flowise streaming if configured with a valid flow spec
       if (flowSpec) {
@@ -1165,21 +1245,25 @@ export class DueDiligenceService {
           message: 'Running Flowise analysis',
         };
 
-        risks = [];
-        for await (const progress of this.streamFlowiseAnalysis(
+        const iterator = this.streamFlowiseAnalysis(
           analysis.id,
           documents,
           dealContext,
           flowSpec.id,
           request.options.flowiseBaseUrl,
           request.options.flowiseApiKey
-        )) {
-          yield progress;
-        }
+        );
 
-        // Fetch stored risks after streaming completes
-        const risksResult = await this.analysisRepo.getRiskFindings(analysis.id);
-        risks = risksResult.success ? risksResult.data : [];
+        while (true) {
+          const next = await iterator.next();
+          if (next.done) {
+            risks = next.value.risks;
+            executionSource = next.value.executionSource;
+            break;
+          }
+
+          yield next.value;
+        }
       } else {
         // Local analysis
         const allRiskInputs: CreateRiskFindingInput[] = [];
@@ -1268,15 +1352,20 @@ export class DueDiligenceService {
       // Generate summary and recommendations
       const summary = generateSummary(storedRisks, categoryScores);
       const recommendations = generateRecommendations(storedRisks);
-
-      // Update analysis with results
-      await this.analysisRepo.markCompleted(analysis.id, {
-        risks: storedRisks.map((r) => r.id),
-        riskScores: categoryScores,
-        overallRiskScore: overallScore,
+      const flowProvenance =
+        flowSpec && executionSource === 'flowise' ? this.createFlowProvenance(flowSpec) : undefined;
+      const persistedResult = this.buildPersistedAnalysisPayload(
+        storedRisks,
+        categoryScores,
+        overallScore,
         summary,
         recommendations,
-      });
+        executionSource,
+        flowProvenance
+      );
+
+      // Update analysis with results
+      await this.analysisRepo.markCompleted(analysis.id, persistedResult);
 
       // Yield completion
       yield {
@@ -1308,7 +1397,7 @@ export class DueDiligenceService {
     flowId: string,
     flowiseBaseUrl?: string,
     flowiseApiKey?: string
-  ): AsyncIterable<AnalysisProgress> {
+  ): AsyncGenerator<AnalysisProgress, FlowiseAnalysisOutcome, void> {
     const connection = this.initializeFlowiseConnection(flowiseBaseUrl, flowiseApiKey);
 
     // Build context from documents
@@ -1323,11 +1412,11 @@ export class DueDiligenceService {
       documents: documents.map((d) => d.id),
     };
 
-    let progress = 30;
+    const progress = 30;
 
     try {
       // Stream Flowise response
-      await connection.streamFlow(flowId, flowInput, (_event: FlowEvent) => {
+      const result = await connection.streamFlow(flowId, flowInput, (_event: FlowEvent) => {
         // Progress updates are handled by the generator
       });
 
@@ -1337,6 +1426,10 @@ export class DueDiligenceService {
         progress: Math.min(progress + 30, 70),
         message: 'Processing Flowise response',
       };
+      return {
+        risks: this.parseFlowiseRiskResponse(result, analysisId, documents),
+        executionSource: 'flowise',
+      };
     } catch (error) {
       if (error instanceof FloWiseError && error.recoverable) {
         yield {
@@ -1344,6 +1437,10 @@ export class DueDiligenceService {
           stage: 'analyzing',
           progress: 50,
           message: 'Flowise unavailable, using local analysis',
+        };
+        return {
+          risks: await this.analyzeLocally(analysisId, documents),
+          executionSource: 'local_fallback',
         };
       } else {
         throw error;

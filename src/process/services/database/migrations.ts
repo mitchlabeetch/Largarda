@@ -1496,7 +1496,7 @@ const migration_v28: IMigration = {
     db.exec('DROP TABLE IF EXISTS ma_chatflow_registry');
 
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_flowise_chunk_id');
-    db.exec('DROP INDEX IF NOT EXISTS idx_ma_documents_chunks_chunk_index');
+    db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_chunk_index');
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_deal_id');
     db.exec('DROP INDEX IF EXISTS idx_ma_documents_chunks_document_id');
     db.exec('DROP TABLE IF EXISTS ma_documents_chunks');
