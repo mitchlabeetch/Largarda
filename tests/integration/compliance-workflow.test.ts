@@ -10,6 +10,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import os from 'node:os';
+import path from 'node:path';
 import {
   ComplianceService,
   type ComplianceServiceConfig,
@@ -23,6 +25,7 @@ import type {
   IComplianceWorkflowRepository,
   IDestructiveActionReviewRepository,
 } from '../../src/process/services/database/IComplianceRepository';
+import type { IConversationRepository } from '../../src/process/services/database/IConversationRepository';
 import { AuditActionCategory } from '../../src/common/types/rbacTypes';
 import type {
   IGdprExportRequest,
@@ -35,6 +38,20 @@ import type {
   IDestructiveActionReview,
 } from '../../src/common/types/complianceTypes';
 import type { IQueryResult } from '../../src/process/services/database/types';
+
+vi.mock('@process/utils', () => ({
+  getDataPath: () => path.join(os.tmpdir(), 'aionui-compliance-tests'),
+}));
+
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => process.cwd()), isPackaged: false, on: vi.fn() },
+  safeStorage: {
+    isEncryptionAvailable: vi.fn(() => false),
+    encryptString: vi.fn((value: string) => Buffer.from(value, 'utf-8')),
+    decryptString: vi.fn((value: Buffer) => value.toString('utf-8')),
+    getSelectedStorageBackend: vi.fn(() => 'mock'),
+  },
+}));
 
 // ===== Mock Repositories =====
 
@@ -428,6 +445,40 @@ function createMockAuditLogRepo(): IAuditLogRepository {
   };
 }
 
+function createMockConversationRepo(): IConversationRepository {
+  const conversations = [
+    {
+      id: 'conv_1',
+      title: 'Compliance Conversation',
+      user_id: 'user_123',
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+  ];
+  const messages = [
+    {
+      id: 'msg_1',
+      conversation_id: 'conv_1',
+      type: 'user',
+      content: 'hello',
+      created_at: Date.now(),
+    },
+  ];
+
+  return {
+    getConversation: vi.fn(async (id) => conversations.find((conversation) => conversation.id === id)),
+    createConversation: vi.fn(async () => undefined),
+    updateConversation: vi.fn(async () => undefined),
+    deleteConversation: vi.fn(async () => undefined),
+    getMessages: vi.fn(async () => ({ data: messages, total: messages.length, hasMore: false })),
+    insertMessage: vi.fn(async () => undefined),
+    getUserConversations: vi.fn(async () => ({ data: conversations, total: conversations.length, hasMore: false })),
+    listAllConversations: vi.fn(async () => conversations),
+    searchMessages: vi.fn(async () => ({ items: [], total: 0, page: 0, pageSize: 0, hasMore: false })),
+    getConversationsByCronJob: vi.fn(async () => []),
+  } as IConversationRepository;
+}
+
 // ===== Test Suite =====
 
 describe('Compliance Workflow Coverage', () => {
@@ -438,6 +489,7 @@ describe('Compliance Workflow Coverage', () => {
   let mockReviewRepo: IDestructiveActionReviewRepository;
   let mockVdrRepo: IVdrAccessRepository;
   let auditLogService: AuditLogService;
+  let mockConversationRepo: IConversationRepository;
 
   beforeEach(() => {
     mockExportRepo = createMockExportRepo();
@@ -445,6 +497,7 @@ describe('Compliance Workflow Coverage', () => {
     mockWorkflowRepo = createMockWorkflowRepo();
     mockReviewRepo = createMockReviewRepo();
     mockVdrRepo = createMockVdrRepo();
+    mockConversationRepo = createMockConversationRepo();
     const mockRetentionRepo = createMockRetentionRepo();
     const mockAuditLogRepo = createMockAuditLogRepo();
     auditLogService = new AuditLogService(mockAuditLogRepo);
@@ -456,6 +509,7 @@ describe('Compliance Workflow Coverage', () => {
       mockWorkflowRepo,
       mockReviewRepo,
       auditLogService,
+      mockConversationRepo,
       { requireReview: true, dualApprovalThreshold: 'high_impact' }
     );
   });
@@ -556,6 +610,7 @@ describe('Compliance Workflow Coverage', () => {
       });
 
       const requestId = initResult.data!.id;
+      await service.reviewErasure(requestId, 'reviewer_1', true);
       expect(mockErasureRepo.storeDryRunResults).toHaveBeenCalled();
     });
 
@@ -672,11 +727,13 @@ describe('Destructive Action Safety Coverage', () => {
   let mockWorkflowRepo: IComplianceWorkflowRepository;
   let mockReviewRepo: IDestructiveActionReviewRepository;
   let auditLogService: AuditLogService;
+  let mockConversationRepo: IConversationRepository;
 
   beforeEach(() => {
     mockErasureRepo = createMockErasureRepo();
     mockWorkflowRepo = createMockWorkflowRepo();
     mockReviewRepo = createMockReviewRepo();
+    mockConversationRepo = createMockConversationRepo();
     const mockRetentionRepo = createMockRetentionRepo();
     const mockExportRepo = createMockExportRepo();
     const mockVdrRepo = createMockVdrRepo();
@@ -690,6 +747,7 @@ describe('Destructive Action Safety Coverage', () => {
       mockWorkflowRepo,
       mockReviewRepo,
       auditLogService,
+      mockConversationRepo,
       { requireReview: true, dualApprovalThreshold: 'high_impact' }
     );
   });
@@ -737,7 +795,14 @@ describe('Destructive Action Safety Coverage', () => {
         initiatedBy: 'user_123',
       });
 
+      await service.reviewErasure(initResult.data!.id, 'reviewer_1', true);
       expect(mockErasureRepo.storeDryRunResults).toHaveBeenCalled();
+      const reviewCalls = (mockReviewRepo.create as ReturnType<typeof vi.fn>).mock.calls;
+      expect(reviewCalls[0]?.[0]?.dryRunResults).toMatchObject({
+        conversationsToDelete: expect.any(Number),
+        messagesToDelete: expect.any(Number),
+        estimatedSize: expect.any(Number),
+      });
     });
   });
 
@@ -751,6 +816,7 @@ describe('Destructive Action Safety Coverage', () => {
         mockWorkflowRepo,
         mockReviewRepo,
         auditLogService,
+        createMockConversationRepo(),
         { dualApprovalThreshold: 'always' }
       );
 
@@ -775,6 +841,7 @@ describe('Destructive Action Safety Coverage', () => {
         mockWorkflowRepo,
         mockReviewRepo,
         auditLogService,
+        createMockConversationRepo(),
         { dualApprovalThreshold: 'never' }
       );
 
@@ -825,7 +892,8 @@ describe('Audit Logging Coverage', () => {
       mockVdrRepo,
       mockWorkflowRepo,
       mockReviewRepo,
-      auditLogService
+      auditLogService,
+      createMockConversationRepo()
     );
 
     await service.initiateExport({

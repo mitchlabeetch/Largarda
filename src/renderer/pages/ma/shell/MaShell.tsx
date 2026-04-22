@@ -7,10 +7,11 @@
 import type { ReactNode } from 'react';
 import React from 'react';
 import { Breadcrumb, Space, Typography } from '@arco-design/web-react';
-import { Home, FolderOpen, Analysis, Search, Folder, Peoples, Data } from '@icon-park/react';
+import { Home, FolderOpen, Analysis, Search, Folder, Data } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
+import ShellExtensionSlots from '@renderer/components/ma/ShellExtensionSlots';
 import styles from './MaShell.module.css';
 
 const { Text } = Typography;
@@ -45,8 +46,6 @@ const MaShell: React.FC<MaShellProps> = ({ breadcrumbs, children }) => {
         return <Analysis />;
       case 'company-enrichment':
         return <Search />;
-      case 'contacts':
-        return <Peoples />;
       case 'pipeline':
         return <Data />;
       default:
@@ -70,12 +69,8 @@ const MaShell: React.FC<MaShellProps> = ({ breadcrumbs, children }) => {
           </Space>
         </div>
         <div className={styles.topBarRight}>
-          {/* Extension slots for future use */}
           <div className={styles.extensionSlots} aria-label={t('shell.aria.extensionSlots')}>
-            {/* Extension slot 1 */}
-            <div className={styles.extensionSlot} data-slot='top-right-1' />
-            {/* Extension slot 2 */}
-            <div className={styles.extensionSlot} data-slot='top-right-2' />
+            <ShellExtensionSlots />
           </div>
         </div>
       </header>

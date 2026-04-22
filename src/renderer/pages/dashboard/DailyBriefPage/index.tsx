@@ -37,6 +37,7 @@ import {
   ActivitySource,
 } from '@icon-park/react';
 import { useDailyBrief } from '@renderer/hooks/ma/useDailyBrief';
+import { useMaDateFormatters } from '@renderer/utils/ma/formatters';
 import type { DailyBrief, BriefItem, BriefTimeWindow } from '@/common/ma/types';
 import styles from './DailyBriefPage.module.css';
 
@@ -229,6 +230,7 @@ const BriefTimeline: React.FC<BriefTimelineProps> = ({ items, onNavigate }) => {
 const DailyBriefPage: React.FC = () => {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
+  const { formatDateTime } = useMaDateFormatters();
   const { brief, isLoadingBrief, briefError, timeWindow, setTimeWindow, refreshBrief } = useDailyBrief({
     autoRefresh: true,
     refreshInterval: 60000,
@@ -303,7 +305,7 @@ const DailyBriefPage: React.FC = () => {
               <Title heading={6}>{t('brief.activityTimeline')}</Title>
               <Text type='secondary'>
                 {t('brief.generatedAt', {
-                  time: new Date(brief.generatedAt).toLocaleString(),
+                  time: formatDateTime(brief.generatedAt),
                 })}
               </Text>
             </div>

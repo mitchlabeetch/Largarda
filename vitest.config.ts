@@ -30,7 +30,6 @@ export default defineConfig({
             'tests/unit/**/*.test.ts',
             'tests/unit/**/test_*.ts',
             'tests/integration/**/*.test.ts',
-            'tests/integration/**/*.bench.ts',
             'tests/regression/**/*.test.ts',
           ],
           exclude: ['tests/unit/**/*.dom.test.ts', 'tests/unit/**/*.dom.test.tsx'],
@@ -45,6 +44,15 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['tests/unit/**/*.dom.test.ts', 'tests/unit/**/*.dom.test.tsx'],
           setupFiles: ['./tests/vitest.dom.setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'bench',
+          environment: 'node',
+          include: ['tests/integration/**/*.bench.ts'],
+          setupFiles: ['./tests/vitest.setup.ts'],
         },
       },
     ],
@@ -79,12 +87,11 @@ export default defineConfig({
         'src/common/config/i18n-config.json',
       ],
       // Thresholds apply to the included file set.
-      // Keeping them informational until coverage ramps up across all files.
       thresholds: {
-        statements: 0,
-        branches: 0,
-        functions: 0,
-        lines: 0,
+        statements: 10,
+        branches: 10,
+        functions: 10,
+        lines: 10,
       },
     },
   },

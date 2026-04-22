@@ -22,6 +22,12 @@ import type {
   FlowInput,
   FlowResult,
   FlowEvent,
+  AnalysisType,
+  DueDiligenceRequest,
+  DueDiligenceResult,
+  ComparisonResult,
+  DealComparison,
+  AnalysisProgress,
 } from '@/common/ma/types';
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
@@ -40,39 +46,6 @@ import {
   type FlowProvenance,
 } from '@/common/ma/flowise';
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export type AnalysisType = 'due_diligence' | 'risk_assessment' | 'financial_extraction' | 'document_comparison';
-
-export interface DueDiligenceRequest {
-  dealId: string;
-  documentIds: string[];
-  analysisTypes: AnalysisType[];
-  options?: {
-    flowKey?: FlowKey;
-    skipCache?: boolean;
-    timeout?: number;
-    useFlowise?: boolean;
-    flowiseBaseUrl?: string;
-    flowiseApiKey?: string;
-  };
-}
-
-export interface DueDiligenceResult {
-  id: string;
-  dealId: string;
-  risks: RiskFinding[];
-  riskScores: Record<RiskCategory, number>;
-  overallRiskScore: number;
-  summary: string;
-  recommendations: string[];
-  generatedAt: number;
-  analysisId: string;
-  flowProvenance?: FlowProvenance;
-}
-
 type AnalysisExecutionSource = 'flowise' | 'local' | 'local_fallback';
 
 interface FlowiseAnalysisOutcome {
@@ -90,34 +63,14 @@ interface PersistedDueDiligencePayload extends Record<string, unknown> {
   flowProvenance?: FlowProvenance;
 }
 
-export interface ComparisonResult {
-  dealIds: string[];
-  deals: DealComparison[];
-  comparison: {
-    riskScoreComparison: Record<string, number>;
-    categoryComparison: Record<RiskCategory, Record<string, number>>;
-    topRisks: RiskFinding[];
-    summary: string;
-  };
-  generatedAt: number;
-}
-
-export interface DealComparison {
-  dealId: string;
-  dealName: string;
-  riskScore: number;
-  categoryScores: Record<RiskCategory, number>;
-  topRisks: RiskFinding[];
-}
-
-export interface AnalysisProgress {
-  analysisId: string;
-  stage: 'initializing' | 'extracting' | 'analyzing' | 'scoring' | 'complete' | 'error';
-  progress: number; // 0-100
-  message?: string;
-  currentDocument?: string;
-  risksFound?: number;
-}
+export type {
+  AnalysisType,
+  DueDiligenceRequest,
+  DueDiligenceResult,
+  ComparisonResult,
+  DealComparison,
+  AnalysisProgress,
+};
 
 // ============================================================================
 // Risk Scoring Constants

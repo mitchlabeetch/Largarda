@@ -12,14 +12,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { ipcBridge } from '@/common';
-import type { RiskCategory, RiskFinding } from '@/common/ma/types';
 import type {
+  RiskCategory,
+  RiskFinding,
   DueDiligenceRequest,
   DueDiligenceResult,
   ComparisonResult,
   AnalysisProgress,
   AnalysisType,
-} from '@process/services/ma/DueDiligenceService';
+} from '@/common/ma/types';
 
 // ============================================================================
 // Types
@@ -93,7 +94,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
     status: 'idle',
   });
 
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // Fetch analyses for deal
   const {
@@ -107,12 +108,10 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
     refreshInterval: autoRefresh ? refreshInterval : undefined,
   });
 
-  // Cleanup progress polling on unmount
   useEffect(() => {
     return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
+      progressUnsubscribeRef.current?.();
+      progressUnsubscribeRef.current = null;
     };
   }, []);
 
@@ -129,18 +128,43 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
       // Reset state
       setCurrentAnalysis({
         analysisId: null,
-        progress: {
-          analysisId: 'pending',
-          stage: 'initializing',
-          progress: 0,
-          message: 'Starting analysis...',
-        },
+        progress: null,
         isRunning: true,
         error: null,
         status: 'initializing',
       });
 
       try {
+        progressUnsubscribeRef.current?.();
+        progressUnsubscribeRef.current = ipcBridge.ma.dueDiligence.progress.on((event) => {
+          setCurrentAnalysis((prev) => {
+            if (!prev.isRunning && prev.status !== 'initializing' && prev.status !== 'running') {
+              return prev;
+            }
+
+            if (prev.analysisId && prev.analysisId !== event.analysisId) {
+              return prev;
+            }
+
+            const status: AnalysisLifecycleStatus =
+              event.stage === 'initializing'
+                ? 'initializing'
+                : event.stage === 'complete'
+                  ? 'completed'
+                  : event.stage === 'error'
+                    ? 'failed'
+                    : 'running';
+
+            return {
+              analysisId: event.analysisId,
+              progress: event,
+              isRunning: status === 'initializing' || status === 'running',
+              error: status === 'failed' ? event.message ?? prev.error : null,
+              status,
+            };
+          });
+        });
+
         const fullRequest: DueDiligenceRequest = {
           ...request,
           dealId,
@@ -148,20 +172,20 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
 
         const result = await ipcBridge.ma.dueDiligence.analyze.invoke(fullRequest);
 
-        // Update state with completion
-        setCurrentAnalysis({
+        setCurrentAnalysis((prev) => ({
           analysisId: result.analysisId,
           progress: {
             analysisId: result.analysisId,
             stage: 'complete',
             progress: 100,
             message: 'Analysis complete',
+            currentDocument: prev.progress?.currentDocument,
             risksFound: result.risks.length,
           },
           isRunning: false,
           error: null,
           status: 'completed',
-        });
+        }));
 
         // Refresh analyses list
         mutate();
@@ -184,6 +208,9 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
         }));
 
         throw err;
+      } finally {
+        progressUnsubscribeRef.current?.();
+        progressUnsubscribeRef.current = null;
       }
     },
     [dealId, mutate]
@@ -221,9 +248,8 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
   );
 
   const clearCurrentAnalysis = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
+    progressUnsubscribeRef.current?.();
+    progressUnsubscribeRef.current = null;
 
     setCurrentAnalysis({
       analysisId: null,

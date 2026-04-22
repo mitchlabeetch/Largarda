@@ -611,8 +611,10 @@ export function initMaBridge(): void {
   // Run due diligence analysis
   ipcBridge.ma.dueDiligence.analyze.provider(async (params) => {
     const { DueDiligenceService } = await import('@process/services/ma/DueDiligenceService');
-    const request = params as any;
-    const service = new DueDiligenceService();
+    const request = params as import('@/common/ma/types').DueDiligenceRequest;
+    const service = new DueDiligenceService(undefined, undefined, undefined, (event) => {
+      ipcBridge.ma.dueDiligence.progress.emit(event);
+    });
     const result = await service.analyze(request);
     if (!result.success || !result.data) {
       throw new Error(result.error ?? 'Failed to run analysis');

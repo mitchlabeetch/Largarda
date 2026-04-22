@@ -31,7 +31,7 @@ import { useMaDateFormatters } from '@/renderer/utils/ma/formatters';
 import { EmptyState, ErrorState, Skeleton } from '@/renderer/components/base';
 import { isActiveDocumentStatus } from '@/common/ma/types';
 import type { MaDocument, RiskCategory, RiskSeverity } from '@/common/ma/types';
-import type { AnalysisType, DueDiligenceResult, ComparisonResult } from '@process/services/ma/DueDiligenceService';
+import type { AnalysisType, DueDiligenceResult, ComparisonResult } from '@/common/ma/types';
 import styles from './DueDiligencePage.module.css';
 
 const { Title, Text } = Typography;

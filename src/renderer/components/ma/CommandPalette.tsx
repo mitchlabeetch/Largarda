@@ -5,10 +5,9 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Input, Modal } from '@arco-design/web-react';
+import { Button, Input, Modal } from '@arco-design/web-react';
 import { Search, Keyboard } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import styles from './CommandPalette.module.css';
 
 export interface CommandPaletteItem {
@@ -35,12 +34,10 @@ interface CommandPaletteProps {
 
 const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, categories }) => {
   const { t } = useTranslation('ma');
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [filteredItems, setFilteredItems] = useState<CommandPaletteItem[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Filter items based on search query
   useEffect(() => {
@@ -76,7 +73,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, catego
 
   // Scroll active item into view
   useEffect(() => {
-    const activeElement = itemRefs.current[activeIndex];
+    const activeElement = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
     if (activeElement && listRef.current) {
       activeElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
@@ -175,20 +172,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, catego
             Object.entries(groupedItems).map(([category, items]) => (
               <div key={category} className={styles.category}>
                 <div className={styles.categoryLabel}>{category}</div>
-                {items.map((item, index) => {
+                {items.map((item) => {
                   const globalIndex = filteredItems.indexOf(item);
                   return (
-                    <button
+                    <Button
                       key={item.id}
-                      ref={(el) => {
-                        itemRefs.current[globalIndex] = el;
-                      }}
-                      type='button'
+                      type='text'
                       role='option'
                       aria-selected={globalIndex === activeIndex}
                       className={`${styles.item} ${globalIndex === activeIndex ? styles.itemActive : ''}`}
                       onClick={() => handleItemClick(item)}
                       onMouseEnter={() => setActiveIndex(globalIndex)}
+                      long
                     >
                       {item.icon && <span className={styles.itemIcon}>{item.icon}</span>}
                       <div className={styles.itemContent}>
@@ -196,7 +191,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, catego
                         {item.description && <span className={styles.itemDescription}>{item.description}</span>}
                       </div>
                       {item.shortcut && <span className={styles.itemShortcut}>{item.shortcut}</span>}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>

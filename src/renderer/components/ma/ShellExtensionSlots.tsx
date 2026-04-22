@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import CommandPalette, { type CommandPaletteItem, type CommandPaletteCategory } from './CommandPalette';
+import { Button } from '@arco-design/web-react';
+import CommandPalette, { type CommandPaletteCategory } from './CommandPalette';
 import { Home, FolderOpen, Analysis, Search, Plus, Setting, Keyboard } from '@icon-park/react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -120,45 +121,19 @@ const ShellExtensionSlots: React.FC<ShellExtensionSlotsProps> = ({ onCommandPale
 
   return (
     <>
-      {/* Top-right extension slot 1: Command palette trigger button */}
       <div className='extension-slot' data-slot='top-right-1'>
-        <button
-          type='button'
+        <Button
+          type='text'
+          shape='circle'
+          size='small'
+          icon={<Keyboard />}
           onClick={() => setIsCommandPaletteOpen(true)}
-          className='command-palette-trigger'
           aria-label={t('commandPalette.open')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '32px',
-            height: '32px',
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--color-text-2)',
-            cursor: 'pointer',
-            borderRadius: '6px',
-            transition: 'background-color 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-fill-1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <Keyboard style={{ fontSize: '18px' }} />
-        </button>
+          className='command-palette-trigger'
+        />
       </div>
 
-      {/* Top-right extension slot 2: Reserved for future use */}
       <div className='extension-slot' data-slot='top-right-2' />
-
-      {/* Sidebar extension slots */}
-      <div className='extension-slot' data-slot='sidebar-top' />
-      <div className='extension-slot' data-slot='sidebar-bottom' />
-
-      {/* Command Palette Modal */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={handleCloseCommandPalette}

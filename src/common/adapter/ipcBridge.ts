@@ -1339,21 +1339,11 @@ import type {
   CreateSyncJobInput,
   SyncJobProgress,
   SyncReadiness,
-} from '@/common/ma/types';
-import type {
   DueDiligenceRequest,
   DueDiligenceResult,
   ComparisonResult,
-} from '@process/services/ma/DueDiligenceService';
-import type { Contact, CreateContactInput, UpdateContactInput } from '@/common/ma/contact/schema';
-import type {
-  Watchlist,
-  CreateWatchlistInput,
-  UpdateWatchlistInput,
-  WatchlistHit,
-  CreateWatchlistHitInput,
-  UpdateWatchlistHitInput,
-} from '@/common/ma/watchlist/schema';
+  AnalysisProgress,
+} from '@/common/ma/types';
 // import type { Company } from '@/common/ma/types'; // For deferred companyEnrichment
 
 export const ma = {
@@ -1450,6 +1440,7 @@ export const ma = {
     getAnalysis: bridge.buildProvider<DueDiligenceResult | null, { id: string }>('ma.due-diligence.get'),
     listAnalyses: bridge.buildProvider<DueDiligenceResult[], { dealId: string }>('ma.due-diligence.list'),
     compareDeals: bridge.buildProvider<ComparisonResult, { dealIds: string[] }>('ma.due-diligence.compare'),
+    progress: bridge.buildEmitter<AnalysisProgress>('ma.due-diligence.progress'),
   },
   // NOTE: Contact and Watchlist operations were removed in Wave 4 / Batch 4A
   // See docs/audit/2026-04-22-wave-4-batch-4a-pass.md for disposition rationale

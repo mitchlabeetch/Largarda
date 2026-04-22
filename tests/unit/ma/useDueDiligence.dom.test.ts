@@ -18,6 +18,7 @@ const mockListAnalyses = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 const mockAnalyze = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     id: 'analysis-1',
+    analysisId: 'analysis-1',
     dealId: 'deal-1',
     type: 'due_diligence',
     status: 'completed',
@@ -41,6 +42,7 @@ const mockCompareDeals = vi.hoisted(() =>
   })
 );
 const mockListRiskFindings = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockProgressOn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/common', () => ({
   ipcBridge: {
@@ -50,6 +52,7 @@ vi.mock('@/common', () => ({
         analyze: { invoke: mockAnalyze },
         getAnalysis: { invoke: mockGetAnalysis },
         compareDeals: { invoke: mockCompareDeals },
+        progress: { on: mockProgressOn },
       },
       riskFinding: {
         listByAnalysis: { invoke: mockListRiskFindings },
@@ -64,6 +67,7 @@ describe('useDueDiligence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     swrMutate = vi.fn();
+    mockProgressOn.mockImplementation(() => () => undefined);
   });
 
   it('does not expose cancelAnalysis function since no backend cancel contract exists', () => {
@@ -92,6 +96,23 @@ describe('useDueDiligence', () => {
   });
 
   it('startAnalysis completes successfully and sets completed status', async () => {
+    mockProgressOn.mockImplementation((handler: (event: unknown) => void) => {
+      handler({
+        analysisId: 'analysis-1',
+        stage: 'analyzing',
+        progress: 42,
+        message: 'Running analysis',
+      });
+      handler({
+        analysisId: 'analysis-1',
+        stage: 'complete',
+        progress: 100,
+        message: 'Analysis complete',
+        risksFound: 0,
+      });
+      return () => undefined;
+    });
+
     const { result } = renderHook(() => useDueDiligence({ dealId: 'deal-1' }));
 
     await act(async () => {
@@ -108,6 +129,8 @@ describe('useDueDiligence', () => {
     });
 
     expect(result.current.currentAnalysis.status).toBe('completed');
+    expect(result.current.currentAnalysis.analysisId).toBe('analysis-1');
+    expect(result.current.currentAnalysis.progress?.progress).toBe(100);
   });
 
   it('startAnalysis sets failed status on error', async () => {

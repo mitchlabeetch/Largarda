@@ -24,6 +24,27 @@ vi.mock('react-i18next', () => ({
           'dealContext.title': 'Deal Management',
           'dueDiligence.title': 'Due Diligence Analysis',
           'companyEnrichment.title': 'Company Enrichment',
+          'pipeline.title': 'Pipeline',
+          'commandPalette.open': 'Open command palette',
+          'commandPalette.categories.navigation': 'Navigation',
+          'commandPalette.categories.actions': 'Actions',
+          'commandPalette.categories.settings': 'Settings',
+          'commandPalette.commands.home': 'Home',
+          'commandPalette.commands.homeDesc': 'Go home',
+          'commandPalette.commands.dealContext': 'Deal Context',
+          'commandPalette.commands.dealContextDesc': 'Open deal context',
+          'commandPalette.commands.dueDiligence': 'Due Diligence',
+          'commandPalette.commands.dueDiligenceDesc': 'Open due diligence',
+          'commandPalette.commands.companyEnrichment': 'Company Enrichment',
+          'commandPalette.commands.companyEnrichmentDesc': 'Open company enrichment',
+          'commandPalette.commands.newDeal': 'New Deal',
+          'commandPalette.commands.newDealDesc': 'Create a new deal',
+          'commandPalette.commands.keyboardShortcuts': 'Keyboard Shortcuts',
+          'commandPalette.commands.keyboardShortcutsDesc': 'View shortcuts',
+          'commandPalette.placeholder': 'Search commands',
+          'commandPalette.noResults': 'No results',
+          'commandPalette.keyboardHint': 'Use arrow keys to navigate',
+          'commandPalette.results': 'results',
         }) as Record<string, string>
       )[key] ?? key,
   }),
@@ -128,6 +149,30 @@ describe('M&A Shell Route Coverage', () => {
 
     expect(await screen.findByTestId('ma-landing')).toBeInTheDocument();
   });
+
+  it('redirects deal and document drilldown routes to the deal-context surface', async () => {
+    render(
+      <MemoryRouter initialEntries={['/ma/deals/deal-1/documents/doc-1']}>
+        <Routes>
+          <Route path='/ma/*' element={<MaShellRouter />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId('deal-context')).toBeInTheDocument();
+  });
+
+  it('redirects analysis drilldown routes to the due-diligence surface', async () => {
+    render(
+      <MemoryRouter initialEntries={['/ma/analyses/analysis-1/findings/finding-1']}>
+        <Routes>
+          <Route path='/ma/*' element={<MaShellRouter />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId('due-diligence')).toBeInTheDocument();
+  });
 });
 
 describe('M&A Shell Landmark and Keyboard Coverage', () => {
@@ -172,9 +217,8 @@ describe('M&A Shell Landmark and Keyboard Coverage', () => {
     expect(breadcrumbs).toHaveLength(2); // Home and Deal Context
 
     // Test keyboard navigation on breadcrumbs
-    const homeBreadcrumb = breadcrumbs[0];
     await user.tab();
-    expect(homeBreadcrumb).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Open command palette' })).toHaveFocus();
   });
 
   it('breadcrumbs are clickable and navigate correctly', async () => {
@@ -208,11 +252,21 @@ describe('M&A Shell Landmark and Keyboard Coverage', () => {
     const extensionSlots = screen.getByLabelText('Extension slots in top bar');
     expect(extensionSlots).toBeInTheDocument();
 
-    const slots = within(extensionSlots).queryAllByTestId((_, element) => {
-      return element?.getAttribute('data-slot')?.startsWith('top-right') ?? false;
-    });
+    const slots = extensionSlots.querySelectorAll('[data-slot^="top-right"]');
 
     expect(slots.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('mounts the command palette trigger inside the shell top bar', async () => {
+    render(
+      <MemoryRouter initialEntries={['/ma']}>
+        <Routes>
+          <Route path='/ma/*' element={<MaShellRouter />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: 'Open command palette' })).toBeInTheDocument();
   });
 
   it('main content is keyboard focusable via landmark', async () => {

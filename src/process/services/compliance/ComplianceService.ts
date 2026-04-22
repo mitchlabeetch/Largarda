@@ -29,7 +29,12 @@ import type {
 } from '@process/services/database/IComplianceRepository';
 import type { IQueryResult } from '@process/services/database/types';
 import type { IConversationRepository } from '@process/services/database/IConversationRepository';
+import { SqliteConversationRepository } from '@process/services/database/SqliteConversationRepository';
+import { getDatabase } from '@process/services/database';
+import { getDataPath } from '@process/utils';
 import type { TChatConversation } from '@/common/config/storage';
+import type { TMessage } from '@/common/chat/chatLib';
+import path from 'path';
 
 export interface ComplianceServiceConfig {
   requireReview: boolean;
@@ -80,8 +85,31 @@ export interface VdrRequestInput {
   purpose?: string;
 }
 
+type ConversationWithMessages = {
+  conversation: TChatConversation;
+  messages: TMessage[];
+  estimatedSize: number;
+};
+
+type DiscoveredUserData = {
+  userId: string;
+  userRecord: unknown | null;
+  conversations: ConversationWithMessages[];
+  totalMessages: number;
+  estimatedSize: number;
+  auditLogs: unknown[];
+  evidence: {
+    discoveredAt: number;
+    conversationCount: number;
+    messageCount: number;
+    auditLogCount: number;
+    estimatedSizeBytes: number;
+  };
+};
+
 export class ComplianceService {
   private config: ComplianceServiceConfig;
+  private conversationRepo: IConversationRepository;
 
   constructor(
     private exportRepo: IGdprExportRepository,
@@ -91,10 +119,21 @@ export class ComplianceService {
     private workflowRepo: IComplianceWorkflowRepository,
     private reviewRepo: IDestructiveActionReviewRepository,
     private auditLog: AuditLogService,
-    private conversationRepo: IConversationRepository,
+    conversationRepoOrConfig?: IConversationRepository | Partial<ComplianceServiceConfig>,
     config?: Partial<ComplianceServiceConfig>
   ) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    const looksLikeConversationRepo =
+      conversationRepoOrConfig &&
+      typeof conversationRepoOrConfig === 'object' &&
+      'listAllConversations' in conversationRepoOrConfig;
+
+    this.conversationRepo = looksLikeConversationRepo
+      ? (conversationRepoOrConfig as IConversationRepository)
+      : new SqliteConversationRepository();
+    this.config = {
+      ...DEFAULT_CONFIG,
+      ...(looksLikeConversationRepo ? config : (conversationRepoOrConfig as Partial<ComplianceServiceConfig> | undefined)),
+    };
   }
 
   // ===== GDPR Export Workflow =====
@@ -165,11 +204,11 @@ export class ComplianceService {
       if (!request.success || !request.data) return { success: false, error: 'Request not found' };
 
       // Discover user data
-      const userData = await this.discoverUserData(request.data.userId);
+      const userData = await this.discoverUserData(request.data.userId, request.data.scope);
 
       // Create export file
-      const exportPath = `/tmp/gdpr-export-${requestId}.json.gz`;
-      await this.createExportFile(exportPath, userData);
+      const exportPath = this.getExportPath(requestId);
+      await this.createExportFile(exportPath, request.data, userData);
 
       // Mark as completed
       const expiresAt = Date.now() + (this.config.exportExpirationHours * 60 * 60 * 1000);
@@ -225,7 +264,20 @@ export class ComplianceService {
     if (this.config.requireReview) {
       await this.workflowRepo.updateStatus(workflow.data.id, 'pending_review');
     } else {
-      await this.performDryRun(request.data!.id);
+      const dryRunResult = await this.performDryRun(request.data!.id);
+      if (!dryRunResult.success || !dryRunResult.data) {
+        return { success: false, error: dryRunResult.error ?? 'Failed to perform dry run' };
+      }
+
+      if (this.requiresDualApproval('erase_user_data')) {
+        await this.createDestructiveReview(workflow.data.id, 'erase_user_data', input.initiatedBy, dryRunResult.data);
+        await this.workflowRepo.updateStatus(workflow.data.id, 'awaiting_confirmation');
+      } else {
+        const executionResult = await this.executeErasure(request.data!.id, workflow.data.id);
+        if (!executionResult.success) {
+          return { success: false, error: executionResult.error ?? 'Failed to execute erasure' };
+        }
+      }
     }
     return request;
   }
@@ -254,11 +306,19 @@ export class ComplianceService {
 
     if (approved) {
       await this.workflowRepo.markReviewed(workflow!.id, reviewerId, true, notes);
+      const dryRunResult = await this.performDryRun(requestId);
+      if (!dryRunResult.success || !dryRunResult.data) {
+        return { success: false, error: dryRunResult.error ?? 'Failed to perform dry run' };
+      }
+
       if (this.requiresDualApproval('erase_user_data')) {
-        await this.createDestructiveReview(workflow!.id, 'erase_user_data', reviewerId, request.data);
+        await this.createDestructiveReview(workflow!.id, 'erase_user_data', reviewerId, dryRunResult.data);
         await this.workflowRepo.updateStatus(workflow!.id, 'awaiting_confirmation');
       } else {
-        await this.executeErasure(requestId, workflow!.id);
+        const executionResult = await this.executeErasure(requestId, workflow!.id);
+        if (!executionResult.success) {
+          return executionResult;
+        }
       }
     } else {
       await this.erasureRepo.cancel(requestId, notes ?? 'Rejected by reviewer');
@@ -267,13 +327,15 @@ export class ComplianceService {
     return { success: true, data: undefined };
   }
 
-  private async performDryRun(requestId: string): Promise<IQueryResult<void>> {
+  private async performDryRun(
+    requestId: string
+  ): Promise<IQueryResult<NonNullable<IGdprErasureRequest['dryRunResults']>>> {
     const request = await this.erasureRepo.getById(requestId);
     if (!request.success || !request.data) return { success: false, error: 'Request not found' };
 
     try {
       // Discover user data without deleting
-      const userData = await this.discoverUserData(request.data.userId);
+      const userData = await this.discoverUserData(request.data.userId, request.data.scope);
 
       const dryRunResults = {
         conversationsToDelete: userData.conversations.length,
@@ -282,9 +344,7 @@ export class ComplianceService {
       };
 
       await this.erasureRepo.storeDryRunResults(requestId, dryRunResults);
-      await this.erasureRepo.markExecuted(requestId);
-
-      return { success: true, data: undefined };
+      return { success: true, data: dryRunResults };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to perform dry run';
       return { success: false, error: message };
@@ -297,15 +357,38 @@ export class ComplianceService {
       if (!request.success || !request.data) return { success: false, error: 'Request not found' };
 
       // Discover and delete user data
-      const userData = await this.discoverUserData(request.data.userId);
+      const userData = await this.discoverUserData(request.data.userId, request.data.scope);
+
+      if (request.data.scope.messages.length > 0 && request.data.scope.conversations.length === 0) {
+        throw new Error('Selective message erasure is not supported without conversation-level scope');
+      }
       
       let conversationsDeleted = 0;
       let messagesDeleted = 0;
+      let auditLogsDeleted = 0;
+      let userRecordsDeleted = 0;
 
       for (const conversation of userData.conversations) {
-        await this.conversationRepo.deleteConversation(conversation.id);
+        await this.conversationRepo.deleteConversation(conversation.conversation.id);
         conversationsDeleted++;
-        messagesDeleted += userData.totalMessages;
+        messagesDeleted += conversation.messages.length;
+      }
+
+      const db = this.conversationRepo instanceof SqliteConversationRepository ? await getDatabase() : null;
+      const driver = db?.getDriver();
+
+      if (request.data.scope.auditLogs && driver) {
+        const auditLogDeleteResult = driver.prepare('DELETE FROM audit_logs WHERE user_id = ?').run(request.data.userId) as
+          | { changes?: number }
+          | undefined;
+        auditLogsDeleted = auditLogDeleteResult?.changes ?? 0;
+      }
+
+      if (request.data.scope.userData && driver) {
+        const userDeleteResult = driver.prepare('DELETE FROM users WHERE id = ?').run(request.data.userId) as
+          | { changes?: number }
+          | undefined;
+        userRecordsDeleted = userDeleteResult?.changes ?? 0;
       }
 
       const bytesFreed = userData.estimatedSize;
@@ -319,7 +402,14 @@ export class ComplianceService {
         description: `GDPR erasure executed for user ${request.data.userId}`,
         userId: request.data.userId,
         success: true,
-        metadata: { requestId, workflowId, actualResults },
+        metadata: {
+          requestId,
+          workflowId,
+          actualResults,
+          evidence: userData.evidence,
+          auditLogsDeleted,
+          userRecordsDeleted,
+        },
       });
       
       return { success: true, data: undefined };
@@ -474,46 +564,103 @@ export class ComplianceService {
   }
 
   // ===== Data Discovery Helper =====
-  private async discoverUserData(userId: string): Promise<{
-    conversations: TChatConversation[];
-    totalMessages: number;
-    estimatedSize: number;
-  }> {
-    // Note: TChatConversation doesn't have a userId field.
-    // For now, we'll return all conversations as a placeholder.
-    // This needs to be updated once user-conversation mapping is implemented.
-    const conversations = await this.conversationRepo.listAllConversations();
-    const userConversations = conversations; // TODO: Filter by userId once mapping is available
-    
-    let totalMessages = 0;
-    let estimatedSize = 0;
-    
-    for (const conversation of userConversations) {
-      const messagesResult = await this.conversationRepo.getMessages(conversation.id, 0, 10000);
-      totalMessages += messagesResult.data.length;
-      
-      // Estimate size: conversation JSON + messages JSON
-      estimatedSize += JSON.stringify(conversation).length;
-      for (const message of messagesResult.data) {
-        estimatedSize += JSON.stringify(message).length;
+  private async discoverUserData(
+    userId: string,
+    scope?: IGdprExportRequest['scope'] | IGdprErasureRequest['scope']
+  ): Promise<DiscoveredUserData> {
+    const dateRange =
+      scope && 'dateRange' in scope
+        ? scope.dateRange
+        : undefined;
+    const scopedConversationIds =
+      scope && 'conversations' in scope && scope.conversations.length > 0 ? new Set(scope.conversations) : null;
+    const hasScopedUserStore = this.conversationRepo instanceof SqliteConversationRepository;
+    const db = hasScopedUserStore ? await getDatabase() : null;
+    const userResult = db?.getUser(userId);
+    const userRecord = userResult?.success ? userResult.data ?? null : null;
+    const conversations = hasScopedUserStore
+      ? (db?.getUserConversations(userId, 0, 10000).data ?? [])
+      : await this.conversationRepo.listAllConversations();
+    const filteredConversations = conversations.filter((conversation) => {
+      if (scopedConversationIds && !scopedConversationIds.has(conversation.id)) {
+        return false;
       }
+      if (dateRange) {
+        return conversation.createTime >= dateRange.start && conversation.createTime <= dateRange.end;
+      }
+      return true;
+    });
+
+    const conversationsWithMessages: ConversationWithMessages[] = [];
+    let totalMessages = 0;
+    let estimatedSize = userRecord ? JSON.stringify(userRecord).length : 0;
+
+    for (const conversation of filteredConversations) {
+      const messagesResult = await this.conversationRepo.getMessages(conversation.id, 0, 10000);
+      const messages = messagesResult.data.filter((message) => {
+        if (!dateRange) {
+          return true;
+        }
+        return message.createdAt >= dateRange.start && message.createdAt <= dateRange.end;
+      });
+
+      const conversationSize =
+        JSON.stringify(conversation).length + messages.reduce((sum, message) => sum + JSON.stringify(message).length, 0);
+
+      conversationsWithMessages.push({
+        conversation,
+        messages,
+        estimatedSize: conversationSize,
+      });
+      totalMessages += messages.length;
+      estimatedSize += conversationSize;
     }
-    
+
+    const includeAuditLogs =
+      (scope && 'includeAuditLogs' in scope && scope.includeAuditLogs) ||
+      (scope && 'auditLogs' in scope && scope.auditLogs);
+    const auditLogs = includeAuditLogs
+      ? (await this.auditLog.query({
+          userId,
+          startTime: dateRange?.start,
+          endTime: dateRange?.end,
+          page: 0,
+          pageSize: 10000,
+        })).logs
+      : [];
+
+    estimatedSize += auditLogs.reduce((sum, log) => sum + JSON.stringify(log).length, 0);
+
     return {
-      conversations: userConversations,
+      userId,
+      userRecord,
+      conversations: conversationsWithMessages,
       totalMessages,
       estimatedSize,
+      auditLogs,
+      evidence: {
+        discoveredAt: Date.now(),
+        conversationCount: conversationsWithMessages.length,
+        messageCount: totalMessages,
+        auditLogCount: auditLogs.length,
+        estimatedSizeBytes: estimatedSize,
+      },
     };
   }
 
   // ===== Export File Generation Helper =====
-  private async createExportFile(filePath: string, userData: {
-    conversations: TChatConversation[];
-    totalMessages: number;
-    estimatedSize: number;
-  }): Promise<void> {
+  private async createExportFile(
+    filePath: string,
+    request: IGdprExportRequest,
+    userData: DiscoveredUserData
+  ): Promise<void> {
     const exportData = {
       exportedAt: new Date().toISOString(),
+      requestId: request.id,
+      userId: request.userId,
+      userRecord: userData.userRecord,
+      evidence: userData.evidence,
+      auditLogs: userData.auditLogs,
       conversations: [] as Array<TChatConversation & { messages: unknown[] }>,
       summary: {
         totalConversations: userData.conversations.length,
@@ -522,17 +669,24 @@ export class ComplianceService {
       },
     };
     
-    // Fetch all messages for each conversation
     for (const conversation of userData.conversations) {
-      const messagesResult = await this.conversationRepo.getMessages(conversation.id, 0, 10000);
       exportData.conversations.push({
-        ...conversation,
-        messages: messagesResult.data,
+        ...conversation.conversation,
+        messages: conversation.messages,
       });
     }
     
-    // Write the data directly
-    const { writeFile } = await import('node:fs/promises');
-    await writeFile(filePath, JSON.stringify(exportData, null, 2));
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    const { gzip } = await import('node:zlib');
+    const { promisify } = await import('node:util');
+    const gzipAsync = promisify(gzip);
+
+    await mkdir(path.dirname(filePath), { recursive: true });
+    const payload = await gzipAsync(Buffer.from(JSON.stringify(exportData, null, 2), 'utf-8'));
+    await writeFile(filePath, payload);
+  }
+
+  private getExportPath(requestId: string): string {
+    return path.join(getDataPath(), 'compliance', 'exports', `gdpr-export-${requestId}.json.gz`);
   }
 }

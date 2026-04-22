@@ -38,6 +38,7 @@
     "format:check": "oxfmt --check",
     "i18n:types": "node scripts/generate-i18n-types.js",
     "test": "vitest run",
+    "test:bench": "vitest run --project bench",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:contract": "vitest run tests/contract --passWithNoTests",

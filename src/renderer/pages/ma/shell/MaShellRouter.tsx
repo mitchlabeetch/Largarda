@@ -5,7 +5,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { Navigate, Route, Routes, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MaShell from './MaShell';
 import AppLoader from '@renderer/components/layout/AppLoader';
@@ -22,6 +22,11 @@ const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentT
     <Component />
   </Suspense>
 );
+
+const RouteRedirect: React.FC<{ to: string }> = ({ to }) => {
+  const location = useLocation();
+  return <Navigate to={{ pathname: to, search: location.search, hash: location.hash }} replace />;
+};
 
 const MaShellRouter: React.FC = () => {
   const { t } = useTranslation('ma');
@@ -53,7 +58,15 @@ const MaShellRouter: React.FC = () => {
         case 'valuation':
           items.push({ key: 'valuation', label: t('valuation.title'), path: '/ma/valuation' });
           break;
-        case 'contacts':
+        case 'deals':
+        case 'documents':
+          items.push({ key: 'deal-context', label: t('dealContext.title'), path: '/ma/deal-context' });
+          break;
+        case 'analyses':
+        case 'risk-findings':
+          items.push({ key: 'due-diligence', label: t('dueDiligence.title'), path: '/ma/due-diligence' });
+          break;
+        case 'pipeline':
           items.push({ key: 'pipeline', label: t('pipeline.title'), path: '/ma/pipeline' });
           break;
       }
@@ -71,6 +84,18 @@ const MaShellRouter: React.FC = () => {
         <Route path='company-enrichment' element={withRouteFallback(CompanyEnrichmentPage)} />
         <Route path='valuation' element={withRouteFallback(ValuationWorkbenchPage)} />
         <Route path='pipeline' element={withRouteFallback(PipelinePage)} />
+        <Route path='deals/:dealId' element={<RouteRedirect to='/ma/deal-context' />} />
+        <Route path='deals/:dealId/documents/:documentId' element={<RouteRedirect to='/ma/deal-context' />} />
+        <Route path='deals/:dealId/analyses/:analysisId' element={<RouteRedirect to='/ma/due-diligence' />} />
+        <Route
+          path='deals/:dealId/analyses/:analysisId/findings/:findingId'
+          element={<RouteRedirect to='/ma/due-diligence' />}
+        />
+        <Route path='documents' element={<RouteRedirect to='/ma/deal-context' />} />
+        <Route path='documents/:documentId' element={<RouteRedirect to='/ma/deal-context' />} />
+        <Route path='analyses/:analysisId' element={<RouteRedirect to='/ma/due-diligence' />} />
+        <Route path='analyses/:analysisId/findings/:findingId' element={<RouteRedirect to='/ma/due-diligence' />} />
+        <Route path='risk-findings' element={<RouteRedirect to='/ma/due-diligence' />} />
         <Route path='*' element={<Navigate to='/ma' replace />} />
       </Routes>
     </MaShell>
