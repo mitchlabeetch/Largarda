@@ -5,15 +5,15 @@
  */
 
 import React, { useCallback, useState, useRef } from 'react';
-import { Upload, Progress, Button } from '@arco-design/web-react';
+import { Upload, Progress, Button, Spin } from '@arco-design/web-react';
 import { Upload as UploadIcon, Close, FileText } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
-import { ipcBridge } from '@/common';
+import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
+import type { UploadStateItem } from '@/renderer/hooks/ma/useDocuments';
 import type { DocumentFormat } from '@/common/ma/types';
 import styles from './DocumentUpload.module.css';
 
 const SUPPORTED_FORMATS: DocumentFormat[] = ['pdf', 'docx', 'xlsx', 'txt'];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 interface DocumentUploadProps {
   /** Deal ID to associate documents with */
@@ -28,12 +28,25 @@ interface DocumentUploadProps {
   className?: string;
 }
 
-interface UploadProgress {
-  uid: string;
-  filename: string;
-  progress: number;
-  status: 'uploading' | 'success' | 'error';
-  error?: string;
+function getStatusLabel(t: (key: string, options?: Record<string, unknown>) => string, item: UploadStateItem): string {
+  switch (item.status) {
+    case 'validating':
+      return t('documentUpload.status.validating' as string);
+    case 'uploading':
+      return t('documentUpload.status.uploading' as string);
+    case 'ingesting':
+      return item.stage
+        ? t(`documentUpload.stage.${item.stage}` as string, { defaultValue: item.stage })
+        : t('documentUpload.status.ingesting' as string);
+    case 'completed':
+      return t('documentUpload.status.uploaded');
+    case 'failed':
+      return t('documentUpload.status.failed');
+    case 'cancelled':
+      return t('documentUpload.status.cancelled' as string);
+    default:
+      return item.status;
+  }
 }
 
 export function DocumentUpload({
@@ -44,139 +57,64 @@ export function DocumentUpload({
   className,
 }: DocumentUploadProps) {
   const { t } = useTranslation('ma');
-  const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
   const uploadRef = useRef<HTMLDivElement>(null);
 
-  const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
-    const extension = file.name.split('.').pop()?.toLowerCase() as DocumentFormat | undefined;
-
-    if (!extension || !SUPPORTED_FORMATS.includes(extension)) {
-      return {
-        valid: false,
-        error: `Unsupported format: .${extension || 'unknown'}. Supported formats: PDF, DOCX, XLSX, TXT`,
-      };
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return {
-        valid: false,
-        error: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum size: 50MB`,
-      };
-    }
-
-    return { valid: true };
-  }, []);
-
-  const handleUpload = useCallback(
-    async (file: File): Promise<{ id: string; filename: string }> => {
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        throw new Error(validation.error);
-      }
-
-      const extension = file.name.split('.').pop()?.toLowerCase() as DocumentFormat;
-      const uid = `${Date.now()}-${file.name}`;
-
-      // Initialize progress
-      setUploadProgress((prev) => {
-        const next = new Map(prev);
-        next.set(uid, {
-          uid,
-          filename: file.name,
-          progress: 0,
-          status: 'uploading',
-        });
-        return next;
-      });
-
-      try {
-        // Create document record
-        const document = await ipcBridge.ma.document.create.invoke({
-          dealId,
-          filename: file.name,
-          originalPath: file.name, // Will be updated with actual path after processing
-          format: extension,
-          size: file.size,
-        });
-
-        // Simulate progress for large files
-        // In real implementation, this would be driven by IPC events
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          setUploadProgress((prev) => {
-            const next = new Map(prev);
-            const current = next.get(uid);
-            if (current) {
-              next.set(uid, { ...current, progress });
-            }
-            return next;
-          });
-        }
-
-        // Update status to success
-        setUploadProgress((prev) => {
-          const next = new Map(prev);
-          next.set(uid, {
-            uid,
-            filename: file.name,
-            progress: 100,
-            status: 'success',
-          });
-          return next;
-        });
-
-        return { id: document.id, filename: file.name };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t('documentUpload.errors.uploadFailed');
-
-        setUploadProgress((prev) => {
-          const next = new Map(prev);
-          next.set(uid, {
-            uid,
-            filename: file.name,
-            progress: 0,
-            status: 'error',
-            error: errorMessage,
-          });
-          return next;
-        });
-
-        throw error;
-      }
-    },
-    [dealId, validateFile]
-  );
+  const { upload, uploadStatus, clearUploadStatus, cancelUpload } = useDocuments({
+    dealId,
+    autoRefresh: false,
+  });
 
   const handleRequest = useCallback(
     async (options: {
       onProgress: (percent: number) => void;
       onSuccess: () => void;
       onError: (error: Error) => void;
+      file: File;
     }) => {
-      const { onProgress, onSuccess, onError } = options;
-      const file = (options as unknown as { file: File }).file;
+      const { onSuccess, onError, file } = options;
 
       try {
-        const result = await handleUpload(file);
+        const result = await upload(file);
         onSuccess();
-        onUploadComplete?.([result]);
+        onUploadComplete?.([{ id: result.id, filename: result.filename }]);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t('documentUpload.errors.uploadFailed');
+        let errorMessage = t('documentUpload.errors.uploadFailed');
+        if (error instanceof Error) {
+          try {
+            const parsed = JSON.parse(error.message) as {
+              key?: string;
+              context?: Record<string, unknown>;
+            };
+            if (parsed.key) {
+              errorMessage = t(parsed.key as string, parsed.context ?? {});
+            } else {
+              errorMessage = error.message;
+            }
+          } catch {
+            errorMessage = error.message;
+          }
+        }
         onError(new Error(errorMessage));
-        onUploadError?.(error instanceof Error ? error : new Error(errorMessage));
+        onUploadError?.(new Error(errorMessage));
       }
     },
-    [handleUpload, onUploadComplete, onUploadError]
+    [upload, onUploadComplete, onUploadError, t]
   );
 
-  const handleRemove = useCallback((uid: string) => {
-    setUploadProgress((prev) => {
-      const next = new Map(prev);
-      next.delete(uid);
-      return next;
-    });
-  }, []);
+  const handleRemove = useCallback(
+    (uploadId: string) => {
+      clearUploadStatus(uploadId);
+    },
+    [clearUploadStatus]
+  );
+
+  const handleCancel = useCallback(
+    async (uploadId: string) => {
+      await cancelUpload(uploadId);
+    },
+    [cancelUpload]
+  );
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -196,40 +134,87 @@ export function DocumentUpload({
     setIsDragging(false);
   }, []);
 
+  const triggerFileInput = useCallback(() => {
+    const input = uploadRef.current?.querySelector('input[type="file"]') as HTMLElement | null;
+    input?.click();
+  }, []);
+
+  const handleDropzoneKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerFileInput();
+      }
+    },
+    [triggerFileInput]
+  );
+
   const renderUploadList = useCallback(() => {
-    const items = Array.from(uploadProgress.values());
-    if (items.length === 0) return null;
+    const entries = Array.from(uploadStatus.entries());
+    if (entries.length === 0) return null;
 
     return (
       <div className={styles.uploadList}>
-        {items.map((item) => (
-          <div key={item.uid} className={styles.uploadItem}>
-            <div className={styles.fileInfo}>
-              <FileText className={styles.fileIcon} />
-              <span className={styles.fileName}>{item.filename}</span>
-              {item.status === 'error' && <span className={styles.errorText}>{item.error}</span>}
+        {entries.map(([uploadId, item]) => {
+          const isTerminal = item.status === 'completed' || item.status === 'failed' || item.status === 'cancelled';
+          const isActive = !isTerminal;
+
+          return (
+            <div key={uploadId} className={styles.uploadItem}>
+              <div className={styles.fileInfo}>
+                <FileText className={styles.fileIcon} />
+                <span className={styles.fileName}>{item.filename}</span>
+                {item.status === 'failed' && (item.errorKey || item.error) && (
+                  <span
+                    className={styles.errorText}
+                    title={item.errorKey ? t(item.errorKey, item.errorContext ?? {}) : item.error}
+                  >
+                    {item.errorKey ? t(item.errorKey, item.errorContext ?? {}) : item.error}
+                  </span>
+                )}
+              </div>
+              <div className={styles.progressSection}>
+                {isActive && item.status === 'ingesting' && (
+                  <Progress percent={item.progress} size='small' className={styles.progress} />
+                )}
+                {isActive && item.status !== 'ingesting' && <Spin size={14} />}
+                <span
+                  className={
+                    item.status === 'completed'
+                      ? styles.successText
+                      : item.status === 'failed' || item.status === 'cancelled'
+                        ? styles.errorText
+                        : styles.statusText
+                  }
+                >
+                  {getStatusLabel(t, item)}
+                </span>
+                {item.status === 'ingesting' && (
+                  <Button
+                    type='text'
+                    size='mini'
+                    onClick={() => handleCancel(uploadId)}
+                    className={styles.cancelButton}
+                  >
+                    {t('common.cancel' as string)}
+                  </Button>
+                )}
+                {isTerminal && (
+                  <Button
+                    type='text'
+                    size='mini'
+                    icon={<Close />}
+                    onClick={() => handleRemove(uploadId)}
+                    className={styles.removeButton}
+                  />
+                )}
+              </div>
             </div>
-            <div className={styles.progressSection}>
-              {item.status === 'uploading' && (
-                <Progress percent={item.progress} size='small' className={styles.progress} />
-              )}
-              {item.status === 'success' && (
-                <span className={styles.successText}>{t('documentUpload.status.uploaded')}</span>
-              )}
-              {item.status === 'error' && <span className={styles.errorText}>{t('documentUpload.status.failed')}</span>}
-              <Button
-                type='text'
-                size='mini'
-                icon={<Close />}
-                onClick={() => handleRemove(item.uid)}
-                className={styles.removeButton}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
-  }, [uploadProgress, handleRemove]);
+  }, [uploadStatus, handleRemove, handleCancel, t]);
 
   return (
     <div
@@ -250,7 +235,13 @@ export function DocumentUpload({
         showUploadList={false}
         tip={<div className={styles.tip}>{t('documentUpload.tip')}</div>}
       >
-        <div className={styles.dropzone}>
+        <div
+          className={styles.dropzone}
+          tabIndex={0}
+          role='button'
+          aria-label={t('documentUpload.primaryText')}
+          onKeyDown={handleDropzoneKeyDown}
+        >
           <div className={styles.dropzoneContent}>
             <UploadIcon className={styles.uploadIcon} />
             <div className={styles.dropzoneText}>

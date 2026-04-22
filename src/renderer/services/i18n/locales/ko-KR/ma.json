@@ -14,9 +14,19 @@
     },
     "messages": {
       "analysisSuccess": "분석이 성공적으로 완료되었습니다",
-      "analysisFailed": "분석 실패",
-      "needTwoDeals": "비교하려면 2개 이상의 활성 딜이 필요합니다",
-      "comparisonFailed": "비교 실패"
+      "analysisFailed": "분석에 실패했습니다",
+      "needTwoDeals": "비교하려면 활성 딜이 최소 2개 필요합니다",
+      "comparisonFailed": "비교에 실패했습니다"
+    },
+    "readiness": {
+      "blockedTitle": "분석을 사용할 수 없음",
+      "blockedDescription": "AI 분석 백엔드가 설정되지 않았거나 연결할 수 없습니다. 설정을 확인한 후 다시 시도하세요."
+    },
+    "prerequisites": {
+      "noDocumentsTitle": "문서 없음",
+      "noDocumentsDescription": "분석을 실행하기 전에 이 딜의 문서를 업로드하고 처리하세요.",
+      "processingTitle": "문서 처리 중",
+      "processingDescription": "일부 문서가 아직 처리 중입니다. 수집이 완료된 후 분석을 실행하세요."
     },
     "documents": {
       "title": "문서 선택",
@@ -201,6 +211,185 @@
       "governance": "거버넌스",
       "deal_structure": "딜 구조",
       "due_diligence": "실사"
+    }
+  },
+  "dealSelector": {
+    "status": {
+      "active": "Active",
+      "archived": "Archived",
+      "closed": "Closed"
+    },
+    "noDealsYet": "No deals yet",
+    "createFirstDeal": "Create First Deal",
+    "selectDeal": "Select a deal",
+    "active": "Active"
+  },
+  "dealForm": {
+    "transactionTypes": {
+      "acquisition": "Acquisition",
+      "merger": "Merger",
+      "divestiture": "Divestiture",
+      "jointVenture": "Joint Venture"
+    },
+    "partyRoles": {
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "target": "Target",
+      "advisor": "Advisor"
+    },
+    "validation": {
+      "dealNameRequired": "Deal name is required",
+      "atLeastOnePartyRequired": "At least one party is required",
+      "partyNameRequired": "Party {{index}}: name is required",
+      "transactionTypeRequired": "Transaction type is required",
+      "targetCompanyNameRequired": "Target company name is required"
+    },
+    "editDeal": "Edit Deal",
+    "createNewDeal": "Create New Deal",
+    "saveChanges": "Save Changes",
+    "createDeal": "Create Deal",
+    "cancel": "Cancel",
+    "fields": {
+      "dealName": "Deal Name",
+      "transactionType": "Transaction Type",
+      "targetCompany": "Target Company",
+      "industry": "Industry",
+      "jurisdiction": "Jurisdiction",
+      "parties": "Parties"
+    },
+    "placeholders": {
+      "dealName": "e.g., Project Alpha Acquisition",
+      "transactionType": "Select transaction type",
+      "companyName": "Company name",
+      "industry": "e.g., Technology",
+      "jurisdiction": "e.g., Delaware, USA",
+      "partyName": "Party name"
+    },
+    "addParty": "Add Party"
+  },
+  "dealContext": {
+    "title": "Deal Management",
+    "refresh": "Refresh",
+    "newDeal": "New Deal",
+    "status": {
+      "active": "Active",
+      "archived": "Archived",
+      "closed": "Closed"
+    },
+    "messages": {
+      "updatedSuccessfully": "Deal updated successfully",
+      "createdSuccessfully": "Deal created successfully",
+      "saveFailed": "Failed to save deal",
+      "archived": "Deal archived",
+      "archiveFailed": "Failed to archive deal",
+      "closed": "Deal closed",
+      "closeFailed": "Failed to close deal",
+      "reactivated": "Deal reactivated",
+      "reactivateFailed": "Failed to reactivate deal",
+      "deleted": "Deal deleted",
+      "deleteFailed": "Failed to delete deal"
+    },
+    "deleteConfirm": {
+      "title": "Delete Deal",
+      "content": "Are you sure you want to delete \"{{dealName}}\"? This action cannot be undone.",
+      "ok": "Delete"
+    },
+    "dealsCount": "Deals ({{count}})",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "archived": "Archived",
+      "closed": "Closed"
+    },
+    "empty": {
+      "noDealsFound": "No deals found",
+      "createFirstDeal": "Create your first deal to get started",
+      "noStatusDeals": "No {{status}} deals",
+      "createDeal": "Create Deal",
+      "selectDeal": "Select a deal",
+      "selectDealText": "Choose a deal from the list to view details"
+    },
+    "edit": "Edit",
+    "archiveConfirm": {
+      "title": "Archive this deal?",
+      "content": "Archived deals can be reactivated later."
+    },
+    "archive": "Archive",
+    "details": {
+      "transactionDetails": "Transaction Details",
+      "type": "Type",
+      "status": "Status",
+      "created": "Created",
+      "updated": "Updated",
+      "targetCompany": "Target Company",
+      "name": "Name",
+      "industry": "Industry",
+      "jurisdiction": "Jurisdiction",
+      "parties": "Parties"
+    },
+    "documents": {
+      "title": "Associated Documents ({{count}})"
+    }
+  },
+  "documentUpload": {
+    "errors": {
+      "unsupportedFormat": "Unsupported format: .{{extension}}. Supported formats: PDF, DOCX, XLSX, TXT",
+      "fileTooLarge": "File too large: {{size}}MB. Maximum size: 50MB",
+      "uploadFailed": "Upload failed"
+    },
+    "status": {
+      "uploaded": "Uploaded",
+      "failed": "Failed",
+      "validating": "Validating...",
+      "uploading": "Uploading...",
+      "ingesting": "Processing...",
+      "cancelled": "Cancelled"
+    },
+    "stage": {
+      "queued": "Queued",
+      "extracting": "Extracting...",
+      "chunking": "Chunking...",
+      "persisting": "Saving..."
+    },
+    "tip": "Supported formats: PDF, DOCX, XLSX, TXT (max 50MB)",
+    "primaryText": "Click or drag files to upload",
+    "secondaryText": "Support batch upload of multiple documents"
+  },
+  "riskScoreCard": {
+    "categories": {
+      "financial": {
+        "label": "Financial",
+        "description": "Risks related to financial health, revenue, and profitability"
+      },
+      "legal": {
+        "label": "Legal",
+        "description": "Risks related to litigation, contracts, and legal compliance"
+      },
+      "operational": {
+        "label": "Operational",
+        "description": "Risks related to business operations and key personnel"
+      },
+      "regulatory": {
+        "label": "Regulatory",
+        "description": "Risks related to regulatory compliance and permits"
+      },
+      "reputational": {
+        "label": "Reputational",
+        "description": "Risks related to brand reputation and public perception"
+      }
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "analyzing": "Analyzing risks...",
+    "noData": "No risk data available",
+    "riskAssessment": "Risk Assessment",
+    "riskComparison": "Risk Comparison",
+    "summary": {
+      "totalFindings": "Total Findings"
     }
   }
 }

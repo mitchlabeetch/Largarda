@@ -123,6 +123,17 @@
   color: var(--danger);
 }
 
+.statusText {
+  font-size: 12px;
+  color: var(--bg-6);
+}
+
+.cancelButton {
+  padding: 4px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
 .removeButton {
   padding: 4px;
 }

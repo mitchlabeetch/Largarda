@@ -143,9 +143,7 @@ const BinaryGrass: React.FC = () => {
         const b = blades[i];
         for (let y = 0; y < b.maxH; y++) {
           const hp = y / b.maxH;
-          const windForce =
-            Math.sin(windBase + b.baseX * 0.03) * 1.5 +
-            Math.sin(windBase * 1.5 + b.baseX * 0.1) * 0.6;
+          const windForce = Math.sin(windBase + b.baseX * 0.03) * 1.5 + Math.sin(windBase * 1.5 + b.baseX * 0.1) * 0.6;
           const maxSway = b.maxH * 0.35;
           const sway = Math.round(windForce * (hp * hp) * maxSway * (1.2 - b.stiffness));
           const cx = b.baseX + sway;

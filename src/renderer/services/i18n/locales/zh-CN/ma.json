@@ -13,10 +13,20 @@
       "cancel": "取消"
     },
     "messages": {
-      "analysisSuccess": "分析成功完成",
+      "analysisSuccess": "分析已成功完成",
       "analysisFailed": "分析失败",
-      "needTwoDeals": "需要至少2个活跃交易才能比较",
+      "needTwoDeals": "比较至少需要 2 个活跃交易",
       "comparisonFailed": "比较失败"
+    },
+    "readiness": {
+      "blockedTitle": "分析不可用",
+      "blockedDescription": "AI 分析后端未配置或无法访问。请检查设置后重试。"
+    },
+    "prerequisites": {
+      "noDocumentsTitle": "没有文档",
+      "noDocumentsDescription": "请先为该交易上传并处理文档，然后再运行分析。",
+      "processingTitle": "文档处理中",
+      "processingDescription": "部分文档仍在处理中。请等待摄取完成后再运行分析。"
     },
     "documents": {
       "title": "文档选择",
@@ -201,6 +211,185 @@
       "governance": "公司治理",
       "deal_structure": "交易结构",
       "due_diligence": "尽职调查"
+    }
+  },
+  "dealSelector": {
+    "status": {
+      "active": "活跃",
+      "archived": "已归档",
+      "closed": "已关闭"
+    },
+    "noDealsYet": "暂无交易",
+    "createFirstDeal": "创建第一个交易",
+    "selectDeal": "选择交易",
+    "active": "活跃"
+  },
+  "dealForm": {
+    "transactionTypes": {
+      "acquisition": "收购",
+      "merger": "合并",
+      "divestiture": "剥离",
+      "jointVenture": "合资"
+    },
+    "partyRoles": {
+      "buyer": "买方",
+      "seller": "卖方",
+      "target": "目标",
+      "advisor": "顾问"
+    },
+    "validation": {
+      "dealNameRequired": "交易名称必填",
+      "atLeastOnePartyRequired": "至少需要一个参与方",
+      "partyNameRequired": "参与方 {{index}}：名称必填",
+      "transactionTypeRequired": "交易类型必填",
+      "targetCompanyNameRequired": "目标公司名称必填"
+    },
+    "editDeal": "编辑交易",
+    "createNewDeal": "创建新交易",
+    "saveChanges": "保存更改",
+    "createDeal": "创建交易",
+    "cancel": "取消",
+    "fields": {
+      "dealName": "交易名称",
+      "transactionType": "交易类型",
+      "targetCompany": "目标公司",
+      "industry": "行业",
+      "jurisdiction": "司法管辖区",
+      "parties": "参与方"
+    },
+    "placeholders": {
+      "dealName": "例如：Project Alpha 收购",
+      "transactionType": "选择交易类型",
+      "companyName": "公司名称",
+      "industry": "例如：科技",
+      "jurisdiction": "例如：美国特拉华州",
+      "partyName": "参与方名称"
+    },
+    "addParty": "添加参与方"
+  },
+  "dealContext": {
+    "title": "交易管理",
+    "refresh": "刷新",
+    "newDeal": "新交易",
+    "status": {
+      "active": "活跃",
+      "archived": "已归档",
+      "closed": "已关闭"
+    },
+    "messages": {
+      "updatedSuccessfully": "交易更新成功",
+      "createdSuccessfully": "交易创建成功",
+      "saveFailed": "保存交易失败",
+      "archived": "交易已归档",
+      "archiveFailed": "归档交易失败",
+      "closed": "交易已关闭",
+      "closeFailed": "关闭交易失败",
+      "reactivated": "交易已重新激活",
+      "reactivateFailed": "重新激活交易失败",
+      "deleted": "交易已删除",
+      "deleteFailed": "删除交易失败"
+    },
+    "deleteConfirm": {
+      "title": "删除交易",
+      "content": "确定要删除 \"{{dealName}}\" 吗？此操作无法撤销。",
+      "ok": "删除"
+    },
+    "dealsCount": "交易 ({{count}})",
+    "filters": {
+      "all": "全部",
+      "active": "活跃",
+      "archived": "已归档",
+      "closed": "已关闭"
+    },
+    "empty": {
+      "noDealsFound": "未找到交易",
+      "createFirstDeal": "创建您的第一个交易以开始",
+      "noStatusDeals": "没有 {{status}} 交易",
+      "createDeal": "创建交易",
+      "selectDeal": "选择交易",
+      "selectDealText": "从列表中选择交易以查看详情"
+    },
+    "edit": "编辑",
+    "archiveConfirm": {
+      "title": "归档此交易？",
+      "content": "归档的交易可以稍后重新激活。"
+    },
+    "archive": "归档",
+    "details": {
+      "transactionDetails": "交易详情",
+      "type": "类型",
+      "status": "状态",
+      "created": "创建时间",
+      "updated": "更新时间",
+      "targetCompany": "目标公司",
+      "name": "名称",
+      "industry": "行业",
+      "jurisdiction": "司法管辖区",
+      "parties": "参与方"
+    },
+    "documents": {
+      "title": "关联文档 ({{count}})"
+    }
+  },
+  "documentUpload": {
+    "errors": {
+      "unsupportedFormat": "不支持的格式：.{{extension}}。支持的格式：PDF、DOCX、XLSX、TXT",
+      "fileTooLarge": "文件过大：{{size}}MB。最大大小：50MB",
+      "uploadFailed": "上传失败"
+    },
+    "status": {
+      "uploaded": "已上传",
+      "failed": "失败",
+      "validating": "验证中...",
+      "uploading": "上传中...",
+      "ingesting": "处理中...",
+      "cancelled": "已取消"
+    },
+    "stage": {
+      "queued": "队列中",
+      "extracting": "提取中...",
+      "chunking": "分块中...",
+      "persisting": "保存中..."
+    },
+    "tip": "支持的格式：PDF、DOCX、XLSX、TXT（最大 50MB）",
+    "primaryText": "点击或拖拽文件上传",
+    "secondaryText": "支持批量上传多个文档"
+  },
+  "riskScoreCard": {
+    "categories": {
+      "financial": {
+        "label": "财务",
+        "description": "与财务健康状况、收入和盈利能力相关的风险"
+      },
+      "legal": {
+        "label": "法律",
+        "description": "与诉讼、合同和法律合规相关的风险"
+      },
+      "operational": {
+        "label": "运营",
+        "description": "与业务运营和关键人员相关的风险"
+      },
+      "regulatory": {
+        "label": "监管",
+        "description": "与监管合规和许可证相关的风险"
+      },
+      "reputational": {
+        "label": "声誉",
+        "description": "与品牌声誉和公众认知相关的风险"
+      }
+    },
+    "severity": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "critical": "严重"
+    },
+    "analyzing": "分析风险中...",
+    "noData": "无风险数据可用",
+    "riskAssessment": "风险评估",
+    "riskComparison": "风险比较",
+    "summary": {
+      "totalFindings": "总发现数"
     }
   }
 }

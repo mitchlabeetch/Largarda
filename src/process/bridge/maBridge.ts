@@ -41,6 +41,8 @@ import {
   type FlowiseSessionRepository,
 } from '@process/services/database/repositories/ma/FlowiseSessionRepository';
 import { DealContextService } from '@process/services/ma/DealContextService';
+import type { DocumentIngestionService } from '@process/services/ma/DocumentIngestionService';
+import { initDocumentIngestionService } from '@process/services/ma/DocumentIngestionService';
 import { getIntegrationService, type IntegrationService } from '@process/services/ma/IntegrationService';
 import { probeFlowiseReadiness } from '@process/agent/flowise/FloWiseConnection';
 
@@ -51,6 +53,7 @@ let analysisRepo: AnalysisRepository | null = null;
 let dealContextService: DealContextService | null = null;
 let flowiseSessionRepo: FlowiseSessionRepository | null = null;
 let integrationService: IntegrationService | null = null;
+let ingestionService: DocumentIngestionService | null = null;
 
 function getDealRepo(): DealRepository {
   if (!dealRepo) {
@@ -88,6 +91,16 @@ function getFlowiseSessionRepo(): FlowiseSessionRepository {
 function getIntegrationServiceInstance(): IntegrationService {
   integrationService ??= getIntegrationService();
   return integrationService;
+}
+
+function getIngestionService(): DocumentIngestionService {
+  if (!ingestionService) {
+    ingestionService = initDocumentIngestionService({
+      repository: getDocumentRepo(),
+      emit: (event) => ipcBridge.ma.document.progress.emit(event),
+    });
+  }
+  return ingestionService;
 }
 
 /**
@@ -288,6 +301,32 @@ export function initMaBridge(): void {
       throw new Error(result.error ?? 'Failed to update document status');
     }
     return result.data ?? null;
+  });
+
+  // ============================================================================
+  // Document Ingestion (process-backed state machine)
+  // ============================================================================
+
+  // Run the real process-side ingestion pipeline. Resolves when the document
+  // reaches a terminal state (completed / failed / cancelled). Truthful
+  // progress is streamed via the `ma.document.progress` emitter.
+  ipcBridge.ma.document.ingest.provider(async (params): Promise<MaDocument> => {
+    const { id, filePath, options } = params as {
+      id: string;
+      filePath: string;
+      options?: {
+        strategy?: 'fixed' | 'sentence' | 'paragraph' | 'semantic';
+        chunkSize?: number;
+        chunkOverlap?: number;
+      };
+    };
+    return getIngestionService().ingest(id, filePath, options);
+  });
+
+  // Cancel an in-flight ingestion. Returns true when a matching task existed.
+  ipcBridge.ma.document.cancel.provider(async (params): Promise<boolean> => {
+    const { id } = params as { id: string };
+    return getIngestionService().cancel(id);
   });
 
   // ============================================================================

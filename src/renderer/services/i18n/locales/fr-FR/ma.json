@@ -18,6 +18,16 @@
       "needTwoDeals": "Au moins 2 deals actifs sont nécessaires pour comparer",
       "comparisonFailed": "Échec de la comparaison"
     },
+    "readiness": {
+      "blockedTitle": "Analyse indisponible",
+      "blockedDescription": "Le backend d'analyse IA n'est pas configuré ou inaccessible. Vérifiez vos paramètres puis réessayez."
+    },
+    "prerequisites": {
+      "noDocumentsTitle": "Aucun document",
+      "noDocumentsDescription": "Téléchargez et traitez des documents pour ce deal avant de lancer l'analyse.",
+      "processingTitle": "Documents en cours de traitement",
+      "processingDescription": "Certains documents sont encore en cours de traitement. Attendez la fin de l'ingestion avant de lancer l'analyse."
+    },
     "documents": {
       "title": "Sélection des Documents",
       "selectCount": "Sélectionner Documents ({{selected}}/{{total}})",
@@ -329,7 +339,17 @@
     },
     "status": {
       "uploaded": "Téléchargé",
-      "failed": "Échec"
+      "failed": "Échec",
+      "validating": "Validation...",
+      "uploading": "Téléchargement...",
+      "ingesting": "Traitement...",
+      "cancelled": "Annulé"
+    },
+    "stage": {
+      "queued": "En file d'attente",
+      "extracting": "Extraction...",
+      "chunking": "Fragmentation...",
+      "persisting": "Enregistrement..."
     },
     "tip": "Formats pris en charge : PDF, DOCX, XLSX, TXT (max 50Mo)",
     "primaryText": "Cliquez ou glissez des fichiers pour les télécharger",

@@ -123,14 +123,112 @@ export interface UpdateDealInput {
 // ============================================================================
 
 export type DocumentFormat = 'pdf' | 'docx' | 'xlsx' | 'txt';
-export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'error';
+
+/**
+ * Canonical document lifecycle status.
+ *
+ * State machine (enforced by DocumentIngestionService):
+ *   pending ──► queued ──► extracting ──► chunking ──► completed   (terminal, success)
+ *                   │            │             │
+ *                   └────────────┴─────────────┴──► failed         (terminal, error)
+ *                   └────────────┴─────────────┴──► cancelled      (terminal, cancel)
+ *
+ * Legacy aliases retained for backward compatibility with existing callers:
+ *   - `processing` — umbrella for any active sub-stage (extracting/chunking).
+ *   - `error`      — alias for `failed`.
+ */
+export type DocumentStatus =
+  | 'pending'
+  | 'queued'
+  | 'processing'
+  | 'extracting'
+  | 'chunking'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'error';
+
+/** Terminal statuses — once set, ingestion is finished and will not transition. */
+export const DOCUMENT_TERMINAL_STATUSES = ['completed', 'failed', 'cancelled', 'error'] as const;
+export type DocumentTerminalStatus = (typeof DOCUMENT_TERMINAL_STATUSES)[number];
+
+/** Statuses that indicate active ingestion work is in-flight. */
+export const DOCUMENT_ACTIVE_STATUSES = ['queued', 'processing', 'extracting', 'chunking'] as const;
+export type DocumentActiveStatus = (typeof DOCUMENT_ACTIVE_STATUSES)[number];
+
+/** True when the document has reached a terminal state. */
+export function isTerminalDocumentStatus(s: DocumentStatus): boolean {
+  return (DOCUMENT_TERMINAL_STATUSES as readonly string[]).includes(s);
+}
+
+/** True when ingestion is actively in-flight (not pending, not terminal). */
+export function isActiveDocumentStatus(s: DocumentStatus): boolean {
+  return (DOCUMENT_ACTIVE_STATUSES as readonly string[]).includes(s);
+}
+
+/** Canonical stage emitted by the ingestion progress stream. */
+export type DocumentIngestionStage =
+  | 'queued'
+  | 'extracting'
+  | 'chunking'
+  | 'persisting'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+/**
+ * Truthful progress event emitted from the process while ingestion runs.
+ * `terminal=true` indicates this is the final event for a given documentId.
+ */
+export interface DocumentIngestionProgress {
+  documentId: string;
+  dealId: string;
+  stage: DocumentIngestionStage;
+  progress: number; // 0-100, monotonically non-decreasing for a given documentId
+  message?: string;
+  timestamp: number;
+  terminal: boolean;
+  error?: string;
+}
+
+/**
+ * Honest source metadata captured at ingestion time.
+ * Persisted inside DocumentMetadata.provenance — no schema migration needed.
+ */
+export interface DocumentProvenance {
+  sourcePath: string;
+  sizeBytes: number;
+  sha256?: string;
+  processedAt: number;
+  processingMs?: number;
+  extractor?: string;
+}
 
 export type DocumentType = 'nda' | 'loi' | 'spa' | 'financial_statement' | 'due_diligence_report' | 'other';
 
 // Zod Schemas
 export const DocumentFormatSchema = z.enum(['pdf', 'docx', 'xlsx', 'txt']);
-export const DocumentStatusSchema = z.enum(['pending', 'processing', 'completed', 'error']);
+export const DocumentStatusSchema = z.enum([
+  'pending',
+  'queued',
+  'processing',
+  'extracting',
+  'chunking',
+  'completed',
+  'failed',
+  'cancelled',
+  'error',
+]);
 export const DocumentTypeSchema = z.enum(['nda', 'loi', 'spa', 'financial_statement', 'due_diligence_report', 'other']);
+
+export const DocumentProvenanceSchema = z.object({
+  sourcePath: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  sha256: z.string().optional(),
+  processedAt: z.number().int().positive(),
+  processingMs: z.number().int().nonnegative().optional(),
+  extractor: z.string().optional(),
+});
 
 export const DocumentMetadataSchema = z.object({
   title: z.string().optional(),
@@ -138,6 +236,7 @@ export const DocumentMetadataSchema = z.object({
   createdAt: z.number().int().positive().optional(),
   pageCount: z.number().int().positive().optional(),
   documentType: DocumentTypeSchema.optional(),
+  provenance: DocumentProvenanceSchema.optional(),
 });
 
 export const DocumentChunkSchema = z.object({
@@ -192,6 +291,8 @@ export interface DocumentMetadata {
   createdAt?: number;
   pageCount?: number;
   documentType?: DocumentType;
+  /** Honest source metadata captured by DocumentIngestionService. */
+  provenance?: DocumentProvenance;
 }
 
 export interface DocumentChunk {

@@ -331,7 +331,7 @@ const LoginPage: React.FC = () => {
 
         <div className='login-page__footer'>
           <div className='login-page__footer-content'>
-            <span>Mon jardin avec Largo</span>
+            <span>Mon jardin avec Largo - Un produit de Micou pour manuora.fr</span>
           </div>
         </div>
       </div>

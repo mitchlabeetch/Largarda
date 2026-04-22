@@ -1318,6 +1318,7 @@ import type {
   MaDocument,
   CreateDocumentInput,
   UpdateDocumentInput,
+  DocumentIngestionProgress,
   MaAnalysis,
   CreateAnalysisInput,
   UpdateAnalysisInput,
@@ -1368,6 +1369,27 @@ export const ma = {
     updateStatus: bridge.buildProvider<MaDocument | null, { id: string; status: string; error?: string }>(
       'ma.document.update-status'
     ),
+    /**
+     * Run the process-side ingestion pipeline for a document that has already
+     * been created via `ma.document.create`. Resolves once the document reaches
+     * a terminal state (`completed` / `failed` / `cancelled`).
+     */
+    ingest: bridge.buildProvider<
+      MaDocument,
+      {
+        id: string;
+        filePath: string;
+        options?: {
+          strategy?: 'fixed' | 'sentence' | 'paragraph' | 'semantic';
+          chunkSize?: number;
+          chunkOverlap?: number;
+        };
+      }
+    >('ma.document.ingest'),
+    /** Cancel an in-flight ingestion. Returns true when a task was found & cancelled. */
+    cancel: bridge.buildProvider<boolean, { id: string }>('ma.document.cancel'),
+    /** Truthful progress stream emitted by `DocumentIngestionService`. */
+    progress: bridge.buildEmitter<DocumentIngestionProgress>('ma.document.progress'),
   },
   analysis: {
     create: bridge.buildProvider<MaAnalysis, CreateAnalysisInput>('ma.analysis.create'),

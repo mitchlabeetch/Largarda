@@ -18,6 +18,16 @@
       "needTwoDeals": "Need at least 2 active deals to compare",
       "comparisonFailed": "Comparison failed"
     },
+    "readiness": {
+      "blockedTitle": "Analysis Unavailable",
+      "blockedDescription": "The AI analysis backend is not configured or unreachable. Check your settings and try again."
+    },
+    "prerequisites": {
+      "noDocumentsTitle": "No Documents",
+      "noDocumentsDescription": "Upload and process documents for this deal before running analysis.",
+      "processingTitle": "Documents Processing",
+      "processingDescription": "Some documents are still being processed. Wait for ingestion to complete before analyzing."
+    },
     "documents": {
       "title": "Document Selection",
       "selectCount": "Select Documents ({{selected}}/{{total}})",
@@ -329,7 +339,17 @@
     },
     "status": {
       "uploaded": "Uploaded",
-      "failed": "Failed"
+      "failed": "Failed",
+      "validating": "Validating...",
+      "uploading": "Uploading...",
+      "ingesting": "Processing...",
+      "cancelled": "Cancelled"
+    },
+    "stage": {
+      "queued": "Queued",
+      "extracting": "Extracting...",
+      "chunking": "Chunking...",
+      "persisting": "Saving..."
     },
     "tip": "Supported formats: PDF, DOCX, XLSX, TXT (max 50MB)",
     "primaryText": "Click or drag files to upload",

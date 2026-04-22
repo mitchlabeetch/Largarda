@@ -14,6 +14,7 @@ import { parentPort } from 'worker_threads';
 import type { DocumentFormat } from '@/common/ma/types';
 import {
   DocumentProcessor,
+  type CancelSignal,
   type ChunkingOptions,
   type ProcessingProgress,
   type DocumentProcessingResult,
@@ -45,7 +46,7 @@ interface WorkerEvent {
 // ============================================================================
 
 let isProcessing = false;
-let shouldStop = false;
+let cancelSignal: CancelSignal = { cancelled: false };
 
 /**
  * Handle messages from parent process
@@ -58,33 +59,29 @@ function handleMessage(message: WorkerMessage): void {
     }
     processDocument(message.data);
   } else if (message.type === 'stop') {
-    shouldStop = true;
+    cancelSignal.cancelled = true;
   }
 }
 
 /**
- * Process a document and report progress
+ * Process a document and report progress.
+ *
+ * Cancellation is cooperative: we flip `cancelSignal.cancelled` on `stop`
+ * and the processor aborts at the next stage boundary. A `cancelled`
+ * result is surfaced to the parent so it can finalize the DB state.
  */
 async function processDocument(input: DocumentWorkerInput): Promise<void> {
   isProcessing = true;
-  shouldStop = false;
+  cancelSignal = { cancelled: false };
 
   try {
     const processor = new DocumentProcessor((progress: ProcessingProgress) => {
-      if (shouldStop) {
-        throw new Error('Processing cancelled');
-      }
-      sendProgress(progress);
+      sendProgress(input.documentId, progress);
     });
 
-    const result = await processor.processDocument(input.filePath, input.format, input.options);
+    const result = await processor.processDocument(input.filePath, input.format, input.options, cancelSignal);
 
-    if (shouldStop) {
-      sendError('Processing cancelled');
-      return;
-    }
-
-    sendComplete(result);
+    sendComplete(input.documentId, result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     sendError(message);
@@ -96,10 +93,10 @@ async function processDocument(input: DocumentWorkerInput): Promise<void> {
 /**
  * Send progress update to parent
  */
-function sendProgress(progress: ProcessingProgress): void {
+function sendProgress(documentId: string, progress: ProcessingProgress): void {
   const event: WorkerEvent = {
     type: 'progress',
-    data: progress,
+    data: { ...progress, documentId },
   };
   parentPort?.postMessage(event);
 }
@@ -107,10 +104,10 @@ function sendProgress(progress: ProcessingProgress): void {
 /**
  * Send completion result to parent
  */
-function sendComplete(result: DocumentProcessingResult): void {
+function sendComplete(documentId: string, result: DocumentProcessingResult): void {
   const event: WorkerEvent = {
     type: 'complete',
-    data: result,
+    data: { ...result, documentId },
   };
   parentPort?.postMessage(event);
 }
@@ -135,14 +132,14 @@ parentPort?.on('message', handleMessage);
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
-  shouldStop = true;
+  cancelSignal.cancelled = true;
   setTimeout(() => {
     process.exit(0);
   }, 1000);
 });
 
 process.on('SIGINT', () => {
-  shouldStop = true;
+  cancelSignal.cancelled = true;
   setTimeout(() => {
     process.exit(0);
   }, 1000);

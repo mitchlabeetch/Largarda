@@ -34,6 +34,8 @@ export interface UseDueDiligenceOptions {
   refreshInterval?: number;
 }
 
+export type AnalysisLifecycleStatus = 'idle' | 'initializing' | 'running' | 'completed' | 'failed';
+
 export interface AnalysisState {
   /** Current analysis ID */
   analysisId: string | null;
@@ -43,6 +45,8 @@ export interface AnalysisState {
   isRunning: boolean;
   /** Error if analysis failed */
   error: string | null;
+  /** Explicit lifecycle status */
+  status: AnalysisLifecycleStatus;
 }
 
 export interface UseDueDiligenceReturn {
@@ -58,8 +62,6 @@ export interface UseDueDiligenceReturn {
   refresh: () => void;
   /** Start a new analysis */
   startAnalysis: (request: Omit<DueDiligenceRequest, 'dealId'>) => Promise<DueDiligenceResult>;
-  /** Cancel current analysis */
-  cancelAnalysis: () => void;
   /** Get a specific analysis */
   getAnalysis: (id: string) => Promise<DueDiligenceResult | null>;
   /** Compare multiple deals */
@@ -88,6 +90,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
     progress: null,
     isRunning: false,
     error: null,
+    status: 'idle',
   });
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -134,6 +137,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
         },
         isRunning: true,
         error: null,
+        status: 'initializing',
       });
 
       try {
@@ -156,6 +160,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
           },
           isRunning: false,
           error: null,
+          status: 'completed',
         });
 
         // Refresh analyses list
@@ -175,6 +180,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
           },
           isRunning: false,
           error: errorMessage,
+          status: 'failed',
         }));
 
         throw err;
@@ -182,24 +188,6 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
     },
     [dealId, mutate]
   );
-
-  const cancelAnalysis = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
-
-    setCurrentAnalysis((prev) => ({
-      ...prev,
-      progress: {
-        analysisId: prev.analysisId ?? 'cancelled',
-        stage: 'error',
-        progress: 0,
-        message: 'Analysis cancelled',
-      },
-      isRunning: false,
-      error: 'Analysis cancelled',
-    }));
-  }, []);
 
   const getAnalysis = useCallback(async (id: string): Promise<DueDiligenceResult | null> => {
     const result = await ipcBridge.ma.dueDiligence.getAnalysis.invoke({ id });
@@ -242,6 +230,7 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
       progress: null,
       isRunning: false,
       error: null,
+      status: 'idle',
     });
   }, []);
 
@@ -252,7 +241,6 @@ export function useDueDiligence(options: UseDueDiligenceOptions = {}): UseDueDil
     error: error ? (error instanceof Error ? error : new Error(String(error))) : null,
     refresh,
     startAnalysis,
-    cancelAnalysis,
     getAnalysis,
     compareDeals,
     getRiskFindings,

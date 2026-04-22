@@ -28,7 +28,7 @@ export interface ChunkingOptions {
 
 export interface ProcessingProgress {
   documentId: string;
-  stage: 'extracting' | 'chunking' | 'metadata' | 'complete' | 'error';
+  stage: 'extracting' | 'chunking' | 'metadata' | 'complete' | 'error' | 'cancelled';
   progress: number; // 0-100
   message?: string;
 }
@@ -39,6 +39,27 @@ export interface DocumentProcessingResult {
   chunks: DocumentChunk[];
   metadata: DocumentMetadata;
   errors?: string[];
+  /** True when processing was aborted via CancelSignal before reaching `complete`. */
+  cancelled?: boolean;
+}
+
+/**
+ * Cooperative cancellation signal.
+ *
+ * The processor checks `cancelled` at stage boundaries and aborts with a
+ * `DocumentProcessingCancelledError` when it becomes true. Callers flip the
+ * flag (e.g. `signal.cancelled = true`) to request abort.
+ */
+export interface CancelSignal {
+  cancelled: boolean;
+}
+
+/** Thrown when processing is aborted via `CancelSignal`. */
+export class DocumentProcessingCancelledError extends Error {
+  constructor(message = 'Document processing cancelled') {
+    super(message);
+    this.name = 'DocumentProcessingCancelledError';
+  }
 }
 
 export interface ExtractorResult {
@@ -73,31 +94,46 @@ export class DocumentProcessor {
   }
 
   /**
-   * Process a document file
+   * Process a document file.
+   *
+   * Progress is emitted at stage boundaries and is truthful — each stage only
+   * fires after the underlying work has actually started. Pass a `CancelSignal`
+   * to request cooperative abort between stages.
    */
   async processDocument(
     filePath: string,
     format: DocumentFormat,
-    options: Partial<ChunkingOptions> = {}
+    options: Partial<ChunkingOptions> = {},
+    cancelSignal?: CancelSignal
   ): Promise<DocumentProcessingResult> {
     const documentId = this.generateDocumentId(filePath);
     const errors: string[] = [];
 
+    const throwIfCancelled = () => {
+      if (cancelSignal?.cancelled) {
+        throw new DocumentProcessingCancelledError();
+      }
+    };
+
     try {
       // Stage 1: Extract text
+      throwIfCancelled();
       this.reportProgress(documentId, 'extracting', 10, 'Extracting text from document');
       const extractionResult = await this.extractText(filePath, format);
 
       // Stage 2: Extract metadata
+      throwIfCancelled();
       this.reportProgress(documentId, 'metadata', 40, 'Extracting metadata');
       const metadata = await this.extractMetadata(filePath, format, extractionResult);
 
       // Stage 3: Chunk text
+      throwIfCancelled();
       this.reportProgress(documentId, 'chunking', 60, 'Chunking text');
       const chunkingOptions = { ...DEFAULT_CHUNKING_OPTIONS, ...options };
       const chunks = this.chunkText(extractionResult.text, chunkingOptions);
 
-      // Stage 4: Complete
+      // Stage 4: Complete — only emit after real work finished.
+      throwIfCancelled();
       this.reportProgress(documentId, 'complete', 100, 'Processing complete');
 
       return {
@@ -108,6 +144,16 @@ export class DocumentProcessor {
         errors: errors.length > 0 ? errors : undefined,
       };
     } catch (error: unknown) {
+      if (error instanceof DocumentProcessingCancelledError) {
+        this.reportProgress(documentId, 'cancelled', 0, error.message);
+        return {
+          documentId,
+          text: '',
+          chunks: [],
+          metadata: {},
+          cancelled: true,
+        };
+      }
       const message = error instanceof Error ? error.message : String(error);
       errors.push(message);
       this.reportProgress(documentId, 'error', 0, message);

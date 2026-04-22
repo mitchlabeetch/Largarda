@@ -10,20 +10,8 @@
  * progress display, results visualization, and comparison view.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  Button,
-  Card,
-  Checkbox,
-  Empty,
-  Message,
-  Modal,
-  Progress,
-  Spin,
-  Table,
-  Tag,
-  Typography,
-} from '@arco-design/web-react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { Button, Card, Checkbox, Empty, Message, Progress, Table, Tag, Typography } from '@arco-design/web-react';
 import {
   Play,
   Refresh,
@@ -31,7 +19,6 @@ import {
   DocDetail as DocumentIcon,
   Analysis,
   Attention,
-  Success,
   Close,
 } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +26,9 @@ import { RiskScoreCard } from '@/renderer/components/ma/RiskScoreCard';
 import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
 import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
 import { useDueDiligence } from '@/renderer/hooks/ma/useDueDiligence';
+import { useFlowiseReadiness } from '@/renderer/hooks/ma/useFlowiseReadiness';
+import { EmptyState, ErrorState, Skeleton } from '@/renderer/components/base';
+import { isActiveDocumentStatus } from '@/common/ma/types';
 import type { MaDocument, RiskCategory, RiskSeverity } from '@/common/ma/types';
 import type { AnalysisType, DueDiligenceResult, ComparisonResult } from '@process/services/ma/DueDiligenceService';
 import styles from './DueDiligencePage.module.css';
@@ -129,10 +119,10 @@ function DocumentSelector({ documents, selectedIds, onSelectionChange }: Documen
         {documents.map((doc) => (
           <div
             key={doc.id}
-            className={`${styles.documentItem} ${selectedIds.includes(doc.id) ? styles.selected : ''}`}
-            onClick={() => handleToggle(doc.id)}
+            className={`${styles.documentItem} ${selectedIds.includes(doc.id) ? styles.selected : ''} ${doc.status !== 'completed' ? styles.disabled : ''}`}
+            onClick={() => doc.status === 'completed' && handleToggle(doc.id)}
           >
-            <Checkbox checked={selectedIds.includes(doc.id)} />
+            <Checkbox checked={selectedIds.includes(doc.id)} disabled={doc.status !== 'completed'} />
             <DocumentIcon className={styles.documentIcon} />
             <div className={styles.documentInfo}>
               <span className={styles.documentName}>{doc.filename}</span>
@@ -407,15 +397,9 @@ export function DueDiligencePage() {
     autoRefresh: !!activeDeal,
   });
 
-  const {
-    analyses,
-    currentAnalysis,
-    isLoading: analysesLoading,
-    startAnalysis,
-    cancelAnalysis,
-    compareDeals,
-    refresh,
-  } = useDueDiligence({ dealId: activeDeal?.id });
+  const { analyses, currentAnalysis, startAnalysis, compareDeals, refresh } = useDueDiligence({
+    dealId: activeDeal?.id,
+  });
 
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [selectedAnalysisTypes, setSelectedAnalysisTypes] = useState<AnalysisType[]>(['due_diligence']);
@@ -423,11 +407,34 @@ export function DueDiligencePage() {
   const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState(false);
 
+  const { isReady: isFlowiseReady, isLoading: readinessLoading, readiness } = useFlowiseReadiness();
+
+  // Remove non-completed documents from selection when the list changes
+  useEffect(() => {
+    const completedIds = new Set(documents.filter((d) => d.status === 'completed').map((d) => d.id));
+    setSelectedDocumentIds((prev) => prev.filter((id) => completedIds.has(id)));
+  }, [documents]);
+
+  const hasActiveDocuments = useMemo(() => documents.some((d) => isActiveDocumentStatus(d.status)), [documents]);
+
   const canStartAnalysis = useMemo(() => {
-    return (
-      activeDeal && selectedDocumentIds.length > 0 && selectedAnalysisTypes.length > 0 && !currentAnalysis.isRunning
-    );
-  }, [activeDeal, selectedDocumentIds, selectedAnalysisTypes, currentAnalysis.isRunning]);
+    if (!activeDeal) return false;
+    if (!isFlowiseReady) return false;
+    if (selectedDocumentIds.length === 0) return false;
+    if (selectedAnalysisTypes.length === 0) return false;
+    if (currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running') return false;
+
+    const selectedDocs = documents.filter((d) => selectedDocumentIds.includes(d.id));
+    return selectedDocs.length > 0 && selectedDocs.every((d) => d.status === 'completed');
+  }, [activeDeal, isFlowiseReady, selectedDocumentIds, selectedAnalysisTypes, currentAnalysis.status, documents]);
+
+  const announcement = useMemo(() => {
+    if (currentAnalysis.status === 'initializing') return t('ma.dueDiligence.progress.stages.initializing');
+    if (currentAnalysis.status === 'running') return t('ma.dueDiligence.actions.analyzing');
+    if (currentAnalysis.status === 'completed') return t('ma.dueDiligence.messages.analysisSuccess');
+    if (currentAnalysis.status === 'failed') return t('ma.dueDiligence.messages.analysisFailed');
+    return '';
+  }, [currentAnalysis.status, t]);
 
   const handleStartAnalysis = useCallback(async () => {
     if (!canStartAnalysis) return;
@@ -505,7 +512,7 @@ export function DueDiligencePage() {
             <Title heading={5}>{t('ma.dueDiligence.documents.title')}</Title>
             {documentsLoading ? (
               <div className={styles.loadingState}>
-                <Spin />
+                <Skeleton variant='line' lines={4} />
               </div>
             ) : (
               <DocumentSelector
@@ -527,38 +534,87 @@ export function DueDiligencePage() {
               icon={<Play />}
               onClick={handleStartAnalysis}
               disabled={!canStartAnalysis}
-              loading={currentAnalysis.isRunning}
+              loading={currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running'}
               long
             >
-              {currentAnalysis.isRunning
+              {currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running'
                 ? t('ma.dueDiligence.actions.analyzing')
                 : t('ma.dueDiligence.actions.startAnalysis')}
             </Button>
-            {currentAnalysis.isRunning && (
-              <Button size='large' icon={<Close />} onClick={cancelAnalysis} status='danger'>
-                {t('ma.dueDiligence.actions.cancel')}
-              </Button>
-            )}
           </div>
         </div>
 
         {/* Right Panel - Results */}
         <div className={styles.resultsPanel}>
-          {/* Progress Display */}
-          {currentAnalysis.isRunning && currentAnalysis.progress && (
-            <Card className={styles.progressCard}>
-              <ProgressDisplay progress={currentAnalysis.progress} />
-            </Card>
+          {/* Accessible live region for screen readers */}
+          <div aria-live='polite' aria-atomic='true' className={styles.srOnly}>
+            {announcement}
+          </div>
+
+          {/* Documents Loading */}
+          {documentsLoading && (
+            <div className={styles.emptyResults}>
+              <Skeleton variant='card' />
+            </div>
           )}
 
-          {/* Error Display */}
-          {currentAnalysis.error && (
-            <Card className={styles.errorCard}>
-              <div className={styles.errorContent}>
-                <Attention className={styles.errorIcon} />
-                <Text type='error'>{currentAnalysis.error}</Text>
-              </div>
-            </Card>
+          {/* Readiness Loading */}
+          {!documentsLoading && readinessLoading && (
+            <div className={styles.emptyResults}>
+              <Skeleton variant='card' />
+            </div>
+          )}
+
+          {/* Readiness Blocked */}
+          {!documentsLoading && !readinessLoading && !isFlowiseReady && (
+            <div className={styles.emptyResults}>
+              <EmptyState
+                icon={<Attention size={48} />}
+                title='ma.dueDiligence.readiness.blockedTitle'
+                description={readiness?.error ?? 'ma.dueDiligence.readiness.blockedDescription'}
+                i18nNs='ma'
+              />
+            </div>
+          )}
+
+          {/* No Documents */}
+          {!documentsLoading && !readinessLoading && isFlowiseReady && documents.length === 0 && (
+            <div className={styles.emptyResults}>
+              <EmptyState
+                icon={<DocumentIcon size={48} />}
+                title='ma.dueDiligence.prerequisites.noDocumentsTitle'
+                description='ma.dueDiligence.prerequisites.noDocumentsDescription'
+                i18nNs='ma'
+              />
+            </div>
+          )}
+
+          {/* Documents Processing */}
+          {!documentsLoading && !readinessLoading && isFlowiseReady && documents.length > 0 && hasActiveDocuments && (
+            <div className={styles.emptyResults}>
+              <EmptyState
+                icon={<Analysis size={48} />}
+                title='ma.dueDiligence.prerequisites.processingTitle'
+                description='ma.dueDiligence.prerequisites.processingDescription'
+                i18nNs='ma'
+              />
+            </div>
+          )}
+
+          {/* Progress Display */}
+          {(currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running') &&
+            currentAnalysis.progress && (
+              <Card className={styles.progressCard}>
+                <ProgressDisplay progress={currentAnalysis.progress} />
+              </Card>
+            )}
+
+          {/* Failure Display */}
+          {currentAnalysis.status === 'failed' && (
+            <ErrorState
+              error={currentAnalysis.error ?? t('ma.dueDiligence.messages.analysisFailed')}
+              onRetry={handleStartAnalysis}
+            />
           )}
 
           {/* Comparison View */}
@@ -573,19 +629,31 @@ export function DueDiligencePage() {
           )}
 
           {/* Results Display */}
-          {viewMode === 'analysis' && latestAnalysis && !currentAnalysis.isRunning && (
-            <ResultsDisplay result={latestAnalysis} onCompare={handleCompare} />
-          )}
+          {viewMode === 'analysis' &&
+            latestAnalysis &&
+            currentAnalysis.status !== 'initializing' &&
+            currentAnalysis.status !== 'running' && (
+              <ResultsDisplay result={latestAnalysis} onCompare={handleCompare} />
+            )}
 
-          {/* Empty State */}
-          {viewMode === 'analysis' && !latestAnalysis && !currentAnalysis.isRunning && !currentAnalysis.error && (
-            <div className={styles.emptyResults}>
-              <Empty
-                icon={<Analysis className={styles.emptyIcon} />}
-                description={t('ma.dueDiligence.empty.noResults')}
-              />
-            </div>
-          )}
+          {/* Empty State - prerequisites met but no analysis yet */}
+          {viewMode === 'analysis' &&
+            !latestAnalysis &&
+            currentAnalysis.status !== 'initializing' &&
+            currentAnalysis.status !== 'running' &&
+            currentAnalysis.status !== 'failed' &&
+            !documentsLoading &&
+            !readinessLoading &&
+            isFlowiseReady &&
+            documents.length > 0 &&
+            !hasActiveDocuments && (
+              <div className={styles.emptyResults}>
+                <Empty
+                  icon={<Analysis className={styles.emptyIcon} />}
+                  description={t('ma.dueDiligence.empty.noResults')}
+                />
+              </div>
+            )}
 
           {/* History */}
           {viewMode === 'history' && (

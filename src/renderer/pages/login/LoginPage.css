@@ -337,7 +337,6 @@ body.login-page-active {
   gap: 10px;
 }
 
-
 /* Spinner */
 .login-page__spinner {
   animation: login-spin 1s linear infinite;
