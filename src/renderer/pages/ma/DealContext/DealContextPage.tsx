@@ -7,23 +7,39 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button, Dropdown, Menu, Modal, Message, Popconfirm } from '@arco-design/web-react';
 import { IconClose, IconEdit, IconRefresh } from '@arco-design/web-react/icon';
-import { Plus, More, Edit, FolderOpen, Close, Refresh, Folder } from '@icon-park/react';
+import { Plus, More, Edit, FolderOpen, Close, Refresh, Folder, FileText, Left } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { DealSelector, DealForm } from '@/renderer/components/ma/DealSelector';
 import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
 import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
-import type { DealContext, DealStatus, CreateDealInput } from '@/common/ma/types';
+import { useMaDateFormatters } from '@/renderer/utils/ma/formatters';
+import type { DealContext, DealStatus, CreateDealInput, DealParty } from '@/common/ma/types';
 import styles from './DealContextPage.module.css';
 
 type FilterStatus = 'all' | DealStatus;
 
 export function DealContextPage() {
   const { t } = useTranslation('ma');
+  const { formatDate } = useMaDateFormatters();
 
   const statusLabels: Record<DealStatus, string> = {
     active: t('dealContext.status.active'),
     archived: t('dealContext.status.archived'),
     closed: t('dealContext.status.closed'),
+  };
+
+  const transactionTypeLabels: Record<DealContext['transactionType'], string> = {
+    acquisition: t('dealForm.transactionTypes.acquisition'),
+    merger: t('dealForm.transactionTypes.merger'),
+    divestiture: t('dealForm.transactionTypes.divestiture'),
+    joint_venture: t('dealForm.transactionTypes.jointVenture'),
+  };
+
+  const partyRoleLabels: Record<DealParty['role'], string> = {
+    buyer: t('dealForm.partyRoles.buyer'),
+    seller: t('dealForm.partyRoles.seller'),
+    target: t('dealForm.partyRoles.target'),
+    advisor: t('dealForm.partyRoles.advisor'),
   };
 
   const {
@@ -163,6 +179,7 @@ export function DealContextPage() {
         {
           key: 'edit',
           icon: <IconEdit />,
+          label: t('dealContext.edit'),
           onClick: () => handleEdit(deal),
         },
       ];
@@ -171,17 +188,20 @@ export function DealContextPage() {
         items.push({
           key: 'archive',
           icon: <Folder />,
+          label: t('dealContext.archive'),
           onClick: () => handleArchive(deal),
         });
         items.push({
           key: 'close',
           icon: <IconClose />,
+          label: t('dealContext.status.closed'),
           onClick: () => handleClose(deal),
         });
       } else if (deal.status === 'archived' || deal.status === 'closed') {
         items.push({
           key: 'reactivate',
           icon: <IconRefresh />,
+          label: t('dealContext.messages.reactivated'),
           onClick: () => handleReactivate(deal),
         });
       }
@@ -189,6 +209,7 @@ export function DealContextPage() {
       items.push({
         key: 'delete',
         icon: <IconClose />,
+        label: t('dealContext.deleteConfirm.ok'),
         onClick: () => {
           Modal.confirm({
             title: t('dealContext.deleteConfirm.title'),
@@ -202,7 +223,7 @@ export function DealContextPage() {
 
       return items;
     },
-    [handleEdit, handleArchive, handleClose, handleReactivate, handleDelete]
+    [handleEdit, handleArchive, handleClose, handleReactivate, handleDelete, t]
   );
 
   const renderDealCard = useCallback(
@@ -210,37 +231,43 @@ export function DealContextPage() {
       const isActive = activeDeal?.id === deal.id;
 
       return (
-        <div
-          key={deal.id}
-          className={`${styles.dealCard} ${isActive ? styles.active : ''}`}
-          onClick={() => handleSelectDeal(deal)}
-        >
+        <div key={deal.id} className={`${styles.dealCard} ${isActive ? styles.active : ''}`}>
           <div className={styles.dealCardHeader}>
-            <span className={styles.dealCardName}>{deal.name}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button
+              type='text'
+              className={styles.dealCardButton}
+              onClick={() => handleSelectDeal(deal)}
+              aria-pressed={isActive}
+              long
+            >
+              <div className={styles.dealCardText}>
+                <span className={styles.dealCardName}>{deal.name}</span>
+                <span className={styles.dealCardMeta}>{transactionTypeLabels[deal.transactionType]}</span>
+                <span className={styles.dealCardCompany}>{deal.targetCompany.name}</span>
+              </div>
+            </Button>
+            <div className={styles.dealCardHeaderActions}>
               <span className={`${styles.dealCardStatus} ${styles[deal.status]}`}>{statusLabels[deal.status]}</span>
               <Dropdown
                 droplist={
                   <Menu>
                     {getDealActions(deal).map((item) => (
                       <Menu.Item key={item.key} onClick={item.onClick}>
-                        {item.icon} {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
+                        {item.icon} {item.label}
                       </Menu.Item>
                     ))}
                   </Menu>
                 }
                 trigger='click'
               >
-                <Button type='text' size='small' icon={<More />} />
+                <Button type='text' size='small' icon={<More />} aria-label={t('dealContext.edit')} />
               </Dropdown>
             </div>
           </div>
-          <div className={styles.dealCardMeta}>{deal.transactionType}</div>
-          <div className={styles.dealCardCompany}>{deal.targetCompany.name}</div>
         </div>
       );
     },
-    [activeDeal, handleSelectDeal, getDealActions]
+    [activeDeal, getDealActions, handleSelectDeal, statusLabels, t, transactionTypeLabels]
   );
 
   return (
@@ -264,35 +291,41 @@ export function DealContextPage() {
           </div>
 
           <div className={styles.filterTabs}>
-            <button
+            <Button
               className={`${styles.filterTab} ${filterStatus === 'all' ? styles.active : ''}`}
+              type='text'
               onClick={() => setFilterStatus('all')}
             >
               {t('dealContext.filters.all')}
-            </button>
-            <button
+            </Button>
+            <Button
               className={`${styles.filterTab} ${filterStatus === 'active' ? styles.active : ''}`}
+              type='text'
               onClick={() => setFilterStatus('active')}
             >
               {t('dealContext.filters.active')}
-            </button>
-            <button
+            </Button>
+            <Button
               className={`${styles.filterTab} ${filterStatus === 'archived' ? styles.active : ''}`}
+              type='text'
               onClick={() => setFilterStatus('archived')}
             >
               {t('dealContext.filters.archived')}
-            </button>
-            <button
+            </Button>
+            <Button
               className={`${styles.filterTab} ${filterStatus === 'closed' ? styles.active : ''}`}
+              type='text'
               onClick={() => setFilterStatus('closed')}
             >
               {t('dealContext.filters.closed')}
-            </button>
+            </Button>
           </div>
 
           {filteredDeals.length === 0 ? (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>📁</div>
+              <div className={styles.emptyIcon}>
+                <Folder size={48} />
+              </div>
               <div className={styles.emptyTitle}>{t('dealContext.empty.noDealsFound')}</div>
               <div className={styles.emptyText}>
                 {filterStatus === 'all'
@@ -335,7 +368,7 @@ export function DealContextPage() {
                 <div className={styles.detailSectionTitle}>{t('dealContext.details.transactionDetails')}</div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>{t('dealContext.details.type')}</span>
-                  <span className={styles.detailValue}>{selectedDeal.transactionType}</span>
+                  <span className={styles.detailValue}>{transactionTypeLabels[selectedDeal.transactionType]}</span>
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>{t('dealContext.details.status')}</span>
@@ -343,11 +376,11 @@ export function DealContextPage() {
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>{t('dealContext.details.created')}</span>
-                  <span className={styles.detailValue}>{new Date(selectedDeal.createdAt).toLocaleDateString()}</span>
+                  <span className={styles.detailValue}>{formatDate(selectedDeal.createdAt)}</span>
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.detailLabel}>{t('dealContext.details.updated')}</span>
-                  <span className={styles.detailValue}>{new Date(selectedDeal.updatedAt).toLocaleDateString()}</span>
+                  <span className={styles.detailValue}>{formatDate(selectedDeal.updatedAt)}</span>
                 </div>
               </div>
 
@@ -377,7 +410,7 @@ export function DealContextPage() {
                   {selectedDeal.parties.map((party, index) => (
                     <div key={index} className={styles.partyItem}>
                       <span className={styles.partyName}>{party.name}</span>
-                      <span className={styles.partyRole}>{party.role}</span>
+                      <span className={styles.partyRole}>{partyRoleLabels[party.role]}</span>
                     </div>
                   ))}
                 </div>
@@ -391,7 +424,9 @@ export function DealContextPage() {
                   <div className={styles.documentList}>
                     {documents.map((doc) => (
                       <div key={doc.id} className={styles.documentItem}>
-                        <span className={styles.documentIcon}>📄</span>
+                        <span className={styles.documentIcon}>
+                          <FileText size={20} />
+                        </span>
                         <span className={styles.documentName}>{doc.filename}</span>
                         <span className={styles.documentMeta}>{doc.format.toUpperCase()}</span>
                       </div>
@@ -402,7 +437,9 @@ export function DealContextPage() {
             </>
           ) : (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>👈</div>
+              <div className={styles.emptyIcon}>
+                <Left size={48} />
+              </div>
               <div className={styles.emptyTitle}>{t('dealContext.empty.selectDeal')}</div>
               <div className={styles.emptyText}>{t('dealContext.empty.selectDealText')}</div>
             </div>

@@ -5,9 +5,9 @@
  */
 
 /**
- * Watchlist Service
- * Manages watchlists for M&A data spine (CRUD over ma_watchlists table)
- * Handles criteria_json for watchlist matching rules
+ * WatchlistService
+ * Manages watchlist operations with business logic including refresh/schedule.
+ * Provides CRUD operations for watchlists and their hits.
  */
 
 import type {
@@ -17,213 +17,344 @@ import type {
   WatchlistHit,
   CreateWatchlistHitInput,
   UpdateWatchlistHitInput,
-} from '../../../common/ma/watchlist/schema';
+} from '@/common/ma/watchlist/schema';
+import { getWatchlistRepository } from '@process/services/database/repositories/ma/WatchlistRepository';
+import type { IQueryResult, IPaginatedResult } from '@process/services/database/types';
 
 /**
- * Watchlist Service Interface
+ * Service for managing watchlist operations.
+ * Handles CRUD operations, hit management, and refresh scheduling.
  */
-export interface IWatchlistService {
-  // Watchlist CRUD
-  create(input: CreateWatchlistInput): Promise<Watchlist>;
-  getById(id: string): Promise<Watchlist | null>;
-  list(filters?: { ownerUserId?: string; enabled?: boolean }): Promise<Watchlist[]>;
-  update(id: string, input: UpdateWatchlistInput): Promise<Watchlist>;
-  delete(id: string): Promise<void>;
+export class WatchlistService {
+  private repository = getWatchlistRepository();
+  private refreshIntervals = new Map<string, NodeJS.Timeout>();
 
-  // Watchlist Hit CRUD
-  createHit(input: CreateWatchlistHitInput): Promise<WatchlistHit>;
-  getHitsByWatchlistId(watchlistId: string): Promise<WatchlistHit[]>;
-  markHitAsSeen(hitId: string): Promise<void>;
-}
-
-/**
- * Watchlist Service Implementation
- */
-export class WatchlistService implements IWatchlistService {
-  constructor(private db: any) {}
+  // ============================================================================
+  // CRUD Operations
+  // ============================================================================
 
   /**
    * Create a new watchlist
    */
-  async create(input: CreateWatchlistInput): Promise<Watchlist> {
-    const now = Date.now();
-    const id = crypto.randomUUID();
+  async createWatchlist(input: CreateWatchlistInput): Promise<IQueryResult<Watchlist>> {
+    const validation = this.validateWatchlistInput(input);
+    if (!validation.valid) {
+      return { success: false, error: validation.errors.join(', ') };
+    }
 
-    const row = {
-      id,
-      owner_user_id: input.ownerUserId,
-      name: input.name,
-      criteria_json: input.criteriaJson,
-      cadence: input.cadence ?? null,
-      enabled: (input.enabled ?? true) ? 1 : 0,
-      created_at: now,
-      updated_at: now,
-    };
-
-    await this.db.insert('ma_watchlists', row);
-
-    return {
-      id,
-      ownerUserId: input.ownerUserId,
-      name: input.name,
-      criteriaJson: input.criteriaJson,
-      cadence: input.cadence,
-      enabled: input.enabled ?? true,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const result = await this.repository.create(input);
+    if (result.success && result.data && result.data.enabled && result.data.cadence) {
+      this.scheduleRefresh(result.data.id, result.data.cadence);
+    }
+    return result;
   }
 
   /**
-   * Get watchlist by ID
+   * Get a watchlist by ID
    */
-  async getById(id: string): Promise<Watchlist | null> {
-    const row = await this.db.select('ma_watchlists', { id });
-    if (!row) {
-      return null;
-    }
-
-    return {
-      id: row.id,
-      ownerUserId: row.owner_user_id,
-      name: row.name,
-      criteriaJson: row.criteria_json,
-      cadence: row.cadence ?? undefined,
-      enabled: row.enabled === 1,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
-  }
-
-  /**
-   * List watchlists with optional filters
-   */
-  async list(filters?: { ownerUserId?: string; enabled?: boolean }): Promise<Watchlist[]> {
-    const where: Record<string, unknown> = {};
-    if (filters?.ownerUserId) {
-      where.owner_user_id = filters.ownerUserId;
-    }
-    if (filters?.enabled !== undefined) {
-      where.enabled = filters.enabled ? 1 : 0;
-    }
-
-    const rows = await this.db.select('ma_watchlists', where);
-
-    return rows.map((row: any) => ({
-      id: row.id,
-      ownerUserId: row.owner_user_id,
-      name: row.name,
-      criteriaJson: row.criteria_json,
-      cadence: row.cadence ?? undefined,
-      enabled: row.enabled === 1,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+  async getWatchlist(id: string): Promise<IQueryResult<Watchlist | null>> {
+    return this.repository.get(id);
   }
 
   /**
    * Update a watchlist
    */
-  async update(id: string, input: UpdateWatchlistInput): Promise<Watchlist> {
-    const existing = await this.getById(id);
-    if (!existing) {
-      throw new Error(`Watchlist not found: ${id}`);
+  async updateWatchlist(id: string, updates: UpdateWatchlistInput): Promise<IQueryResult<Watchlist>> {
+    const validation = this.validateWatchlistInput(updates, true);
+    if (!validation.valid) {
+      return { success: false, error: validation.errors.join(', ') };
     }
 
-    const now = Date.now();
-    const updates: Record<string, unknown> = {
-      updated_at: now,
-    };
-
-    if (input.name !== undefined) {
-      updates.name = input.name;
+    const result = await this.repository.update(id, updates);
+    if (result.success && result.data) {
+      // Update refresh schedule if cadence or enabled status changed
+      if (updates.cadence !== undefined || updates.enabled !== undefined) {
+        this.stopRefresh(id);
+        if (result.data.enabled && result.data.cadence) {
+          this.scheduleRefresh(id, result.data.cadence);
+        }
+      }
     }
-    if (input.criteriaJson !== undefined) {
-      updates.criteria_json = input.criteriaJson;
-    }
-    if (input.cadence !== undefined) {
-      updates.cadence = input.cadence;
-    }
-    if (input.enabled !== undefined) {
-      updates.enabled = input.enabled ? 1 : 0;
-    }
-
-    await this.db.update('ma_watchlists', { id }, updates);
-
-    return {
-      id,
-      ownerUserId: existing.ownerUserId,
-      name: input.name ?? existing.name,
-      criteriaJson: input.criteriaJson ?? existing.criteriaJson,
-      cadence: input.cadence ?? existing.cadence,
-      enabled: input.enabled ?? existing.enabled,
-      createdAt: existing.createdAt,
-      updatedAt: now,
-    };
+    return result;
   }
 
   /**
    * Delete a watchlist
    */
-  async delete(id: string): Promise<void> {
-    await this.db.delete('ma_watchlists', { id });
+  async deleteWatchlist(id: string): Promise<IQueryResult<boolean>> {
+    this.stopRefresh(id);
+    return this.repository.delete(id);
   }
+
+  // ============================================================================
+  // Query Operations
+  // ============================================================================
+
+  /**
+   * List watchlists for a user
+   */
+  async listWatchlistsByUser(ownerUserId: string, page = 0, pageSize = 50): Promise<IPaginatedResult<Watchlist>> {
+    return this.repository.listByUser(ownerUserId, page, pageSize);
+  }
+
+  /**
+   * List enabled watchlists
+   */
+  async listEnabledWatchlists(page = 0, pageSize = 50): Promise<IPaginatedResult<Watchlist>> {
+    return this.repository.listEnabled(page, pageSize);
+  }
+
+  // ============================================================================
+  // Watchlist Hit Operations
+  // ============================================================================
 
   /**
    * Create a watchlist hit
    */
-  async createHit(input: CreateWatchlistHitInput): Promise<WatchlistHit> {
-    const now = Date.now();
-    const id = crypto.randomUUID();
+  async createWatchlistHit(input: CreateWatchlistHitInput): Promise<IQueryResult<WatchlistHit>> {
+    return this.repository.createHit(input);
+  }
 
-    const row = {
-      id,
-      watchlist_id: input.watchlistId,
-      payload_json: input.payloadJson,
-      matched_at: input.matchedAt ?? now,
-      seen_at: input.seenAt ?? null,
-    };
+  /**
+   * Get a watchlist hit by ID
+   */
+  async getWatchlistHit(id: string): Promise<IQueryResult<WatchlistHit | null>> {
+    return this.repository.getHit(id);
+  }
 
-    await this.db.insert('ma_watchlist_hits', row);
+  /**
+   * Update a watchlist hit
+   */
+  async updateWatchlistHit(id: string, updates: UpdateWatchlistHitInput): Promise<IQueryResult<WatchlistHit>> {
+    return this.repository.updateHit(id, updates);
+  }
+
+  /**
+   * List hits for a watchlist
+   */
+  async listWatchlistHits(watchlistId: string, page = 0, pageSize = 50): Promise<IPaginatedResult<WatchlistHit>> {
+    return this.repository.listHits(watchlistId, page, pageSize);
+  }
+
+  /**
+   * List unseen hits for a watchlist
+   */
+  async listUnseenWatchlistHits(watchlistId: string, page = 0, pageSize = 50): Promise<IPaginatedResult<WatchlistHit>> {
+    return this.repository.listUnseenHits(watchlistId, page, pageSize);
+  }
+
+  /**
+   * Mark all hits for a watchlist as seen
+   */
+  async markAllHitsSeen(watchlistId: string): Promise<IQueryResult<number>> {
+    return this.repository.markAllHitsSeen(watchlistId);
+  }
+
+  /**
+   * Delete all hits for a watchlist
+   */
+  async deleteWatchlistHits(watchlistId: string): Promise<IQueryResult<number>> {
+    return this.repository.deleteHits(watchlistId);
+  }
+
+  // ============================================================================
+  // Refresh/Schedule Operations
+  // ============================================================================
+
+  /**
+   * Schedule automatic refresh for a watchlist
+   */
+  scheduleRefresh(watchlistId: string, cadence: string): void {
+    this.stopRefresh(watchlistId);
+
+    const intervalMs = this.parseCadenceToMs(cadence);
+    if (intervalMs === null) {
+      console.warn(`[WatchlistService] Invalid cadence: ${cadence}`);
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      await this.refreshWatchlist(watchlistId);
+    }, intervalMs);
+
+    this.refreshIntervals.set(watchlistId, interval);
+    console.log(`[WatchlistService] Scheduled refresh for ${watchlistId} with cadence ${cadence}`);
+  }
+
+  /**
+   * Stop automatic refresh for a watchlist
+   */
+  stopRefresh(watchlistId: string): void {
+    const interval = this.refreshIntervals.get(watchlistId);
+    if (interval) {
+      clearInterval(interval);
+      this.refreshIntervals.delete(watchlistId);
+      console.log(`[WatchlistService] Stopped refresh for ${watchlistId}`);
+    }
+  }
+
+  /**
+   * Refresh a watchlist (check for new matches)
+   */
+  async refreshWatchlist(watchlistId: string): Promise<IQueryResult<WatchlistHit[]>> {
+    try {
+      const watchlistResult = await this.repository.get(watchlistId);
+      if (!watchlistResult.success || !watchlistResult.data) {
+        return { success: false, error: 'Watchlist not found', data: [] };
+      }
+
+      const watchlist = watchlistResult.data;
+      if (!watchlist.enabled) {
+        return { success: true, data: [] };
+      }
+
+      // Parse criteria and check for matches
+      const criteria = JSON.parse(watchlist.criteriaJson);
+      const matches = await this.checkCriteria(criteria);
+
+      // Create hits for new matches
+      const hits: WatchlistHit[] = [];
+      for (const match of matches) {
+        const hitResult = await this.repository.createHit({
+          watchlistId,
+          payloadJson: JSON.stringify(match),
+          matchedAt: Date.now(),
+        });
+        if (hitResult.success && hitResult.data) {
+          hits.push(hitResult.data);
+        }
+      }
+
+      return { success: true, data: hits };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[WatchlistService] Refresh error for ${watchlistId}:`, error);
+      return { success: false, error: message, data: [] };
+    }
+  }
+
+  /**
+   * Stop all refresh intervals
+   */
+  stopAllRefreshes(): void {
+    for (const [watchlistId, interval] of this.refreshIntervals) {
+      clearInterval(interval);
+      console.log(`[WatchlistService] Stopped refresh for ${watchlistId}`);
+    }
+    this.refreshIntervals.clear();
+  }
+
+  /**
+   * Start refresh for all enabled watchlists
+   */
+  async startAllEnabledRefreshes(): Promise<void> {
+    const result = await this.repository.listEnabled(0, 100);
+    for (const watchlist of result.data) {
+      if (watchlist.enabled && watchlist.cadence) {
+        this.scheduleRefresh(watchlist.id, watchlist.cadence);
+      }
+    }
+  }
+
+  // ============================================================================
+  // Validation
+  // ============================================================================
+
+  /**
+   * Validate watchlist input
+   */
+  validateWatchlistInput(
+    input: CreateWatchlistInput | UpdateWatchlistInput,
+    isUpdate = false
+  ): {
+    valid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (!isUpdate && (input as CreateWatchlistInput).name) {
+      const name = (input as CreateWatchlistInput).name;
+      if (name.trim().length === 0) {
+        errors.push('Name is required');
+      }
+    }
+
+    if (!isUpdate && (input as CreateWatchlistInput).criteriaJson) {
+      const criteriaJson = (input as CreateWatchlistInput).criteriaJson;
+      try {
+        JSON.parse(criteriaJson);
+      } catch {
+        errors.push('Invalid criteria JSON');
+      }
+    }
+
+    if (input.criteriaJson !== undefined) {
+      try {
+        JSON.parse(input.criteriaJson);
+      } catch {
+        errors.push('Invalid criteria JSON');
+      }
+    }
+
+    if (input.cadence !== undefined && !this.isValidCadence(input.cadence)) {
+      errors.push('Invalid cadence (use: hourly, daily, weekly, monthly)');
+    }
 
     return {
-      id,
-      watchlistId: input.watchlistId,
-      payloadJson: input.payloadJson,
-      matchedAt: input.matchedAt ?? now,
-      seenAt: input.seenAt,
+      valid: errors.length === 0,
+      errors,
     };
   }
 
-  /**
-   * Get hits for a watchlist
-   */
-  async getHitsByWatchlistId(watchlistId: string): Promise<WatchlistHit[]> {
-    const rows = await this.db.select('ma_watchlist_hits', { watchlist_id: watchlistId });
+  private isValidCadence(cadence: string): boolean {
+    const validCadences = ['hourly', 'daily', 'weekly', 'monthly'];
+    return validCadences.includes(cadence);
+  }
 
-    return rows.map((row: any) => ({
-      id: row.id,
-      watchlistId: row.watchlist_id,
-      payloadJson: row.payload_json,
-      matchedAt: row.matched_at,
-      seenAt: row.seen_at ?? undefined,
-    }));
+  private parseCadenceToMs(cadence: string): number | null {
+    const cadenceMap: Record<string, number> = {
+      hourly: 60 * 60 * 1000,
+      daily: 24 * 60 * 60 * 1000,
+      weekly: 7 * 24 * 60 * 60 * 1000,
+      monthly: 30 * 24 * 60 * 60 * 1000,
+    };
+    return cadenceMap[cadence] ?? null;
   }
 
   /**
-   * Mark a hit as seen
+   * Check criteria against data sources (placeholder for actual implementation)
    */
-  async markHitAsSeen(hitId: string): Promise<void> {
-    await this.db.update('ma_watchlist_hits', { id: hitId }, { seen_at: Date.now() });
+  private async checkCriteria(criteria: Record<string, unknown>): Promise<Record<string, unknown>[]> {
+    // This is a placeholder for the actual criteria checking logic
+    // In a real implementation, this would query company data, deal data, etc.
+    // and return matches based on the criteria
+    console.log('[WatchlistService] Checking criteria:', criteria);
+    return [];
   }
 }
 
-// Singleton instance
-let watchlistService: WatchlistService | null = null;
+// ============================================================================
+// Singleton Instance
+// ============================================================================
 
-export function getWatchlistService(db: any): WatchlistService {
-  if (!watchlistService) {
-    watchlistService = new WatchlistService(db);
+let watchlistServiceInstance: WatchlistService | null = null;
+
+export function getWatchlistService(): WatchlistService {
+  if (!watchlistServiceInstance) {
+    watchlistServiceInstance = new WatchlistService();
   }
-  return watchlistService;
+  return watchlistServiceInstance;
 }
+
+// ============================================================================
+// Export all types
+// ============================================================================
+
+export type {
+  Watchlist,
+  CreateWatchlistInput,
+  UpdateWatchlistInput,
+  WatchlistHit,
+  CreateWatchlistHitInput,
+  UpdateWatchlistHitInput,
+};

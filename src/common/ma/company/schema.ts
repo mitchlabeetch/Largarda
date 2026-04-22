@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import type { FreshnessStatus } from '@/common/ma/sourceCache/schema';
 
 // ============================================================================
 // Company Types
@@ -36,6 +37,8 @@ export const CompanySchema = z.object({
   revenue: z.number().nonnegative().optional(),
   sourcesJson: z.string().optional(),
   lastEnrichedAt: z.number().int().positive().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
   createdAt: z.number().int().positive(),
   updatedAt: z.number().int().positive(),
 });
@@ -56,6 +59,8 @@ export const CreateCompanyInputSchema = z.object({
   employeeCount: z.number().int().nonnegative().optional(),
   revenue: z.number().nonnegative().optional(),
   sourcesJson: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 export const UpdateCompanyInputSchema = z.object({
@@ -74,6 +79,8 @@ export const UpdateCompanyInputSchema = z.object({
   revenue: z.number().nonnegative().optional(),
   sourcesJson: z.string().optional(),
   lastEnrichedAt: z.number().int().positive().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 // ============================================================================
@@ -95,6 +102,8 @@ export interface Company {
   revenue?: number;
   sourcesJson?: string;
   lastEnrichedAt?: number;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
   createdAt: number;
   updatedAt: number;
 }
@@ -112,6 +121,8 @@ export interface CreateCompanyInput {
   employeeCount?: number;
   revenue?: number;
   sourcesJson?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 export interface UpdateCompanyInput {
@@ -127,6 +138,8 @@ export interface UpdateCompanyInput {
   revenue?: number;
   sourcesJson?: string;
   lastEnrichedAt?: number;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 // ============================================================================
@@ -148,6 +161,8 @@ export interface IMaCompanyRow {
   revenue: number | null;
   sources_json: string | null;
   last_enriched_at: number | null;
+  provenance_json: string | null;
+  freshness: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -172,6 +187,8 @@ export function companyToRow(company: Company): IMaCompanyRow {
     revenue: company.revenue ?? null,
     sources_json: company.sourcesJson ?? null,
     last_enriched_at: company.lastEnrichedAt ?? null,
+    provenance_json: company.provenanceJson ?? null,
+    freshness: company.freshness ?? null,
     created_at: company.createdAt,
     updated_at: company.updatedAt,
   };
@@ -193,6 +210,8 @@ export function rowToCompany(row: IMaCompanyRow): Company {
     revenue: row.revenue ?? undefined,
     sourcesJson: row.sources_json ?? undefined,
     lastEnrichedAt: row.last_enriched_at ?? undefined,
+    provenanceJson: row.provenance_json ?? undefined,
+    freshness: (row.freshness as FreshnessStatus) ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

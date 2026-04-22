@@ -103,4 +103,34 @@ describe('DocumentUpload', () => {
     expect(screen.getByText(/Unsupported format: \.exe/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Click or drag files to upload' })).toBeInTheDocument();
   });
+
+  it('should not contain emoji in upload states', () => {
+    render(<DocumentUpload dealId='deal-1' />);
+
+    const html = document.body.innerHTML;
+    // Check that common emojis are not present
+    expect(html).not.toContain('📄');
+    expect(html).not.toContain('📁');
+    expect(html).not.toContain('⬆️');
+    expect(html).not.toContain('✅');
+    expect(html).not.toContain('❌');
+  });
+
+  it('should use semantic CSS variables for status colors', () => {
+    render(<DocumentUpload dealId='deal-1' />);
+
+    expect(screen.getByText('Uploaded').className).toContain('successText');
+    expect(screen.getByText('Failed').className).toContain('errorText');
+
+    const html = document.body.innerHTML;
+    expect(html).not.toContain('#F53F3F');
+    expect(html).not.toContain('#00B42A');
+  });
+
+  it('should maintain accessible dropzone during all states', () => {
+    render(<DocumentUpload dealId='deal-1' />);
+
+    const dropzone = screen.getByRole('button', { name: 'Click or drag files to upload' });
+    expect(dropzone).toHaveAttribute('aria-label', 'Click or drag files to upload');
+  });
 });

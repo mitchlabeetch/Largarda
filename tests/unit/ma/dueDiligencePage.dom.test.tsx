@@ -66,6 +66,9 @@ const translations: Record<string, string> = {
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, _opts?: unknown) => translations[key] ?? key,
+    i18n: {
+      language: 'en-US',
+    },
   }),
 }));
 
@@ -394,5 +397,170 @@ describe('DueDiligencePage', () => {
     expect(screen.queryByText('Documents Processing')).not.toBeInTheDocument();
     expect(screen.queryByText('No Documents')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start Analysis' })).toBeEnabled();
+  });
+});
+
+describe('DueDiligencePage - Async Accessibility Coverage', () => {
+  it('should have aria-live region for screen reader announcements', () => {
+    setupMocks();
+
+    render(<DueDiligencePage />);
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute('aria-atomic', 'true');
+  });
+
+  it('should announce analysis initialization to screen readers', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [],
+        currentAnalysis: {
+          analysisId: 'analysis-2',
+          progress: {
+            analysisId: 'analysis-2',
+            stage: 'initializing',
+            progress: 0,
+          },
+          isRunning: true,
+          error: null,
+          status: 'initializing',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveTextContent('Initializing');
+  });
+
+  it('should announce analysis running to screen readers', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [],
+        currentAnalysis: {
+          analysisId: 'analysis-2',
+          progress: {
+            analysisId: 'analysis-2',
+            stage: 'analyzing',
+            progress: 50,
+            message: 'Analyzing documents...',
+          },
+          isRunning: true,
+          error: null,
+          status: 'running',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveTextContent('Analyzing...');
+  });
+
+  it('should announce analysis completion to screen readers', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [defaultAnalysis],
+        currentAnalysis: {
+          analysisId: null,
+          progress: null,
+          isRunning: false,
+          error: null,
+          status: 'completed',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveTextContent('Analysis completed successfully');
+  });
+
+  it('should announce analysis failure to screen readers', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [],
+        currentAnalysis: {
+          analysisId: null,
+          progress: null,
+          isRunning: false,
+          error: 'Backend timeout',
+          status: 'failed',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveTextContent('Analysis failed');
+  });
+
+  it('should not contain emoji in progress display', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [],
+        currentAnalysis: {
+          analysisId: 'analysis-2',
+          progress: {
+            analysisId: 'analysis-2',
+            stage: 'analyzing',
+            progress: 50,
+            message: 'Analyzing documents...',
+            currentDocument: 'test.pdf',
+          },
+          isRunning: true,
+          error: null,
+          status: 'running',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const html = document.body.innerHTML;
+    // Check that document emoji is not present
+    expect(html).not.toContain('📄');
+  });
+
+  it('should use semantic color variables in severity tags', () => {
+    setupMocks({
+      dueDiligence: {
+        analyses: [
+          {
+            ...defaultAnalysis,
+            risks: [
+              {
+                id: 'risk-1',
+                category: 'financial',
+                severity: 'high',
+                title: 'Test Risk',
+                description: 'Test description',
+                score: 75,
+              },
+            ],
+          },
+        ],
+        currentAnalysis: {
+          analysisId: null,
+          progress: null,
+          isRunning: false,
+          error: null,
+          status: 'idle',
+        },
+      },
+    });
+
+    render(<DueDiligencePage />);
+
+    const html = document.body.innerHTML;
+    // This assertion targets the DD page's own severity tag rendering, not the mocked RiskScoreCard.
+    expect(html).toContain('var(--warning)');
+    expect(html).not.toContain('#F53F3F');
+    expect(html).not.toContain('#FF7D00');
   });
 });

@@ -32,6 +32,27 @@ export type FlowStatus = 'draft' | 'authored' | 'deployed' | 'deprecated';
 export type FlowKind = 'chatflow' | 'agentflow-v2';
 
 /**
+ * Provenance record that tracks which flow family and prompt version
+ * were used for a given AI operation. This ensures every AI feature
+ * knows exactly which flow family and prompt version it is using.
+ *
+ * This should be persisted alongside any results from flow execution
+ * to enable observability, debugging, and prompt version rollbacks.
+ */
+export interface FlowProvenance {
+  /** The stable feature key from the flow catalog. */
+  flowKey: FlowKey;
+  /** The Flowise flow UUID that was actually invoked. */
+  flowId: string;
+  /** The prompt version ID pinned for this execution. */
+  promptVersionId: string;
+  /** Human-readable description of the flow. */
+  flowDescription: string;
+  /** Timestamp when the flow spec was resolved (ms since epoch). */
+  resolvedAt: number;
+}
+
+/**
  * A single entry in the flow catalogue. Entries are pure data; they
  * never contain secrets or environment-specific values. Runtime
  * overrides live in a separate `FlowRuntimeConfig` (Wave 6.4).

@@ -30,6 +30,7 @@ export default defineConfig({
             'tests/unit/**/*.test.ts',
             'tests/unit/**/test_*.ts',
             'tests/integration/**/*.test.ts',
+            'tests/integration/**/*.bench.ts',
             'tests/regression/**/*.test.ts',
           ],
           exclude: ['tests/unit/**/*.dom.test.ts', 'tests/unit/**/*.dom.test.tsx'],

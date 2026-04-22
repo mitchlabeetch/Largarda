@@ -598,6 +598,7 @@
   "bugReportModuleDisplaySettingsDescription": "For issues with theme, scaling, UI styles, window display, or desktop pet presentation.",
   "bugReportModuleSystemSettingsDescription": "For issues with system permissions, launch at startup, notifications, storage paths, or platform integration.",
   "bugReportModuleOtherDescription": "Use this when the issue spans multiple modules, or when you are not sure which category fits best.",
+  "requiredField": "required",
   "bugReportModulePreview": "Preview Panel",
   "bugReportModuleSystemSettings": "System Settings",
   "bugReportModuleDisplaySettings": "Interface, Display & Desktop Pet",

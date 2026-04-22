@@ -1575,6 +1575,567 @@ const migration_v29: IMigration = {
 };
 
 /**
+ * Migration v29 -> v30: Add ma_source_cache table + provenance/freshness columns
+ *
+ * Wave 5 / Batch 5A — M&A data spine schema hardening:
+ *   - New `ma_source_cache` table for generic external API response caching
+ *     with provenance, freshness, and canonical-source policy tracking.
+ *   - Add `provenance_json` / `freshness` columns to `ma_companies`,
+ *     `ma_contacts`, and `ma_kb_sources` so enrichment provenance and
+ *     staleness are durable per-row without reopening schema later.
+ */
+const migration_v30: IMigration = {
+  version: 30,
+  name: 'Add ma_source_cache table and provenance/freshness columns',
+  up: (db) => {
+    // ── ma_source_cache ──────────────────────────────────────────────
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_source_cache (
+        id TEXT PRIMARY KEY,
+        surface TEXT NOT NULL,
+        lookup_key TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        provenance_json TEXT NOT NULL,
+        fetched_at INTEGER NOT NULL,
+        ttl_ms INTEGER NOT NULL,
+        freshness TEXT NOT NULL DEFAULT 'unknown',
+        source_url TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        UNIQUE(surface, lookup_key)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_source_cache_surface ON ma_source_cache(surface)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_source_cache_freshness ON ma_source_cache(freshness)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_source_cache_fetched_at ON ma_source_cache(fetched_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_source_cache_surface_lookup ON ma_source_cache(surface, lookup_key)');
+
+    // ── ma_companies provenance/freshness ────────────────────────────
+    const companyCols = new Set((db.pragma('table_info(ma_companies)') as Array<{ name: string }>).map((c) => c.name));
+    if (!companyCols.has('provenance_json')) {
+      db.exec('ALTER TABLE ma_companies ADD COLUMN provenance_json TEXT');
+    }
+    if (!companyCols.has('freshness')) {
+      db.exec("ALTER TABLE ma_companies ADD COLUMN freshness TEXT NOT NULL DEFAULT 'unknown'");
+    }
+
+    // ── ma_contacts provenance/freshness ────────────────────────────
+    const contactCols = new Set((db.pragma('table_info(ma_contacts)') as Array<{ name: string }>).map((c) => c.name));
+    if (!contactCols.has('provenance_json')) {
+      db.exec('ALTER TABLE ma_contacts ADD COLUMN provenance_json TEXT');
+    }
+    if (!contactCols.has('freshness')) {
+      db.exec("ALTER TABLE ma_contacts ADD COLUMN freshness TEXT NOT NULL DEFAULT 'unknown'");
+    }
+
+    // ── ma_kb_sources provenance/freshness ───────────────────────────
+    const kbCols = new Set((db.pragma('table_info(ma_kb_sources)') as Array<{ name: string }>).map((c) => c.name));
+    if (!kbCols.has('provenance_json')) {
+      db.exec('ALTER TABLE ma_kb_sources ADD COLUMN provenance_json TEXT');
+    }
+    if (!kbCols.has('freshness')) {
+      db.exec("ALTER TABLE ma_kb_sources ADD COLUMN freshness TEXT NOT NULL DEFAULT 'unknown'");
+    }
+
+    console.log('[Migration v30] Added ma_source_cache table and provenance/freshness columns');
+  },
+  down: (db) => {
+    // Drop ma_source_cache
+    db.exec('DROP INDEX IF EXISTS idx_ma_source_cache_surface_lookup');
+    db.exec('DROP INDEX IF EXISTS idx_ma_source_cache_fetched_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_source_cache_freshness');
+    db.exec('DROP INDEX IF EXISTS idx_ma_source_cache_surface');
+    db.exec('DROP TABLE IF EXISTS ma_source_cache');
+
+    // Recreate ma_companies without provenance_json / freshness
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_companies_backup AS
+      SELECT id, siren, siret, name, legal_form, naf_code, sector_id,
+             jurisdiction, headquarters_address, registered_at,
+             employee_count, revenue, sources_json, last_enriched_at,
+             created_at, updated_at
+      FROM ma_companies`);
+    db.exec('DROP TABLE ma_companies');
+    db.exec(`CREATE TABLE ma_companies (
+        id TEXT PRIMARY KEY,
+        siren TEXT NOT NULL UNIQUE,
+        siret TEXT,
+        name TEXT NOT NULL,
+        legal_form TEXT,
+        naf_code TEXT,
+        sector_id TEXT,
+        jurisdiction TEXT,
+        headquarters_address TEXT,
+        registered_at INTEGER,
+        employee_count INTEGER,
+        revenue REAL,
+        sources_json TEXT,
+        last_enriched_at INTEGER,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )`);
+    db.exec('INSERT INTO ma_companies SELECT * FROM ma_companies_backup');
+    db.exec('DROP TABLE ma_companies_backup');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_siren ON ma_companies(siren)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_siret ON ma_companies(siret)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_name ON ma_companies(name)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_companies_sector ON ma_companies(sector_id)');
+
+    // Recreate ma_contacts without provenance_json / freshness
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_contacts_backup AS
+      SELECT id, company_id, deal_id, full_name, role, email, phone,
+             linkedin_url, notes, created_at, updated_at
+      FROM ma_contacts`);
+    db.exec('DROP TABLE ma_contacts');
+    db.exec(`CREATE TABLE ma_contacts (
+        id TEXT PRIMARY KEY,
+        company_id TEXT,
+        deal_id TEXT,
+        full_name TEXT NOT NULL,
+        role TEXT,
+        email TEXT,
+        phone TEXT,
+        linkedin_url TEXT,
+        notes TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        FOREIGN KEY (company_id) REFERENCES ma_companies(id) ON DELETE SET NULL,
+        FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+      )`);
+    db.exec('INSERT INTO ma_contacts SELECT * FROM ma_contacts_backup');
+    db.exec('DROP TABLE ma_contacts_backup');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_company_id ON ma_contacts(company_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_deal_id ON ma_contacts(deal_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_contacts_email ON ma_contacts(email)');
+
+    // Recreate ma_kb_sources without provenance_json / freshness
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_kb_sources_backup AS
+      SELECT id, scope, scope_id, flowise_document_store_id, embedding_model,
+             chunk_count, last_ingested_at, status, error_text, created_at, updated_at
+      FROM ma_kb_sources`);
+    db.exec('DROP TABLE ma_kb_sources');
+    db.exec(`CREATE TABLE ma_kb_sources (
+        id TEXT PRIMARY KEY,
+        scope TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        flowise_document_store_id TEXT,
+        embedding_model TEXT,
+        chunk_count INTEGER DEFAULT 0,
+        last_ingested_at INTEGER,
+        status TEXT NOT NULL DEFAULT 'pending',
+        error_text TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        UNIQUE(scope, scope_id)
+      )`);
+    db.exec('INSERT INTO ma_kb_sources SELECT * FROM ma_kb_sources_backup');
+    db.exec('DROP TABLE ma_kb_sources_backup');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_kb_sources_scope ON ma_kb_sources(scope)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_kb_sources_status ON ma_kb_sources(status)');
+
+    console.log('[Migration v30] Rolled back: Removed ma_source_cache and provenance/freshness columns');
+  },
+};
+
+/**
+ * Migration v30 -> v31: Add ma_sync_jobs table
+ *
+ * Wave 8 / Batch 8B — Email and CRM sync flows:
+ *   - New `ma_sync_jobs` table for tracking email and CRM sync operations
+ *     with state machine, retry logic, and progress tracking.
+ */
+const migration_v31: IMigration = {
+  version: 31,
+  name: 'Add ma_sync_jobs table for email/CRM sync flows',
+  up: (db) => {
+    db.exec(`CREATE TABLE IF NOT EXISTS ma_sync_jobs (
+        id TEXT PRIMARY KEY,
+        job_type TEXT NOT NULL CHECK(job_type IN ('email', 'crm')),
+        provider_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('pending', 'queued', 'connecting', 'fetching', 'processing', 'completed', 'failed', 'cancelled', 'retrying')),
+        config TEXT,
+        result TEXT,
+        error TEXT,
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        max_retries INTEGER NOT NULL DEFAULT 3,
+        items_processed INTEGER NOT NULL DEFAULT 0,
+        items_total INTEGER NOT NULL DEFAULT 0,
+        started_at INTEGER,
+        completed_at INTEGER,
+        next_retry_at INTEGER,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_sync_jobs_job_type ON ma_sync_jobs(job_type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_sync_jobs_provider_id ON ma_sync_jobs(provider_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_sync_jobs_status ON ma_sync_jobs(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_sync_jobs_next_retry_at ON ma_sync_jobs(next_retry_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_ma_sync_jobs_created_at ON ma_sync_jobs(created_at DESC)');
+
+    console.log('[Migration v31] Added ma_sync_jobs table for email/CRM sync flows');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_ma_sync_jobs_created_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_sync_jobs_next_retry_at');
+    db.exec('DROP INDEX IF EXISTS idx_ma_sync_jobs_status');
+    db.exec('DROP INDEX IF EXISTS idx_ma_sync_jobs_provider_id');
+    db.exec('DROP INDEX IF EXISTS idx_ma_sync_jobs_job_type');
+    db.exec('DROP TABLE IF EXISTS ma_sync_jobs');
+
+    console.log('[Migration v31] Rolled back: Removed ma_sync_jobs table');
+  },
+};
+
+/**
+ * Wave 11 / Batch 11A — RBAC and Audit Log:
+ *   - permissions, roles, role_permissions, user_roles tables for RBAC
+ *   - audit_logs table for compliance tracking
+ *   - Support for permissioned actions and audit trails
+ */
+const migration_v32: IMigration = {
+  version: 32,
+  name: 'Add RBAC and audit log tables',
+  up: (db) => {
+    // Permissions table
+    db.exec(`CREATE TABLE IF NOT EXISTS permissions (
+      id TEXT PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT NOT NULL,
+      resource_type TEXT NOT NULL,
+      action TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(name)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_permissions_resource ON permissions(resource_type, action)');
+
+    // Roles table
+    db.exec(`CREATE TABLE IF NOT EXISTS roles (
+      id TEXT PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT NOT NULL,
+      is_system INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_roles_is_system ON roles(is_system)');
+
+    // Role-Permission mapping table
+    db.exec(`CREATE TABLE IF NOT EXISTS role_permissions (
+      role_id TEXT NOT NULL,
+      permission_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (role_id, permission_id),
+      FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+      FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id)');
+
+    // User-Role mapping table
+    db.exec(`CREATE TABLE IF NOT EXISTS user_roles (
+      user_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      assigned_at INTEGER NOT NULL,
+      assigned_by TEXT,
+      PRIMARY KEY (user_id, role_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+      FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id)');
+
+    // Audit logs table
+    db.exec(`CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      timestamp INTEGER NOT NULL,
+      user_id TEXT,
+      username TEXT,
+      action TEXT NOT NULL,
+      category TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      resource_type TEXT,
+      resource_id TEXT,
+      description TEXT NOT NULL,
+      metadata TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      success INTEGER NOT NULL DEFAULT 1,
+      error_message TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp DESC)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_action_timestamp ON audit_logs(action, timestamp DESC)');
+
+    console.log('[Migration v32] Added RBAC and audit log tables');
+  },
+  down: (db) => {
+    // Drop audit log indexes and table
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_action_timestamp');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_user_timestamp');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_resource');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_severity');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_category');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_action');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_user');
+    db.exec('DROP INDEX IF EXISTS idx_audit_logs_timestamp');
+    db.exec('DROP TABLE IF EXISTS audit_logs');
+
+    // Drop user_roles indexes and table
+    db.exec('DROP INDEX IF EXISTS idx_user_roles_role');
+    db.exec('DROP INDEX IF EXISTS idx_user_roles_user');
+    db.exec('DROP TABLE IF EXISTS user_roles');
+
+    // Drop role_permissions indexes and table
+    db.exec('DROP INDEX IF EXISTS idx_role_permissions_permission');
+    db.exec('DROP INDEX IF EXISTS idx_role_permissions_role');
+    db.exec('DROP TABLE IF EXISTS role_permissions');
+
+    // Drop roles indexes and table
+    db.exec('DROP INDEX IF EXISTS idx_roles_is_system');
+    db.exec('DROP INDEX IF EXISTS idx_roles_name');
+    db.exec('DROP TABLE IF EXISTS roles');
+
+    // Drop permissions indexes and table
+    db.exec('DROP INDEX IF EXISTS idx_permissions_resource');
+    db.exec('DROP INDEX IF EXISTS idx_permissions_name');
+    db.exec('DROP TABLE IF EXISTS permissions');
+
+    console.log('[Migration v32] Rolled back: Removed RBAC and audit log tables');
+  },
+};
+
+/**
+ * Migration v32 -> v33: Add GDPR and VDR compliance workflow tables
+ * Tables for GDPR export requests, erasure requests, retention policies,
+ * VDR access grants, compliance workflows, and destructive action reviews.
+ */
+const migration_v33: IMigration = {
+  version: 33,
+  name: 'Add GDPR and VDR compliance workflow tables',
+  up: (db) => {
+    // GDPR export requests table
+    db.exec(`CREATE TABLE IF NOT EXISTS gdpr_export_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      request_type TEXT NOT NULL CHECK(request_type IN ('full_export', 'conversation_history', 'audit_trail')),
+      requested_at INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending_review', 'awaiting_confirmation', 'in_progress', 'completed', 'cancelled', 'failed')),
+      scope_conversations INTEGER NOT NULL DEFAULT 0,
+      scope_audit_logs INTEGER NOT NULL DEFAULT 0,
+      scope_settings INTEGER NOT NULL DEFAULT 0,
+      scope_extensions INTEGER NOT NULL DEFAULT 0,
+      date_range_start INTEGER,
+      date_range_end INTEGER,
+      reviewed_by TEXT,
+      reviewed_at INTEGER,
+      completed_at INTEGER,
+      download_url TEXT,
+      expires_at INTEGER,
+      metadata TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_gdpr_export_user ON gdpr_export_requests(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_gdpr_export_status ON gdpr_export_requests(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_gdpr_export_requested_at ON gdpr_export_requests(requested_at)');
+
+    // GDPR erasure requests table
+    db.exec(`CREATE TABLE IF NOT EXISTS gdpr_erasure_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      request_type TEXT NOT NULL CHECK(request_type IN ('full_erasure', 'selective_erasure')),
+      requested_at INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending_review', 'awaiting_confirmation', 'in_progress', 'completed', 'cancelled', 'failed')),
+      scope_conversations TEXT,
+      scope_messages TEXT,
+      scope_user_data INTEGER NOT NULL DEFAULT 0,
+      scope_audit_logs INTEGER NOT NULL DEFAULT 0,
+      reviewed_by TEXT,
+      reviewed_at INTEGER,
+      executed_at INTEGER,
+      completed_at INTEGER,
+      dry_run_performed INTEGER NOT NULL DEFAULT 0,
+      dry_run_results TEXT,
+      actual_results TEXT,
+      metadata TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_gdpr_erasure_user ON gdpr_erasure_requests(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_gdpr_erasure_status ON gdpr_erasure_requests(status)');
+
+    // Retention policies table
+    db.exec(`CREATE TABLE IF NOT EXISTS retention_policies (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      applies_to TEXT NOT NULL,
+      retention_days INTEGER NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('archive', 'delete', 'anonymize')),
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      created_by TEXT NOT NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_retention_active ON retention_policies(is_active)');
+
+    // Retention enforcement jobs table
+    db.exec(`CREATE TABLE IF NOT EXISTS retention_enforcement_jobs (
+      id TEXT PRIMARY KEY,
+      policy_id TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed')),
+      items_scanned INTEGER NOT NULL DEFAULT 0,
+      items_processed INTEGER NOT NULL DEFAULT 0,
+      items_skipped INTEGER NOT NULL DEFAULT 0,
+      errors TEXT,
+      FOREIGN KEY (policy_id) REFERENCES retention_policies(id) ON DELETE CASCADE
+    )`);
+
+    // VDR access grants table
+    db.exec(`CREATE TABLE IF NOT EXISTS vdr_access_grants (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      deal_id TEXT,
+      document_ids TEXT NOT NULL,
+      granted_at INTEGER NOT NULL,
+      expires_at INTEGER,
+      granted_by TEXT NOT NULL,
+      access_level TEXT NOT NULL CHECK(access_level IN ('view', 'download', 'annotate', 'admin')),
+      status TEXT NOT NULL CHECK(status IN ('active', 'expired', 'revoked')),
+      revoked_at INTEGER,
+      revoked_by TEXT,
+      metadata TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (revoked_by) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (deal_id) REFERENCES ma_deals(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_vdr_grant_user ON vdr_access_grants(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_vdr_grant_deal ON vdr_access_grants(deal_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_vdr_grant_status ON vdr_access_grants(status)');
+
+    // VDR access requests table
+    db.exec(`CREATE TABLE IF NOT EXISTS vdr_access_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      requested_at INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending_review', 'awaiting_confirmation', 'in_progress', 'completed', 'cancelled', 'failed')),
+      purpose TEXT NOT NULL,
+      requested_documents TEXT NOT NULL,
+      requested_access_level TEXT NOT NULL CHECK(requested_access_level IN ('view', 'download', 'annotate', 'admin')),
+      reviewed_by TEXT,
+      reviewed_at INTEGER,
+      approved INTEGER,
+      rejection_reason TEXT,
+      resulting_grant_id TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (resulting_grant_id) REFERENCES vdr_access_grants(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_vdr_request_user ON vdr_access_requests(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_vdr_request_status ON vdr_access_requests(status)');
+
+    // Compliance workflows table
+    db.exec(`CREATE TABLE IF NOT EXISTS compliance_workflows (
+      id TEXT PRIMARY KEY,
+      workflow_type TEXT NOT NULL CHECK(workflow_type IN ('data_export', 'data_erasure', 'retention_enforcement', 'vdr_provision', 'vdr_revoke')),
+      action_type TEXT NOT NULL CHECK(action_type IN ('export_user_data', 'export_conversation_history', 'export_audit_logs', 'erase_user_data', 'erase_conversation', 'enforce_retention_policy', 'create_vdr_access', 'revoke_vdr_access', 'archive_expired_data')),
+      status TEXT NOT NULL CHECK(status IN ('pending_review', 'awaiting_confirmation', 'in_progress', 'completed', 'cancelled', 'failed')),
+      initiated_by TEXT NOT NULL,
+      initiated_at INTEGER NOT NULL,
+      review_required INTEGER NOT NULL DEFAULT 1,
+      reviewed_by TEXT,
+      reviewed_at INTEGER,
+      approved INTEGER,
+      approval_notes TEXT,
+      executed_at INTEGER,
+      completed_at INTEGER,
+      target_user_id TEXT,
+      metadata TEXT,
+      error_message TEXT,
+      FOREIGN KEY (initiated_by) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_compliance_workflow_type ON compliance_workflows(workflow_type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_compliance_workflow_status ON compliance_workflows(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_compliance_workflow_initiated ON compliance_workflows(initiated_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_compliance_workflow_target ON compliance_workflows(target_user_id)');
+
+    // Destructive action reviews table
+    db.exec(`CREATE TABLE IF NOT EXISTS destructive_action_reviews (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL UNIQUE,
+      action_type TEXT NOT NULL,
+      requested_by TEXT NOT NULL,
+      requested_at INTEGER NOT NULL,
+      requires_dual_approval INTEGER NOT NULL DEFAULT 0,
+      primary_reviewer TEXT,
+      primary_approved_at INTEGER,
+      secondary_reviewer TEXT,
+      secondary_approved_at INTEGER,
+      rejection_reason TEXT,
+      dry_run_results TEXT,
+      approved INTEGER NOT NULL DEFAULT 0,
+      executed INTEGER NOT NULL DEFAULT 0,
+      executed_at INTEGER,
+      FOREIGN KEY (workflow_id) REFERENCES compliance_workflows(id) ON DELETE CASCADE,
+      FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (primary_reviewer) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (secondary_reviewer) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_destructive_review_workflow ON destructive_action_reviews(workflow_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_destructive_review_approved ON destructive_action_reviews(approved)');
+
+    console.log('[Migration v33] Added GDPR and VDR compliance workflow tables');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_destructive_review_approved');
+    db.exec('DROP INDEX IF EXISTS idx_destructive_review_workflow');
+    db.exec('DROP TABLE IF EXISTS destructive_action_reviews');
+
+    db.exec('DROP INDEX IF EXISTS idx_compliance_workflow_target');
+    db.exec('DROP INDEX IF EXISTS idx_compliance_workflow_initiated');
+    db.exec('DROP INDEX IF EXISTS idx_compliance_workflow_status');
+    db.exec('DROP INDEX IF EXISTS idx_compliance_workflow_type');
+    db.exec('DROP TABLE IF EXISTS compliance_workflows');
+
+    db.exec('DROP INDEX IF EXISTS idx_vdr_request_status');
+    db.exec('DROP INDEX IF EXISTS idx_vdr_request_user');
+    db.exec('DROP TABLE IF EXISTS vdr_access_requests');
+
+    db.exec('DROP INDEX IF EXISTS idx_vdr_grant_status');
+    db.exec('DROP INDEX IF EXISTS idx_vdr_grant_deal');
+    db.exec('DROP INDEX IF EXISTS idx_vdr_grant_user');
+    db.exec('DROP TABLE IF EXISTS vdr_access_grants');
+
+    db.exec('DROP TABLE IF EXISTS retention_enforcement_jobs');
+
+    db.exec('DROP INDEX IF EXISTS idx_retention_active');
+    db.exec('DROP TABLE IF EXISTS retention_policies');
+
+    db.exec('DROP INDEX IF EXISTS idx_gdpr_erasure_status');
+    db.exec('DROP INDEX IF EXISTS idx_gdpr_erasure_user');
+    db.exec('DROP TABLE IF EXISTS gdpr_erasure_requests');
+
+    db.exec('DROP INDEX IF EXISTS idx_gdpr_export_requested_at');
+    db.exec('DROP INDEX IF EXISTS idx_gdpr_export_status');
+    db.exec('DROP INDEX IF EXISTS idx_gdpr_export_user');
+    db.exec('DROP TABLE IF EXISTS gdpr_export_requests');
+
+    console.log('[Migration v33] Rolled back: Removed GDPR and VDR compliance workflow tables');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1583,7 +2144,8 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v7, migration_v8, migration_v9, migration_v10, migration_v11, migration_v12,
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
-  migration_v25, migration_v26, migration_v27, migration_v28, migration_v29,
+  migration_v25, migration_v26, migration_v27, migration_v28, migration_v29, migration_v30,
+  migration_v31, migration_v32, migration_v33,
 ];
 
 /**

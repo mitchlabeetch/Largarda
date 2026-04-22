@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Button, Card, Checkbox, Empty, Message, Progress, Table, Tag, Typography } from '@arco-design/web-react';
+import { Button, Card, Empty, Message, Progress, Table, Tag, Typography } from '@arco-design/web-react';
 import {
   Play,
   Refresh,
@@ -27,6 +27,7 @@ import { useDealContext } from '@/renderer/hooks/ma/useDealContext';
 import { useDocuments } from '@/renderer/hooks/ma/useDocuments';
 import { useDueDiligence } from '@/renderer/hooks/ma/useDueDiligence';
 import { useFlowiseReadiness } from '@/renderer/hooks/ma/useFlowiseReadiness';
+import { useMaDateFormatters } from '@/renderer/utils/ma/formatters';
 import { EmptyState, ErrorState, Skeleton } from '@/renderer/components/base';
 import { isActiveDocumentStatus } from '@/common/ma/types';
 import type { MaDocument, RiskCategory, RiskSeverity } from '@/common/ma/types';
@@ -35,21 +36,13 @@ import styles from './DueDiligencePage.module.css';
 
 const { Title, Text } = Typography;
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type ViewMode = 'analysis' | 'comparison' | 'history';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const SEVERITY_COLORS: Record<RiskSeverity, string> = {
-  low: 'green',
-  medium: 'orange',
-  high: 'red',
-  critical: 'purple',
+  low: 'var(--success)',
+  medium: 'var(--info)',
+  high: 'var(--warning)',
+  critical: 'var(--danger)',
 };
 
 const EMPTY_RISK_SCORES: Record<RiskCategory, number> = {
@@ -60,10 +53,6 @@ const EMPTY_RISK_SCORES: Record<RiskCategory, number> = {
   reputational: 0,
 };
 
-// ============================================================================
-// Sub-Components
-// ============================================================================
-
 interface DocumentSelectorProps {
   documents: MaDocument[];
   selectedIds: string[];
@@ -73,8 +62,33 @@ interface DocumentSelectorProps {
 function DocumentSelector({ documents, selectedIds, onSelectionChange }: DocumentSelectorProps) {
   const { t } = useTranslation();
 
+  const getDocumentStatusLabel = useCallback(
+    (status: MaDocument['status']) => {
+      switch (status) {
+        case 'completed':
+          return t('ma.documentUpload.status.uploaded');
+        case 'failed':
+        case 'error':
+          return t('ma.documentUpload.status.failed');
+        case 'cancelled':
+          return t('ma.documentUpload.status.cancelled');
+        case 'queued':
+          return t('ma.documentUpload.stage.queued');
+        case 'extracting':
+          return t('ma.documentUpload.stage.extracting');
+        case 'chunking':
+          return t('ma.documentUpload.stage.chunking');
+        case 'processing':
+          return t('ma.documentUpload.status.ingesting');
+        default:
+          return status;
+      }
+    },
+    [t]
+  );
+
   const handleSelectAll = useCallback(() => {
-    onSelectionChange(documents.map((d) => d.id));
+    onSelectionChange(documents.filter((doc) => doc.status === 'completed').map((doc) => doc.id));
   }, [documents, onSelectionChange]);
 
   const handleClearAll = useCallback(() => {
@@ -84,12 +98,12 @@ function DocumentSelector({ documents, selectedIds, onSelectionChange }: Documen
   const handleToggle = useCallback(
     (id: string) => {
       if (selectedIds.includes(id)) {
-        onSelectionChange(selectedIds.filter((i) => i !== id));
+        onSelectionChange(selectedIds.filter((itemId) => itemId !== id));
       } else {
         onSelectionChange([...selectedIds, id]);
       }
     },
-    [selectedIds, onSelectionChange]
+    [onSelectionChange, selectedIds]
   );
 
   if (documents.length === 0) {
@@ -116,25 +130,45 @@ function DocumentSelector({ documents, selectedIds, onSelectionChange }: Documen
         </div>
       </div>
       <div className={styles.documentList}>
-        {documents.map((doc) => (
-          <div
-            key={doc.id}
-            className={`${styles.documentItem} ${selectedIds.includes(doc.id) ? styles.selected : ''} ${doc.status !== 'completed' ? styles.disabled : ''}`}
-            onClick={() => doc.status === 'completed' && handleToggle(doc.id)}
-          >
-            <Checkbox checked={selectedIds.includes(doc.id)} disabled={doc.status !== 'completed'} />
-            <DocumentIcon className={styles.documentIcon} />
-            <div className={styles.documentInfo}>
-              <span className={styles.documentName}>{doc.filename}</span>
-              <span className={styles.documentMeta}>
-                {doc.format.toUpperCase()} • {doc.metadata?.documentType ?? t('ma.dueDiligence.documents.unknownType')}
-              </span>
-            </div>
-            <Tag size='small' color={doc.status === 'completed' ? 'green' : doc.status === 'error' ? 'red' : 'blue'}>
-              {doc.status}
-            </Tag>
-          </div>
-        ))}
+        {documents.map((doc) => {
+          const isSelected = selectedIds.includes(doc.id);
+          const isCompleted = doc.status === 'completed';
+
+          return (
+            <Button
+              key={doc.id}
+              type='text'
+              className={`${styles.documentItem} ${isSelected ? styles.selected : ''} ${!isCompleted ? styles.disabled : ''}`}
+              onClick={() => isCompleted && handleToggle(doc.id)}
+              disabled={!isCompleted}
+              aria-pressed={isSelected}
+              long
+            >
+              <div className={styles.documentItemContent}>
+                <DocumentIcon className={styles.documentIcon} />
+                <div className={styles.documentInfo}>
+                  <span className={styles.documentName}>{doc.filename}</span>
+                  <span className={styles.documentMeta}>
+                    {doc.format.toUpperCase()} -{' '}
+                    {doc.metadata?.documentType ?? t('ma.dueDiligence.documents.unknownType')}
+                  </span>
+                </div>
+                <Tag
+                  size='small'
+                  color={
+                    isCompleted
+                      ? 'var(--success)'
+                      : doc.status === 'error' || doc.status === 'failed'
+                        ? 'var(--danger)'
+                        : 'var(--primary)'
+                  }
+                >
+                  {getDocumentStatusLabel(doc.status)}
+                </Tag>
+              </div>
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
@@ -174,31 +208,39 @@ function AnalysisConfig({ selectedTypes, onTypesChange }: AnalysisConfigProps) {
   const handleToggle = useCallback(
     (type: AnalysisType) => {
       if (selectedTypes.includes(type)) {
-        onTypesChange(selectedTypes.filter((t) => t !== type));
+        onTypesChange(selectedTypes.filter((selectedType) => selectedType !== type));
       } else {
         onTypesChange([...selectedTypes, type]);
       }
     },
-    [selectedTypes, onTypesChange]
+    [onTypesChange, selectedTypes]
   );
 
   return (
     <div className={styles.analysisConfig}>
       <Text className={styles.configLabel}>{t('ma.dueDiligence.analysisTypes.title')}</Text>
       <div className={styles.typeList}>
-        {analysisTypes.map((type) => (
-          <div
-            key={type.value}
-            className={`${styles.typeItem} ${selectedTypes.includes(type.value) ? styles.selected : ''}`}
-            onClick={() => handleToggle(type.value)}
-          >
-            <Checkbox checked={selectedTypes.includes(type.value)} />
-            <div className={styles.typeInfo}>
-              <span className={styles.typeLabel}>{t(type.labelKey)}</span>
-              <span className={styles.typeDescription}>{t(type.descriptionKey)}</span>
-            </div>
-          </div>
-        ))}
+        {analysisTypes.map((type) => {
+          const isSelected = selectedTypes.includes(type.value);
+
+          return (
+            <Button
+              key={type.value}
+              type='text'
+              className={`${styles.typeItem} ${isSelected ? styles.selected : ''}`}
+              onClick={() => handleToggle(type.value)}
+              aria-pressed={isSelected}
+              long
+            >
+              <div className={styles.typeItemContent}>
+                <div className={styles.typeInfo}>
+                  <span className={styles.typeLabel}>{t(type.labelKey)}</span>
+                  <span className={styles.typeDescription}>{t(type.descriptionKey)}</span>
+                </div>
+              </div>
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
@@ -231,7 +273,9 @@ function ProgressDisplay({ progress }: ProgressDisplayProps) {
       <div className={styles.progressHeader}>
         <Text className={styles.progressStage}>{stageLabels[progress.stage] ?? progress.stage}</Text>
         {progress.risksFound !== undefined && (
-          <Tag color='blue'>{t('ma.dueDiligence.progress.risksFound', { count: progress.risksFound })}</Tag>
+          <Tag style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
+            {t('ma.dueDiligence.progress.risksFound', { count: progress.risksFound })}
+          </Tag>
         )}
       </div>
       <Progress
@@ -239,7 +283,7 @@ function ProgressDisplay({ progress }: ProgressDisplayProps) {
         status={progress.stage === 'error' ? 'error' : progress.stage === 'complete' ? 'success' : 'normal'}
       />
       {progress.message && <Text className={styles.progressMessage}>{progress.message}</Text>}
-      {progress.currentDocument && <Text className={styles.progressDocument}>📄 {progress.currentDocument}</Text>}
+      {progress.currentDocument && <Text className={styles.progressDocument}>{progress.currentDocument}</Text>}
     </div>
   );
 }
@@ -251,11 +295,12 @@ interface ResultsDisplayProps {
 
 function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useMaDateFormatters();
   const [selectedCategory, setSelectedCategory] = useState<RiskCategory | null>(null);
 
   const filteredRisks = useMemo(() => {
     if (!selectedCategory) return result.risks;
-    return result.risks.filter((r) => r.category === selectedCategory);
+    return result.risks.filter((risk) => risk.category === selectedCategory);
   }, [result.risks, selectedCategory]);
 
   const columns = [
@@ -264,7 +309,11 @@ function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
       dataIndex: 'severity',
       key: 'severity',
       width: 100,
-      render: (severity: RiskSeverity) => <Tag color={SEVERITY_COLORS[severity]}>{severity.toUpperCase()}</Tag>,
+      render: (severity: RiskSeverity) => (
+        <Tag style={{ color: SEVERITY_COLORS[severity], borderColor: SEVERITY_COLORS[severity] }}>
+          {t(`ma.riskScoreCard.severity.${severity}`)}
+        </Tag>
+      ),
     },
     {
       title: t('ma.dueDiligence.results.score'),
@@ -284,18 +333,17 @@ function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
       dataIndex: 'category',
       key: 'category',
       width: 120,
-      render: (category: RiskCategory) => <Tag>{category.charAt(0).toUpperCase() + category.slice(1)}</Tag>,
+      render: (category: RiskCategory) => <Tag>{t(`ma.dueDiligence.categories.${category}`)}</Tag>,
     },
   ];
 
   return (
     <div className={styles.resultsDisplay}>
-      {/* Summary Card */}
       <Card className={styles.summaryCard}>
         <div className={styles.summaryHeader}>
           <Title heading={5}>{t('ma.dueDiligence.results.summary')}</Title>
           <Text type='secondary'>
-            {t('ma.dueDiligence.results.generatedAt')}: {new Date(result.generatedAt).toLocaleString()}
+            {t('ma.dueDiligence.results.generatedAt')}: {formatDateTime(result.generatedAt)}
           </Text>
         </div>
         <Text className={styles.summaryText}>{result.summary}</Text>
@@ -303,8 +351,8 @@ function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
           <div className={styles.recommendations}>
             <Text className={styles.recommendationsTitle}>{t('ma.dueDiligence.results.recommendations')}</Text>
             <ul className={styles.recommendationsList}>
-              {result.recommendations.map((rec, index) => (
-                <li key={index}>{rec}</li>
+              {result.recommendations.map((recommendation, index) => (
+                <li key={index}>{recommendation}</li>
               ))}
             </ul>
           </div>
@@ -316,22 +364,20 @@ function ResultsDisplay({ result, onCompare }: ResultsDisplayProps) {
         )}
       </Card>
 
-      {/* Risk Score Card */}
       <RiskScoreCard riskScores={result.riskScores} overallScore={result.overallRiskScore} risks={result.risks} />
 
-      {/* Risk Findings Table */}
       <Card className={styles.findingsCard}>
         <div className={styles.findingsHeader}>
           <Title heading={5}>{t('ma.dueDiligence.results.findings', { count: result.risks.length })}</Title>
           <div className={styles.categoryFilters}>
-            {(['financial', 'legal', 'operational', 'regulatory', 'reputational'] as RiskCategory[]).map((cat) => (
+            {(['financial', 'legal', 'operational', 'regulatory', 'reputational'] as RiskCategory[]).map((category) => (
               <Button
-                key={cat}
+                key={category}
                 size='small'
-                type={selectedCategory === cat ? 'primary' : 'default'}
-                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                type={selectedCategory === category ? 'primary' : 'default'}
+                onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
               >
-                {t(`ma.dueDiligence.categories.${cat}`)}
+                {t(`ma.dueDiligence.categories.${category}`)}
               </Button>
             ))}
           </div>
@@ -372,7 +418,9 @@ function ComparisonDisplay({ comparison, onClose }: ComparisonDisplayProps) {
         <div className={styles.topRisksList}>
           {comparison.comparison.topRisks.map((risk) => (
             <div key={risk.id} className={styles.topRiskItem}>
-              <Tag color={SEVERITY_COLORS[risk.severity]}>{risk.severity}</Tag>
+              <Tag style={{ color: SEVERITY_COLORS[risk.severity], borderColor: SEVERITY_COLORS[risk.severity] }}>
+                {t(`ma.riskScoreCard.severity.${risk.severity}`)}
+              </Tag>
               <Text>{risk.title}</Text>
               <Text type='secondary'>
                 {t('ma.dueDiligence.results.score')}: {risk.score}
@@ -385,12 +433,9 @@ function ComparisonDisplay({ comparison, onClose }: ComparisonDisplayProps) {
   );
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export function DueDiligencePage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useMaDateFormatters();
   const { activeDeal, deals } = useDealContext();
   const { documents, isLoading: documentsLoading } = useDocuments({
     dealId: activeDeal?.id ?? '',
@@ -409,24 +454,21 @@ export function DueDiligencePage() {
 
   const { isReady: isFlowiseReady, isLoading: readinessLoading, readiness } = useFlowiseReadiness();
 
-  // Remove non-completed documents from selection when the list changes
   useEffect(() => {
-    const completedIds = new Set(documents.filter((d) => d.status === 'completed').map((d) => d.id));
+    const completedIds = new Set(documents.filter((doc) => doc.status === 'completed').map((doc) => doc.id));
     setSelectedDocumentIds((prev) => prev.filter((id) => completedIds.has(id)));
   }, [documents]);
 
-  const hasActiveDocuments = useMemo(() => documents.some((d) => isActiveDocumentStatus(d.status)), [documents]);
+  const hasActiveDocuments = useMemo(() => documents.some((doc) => isActiveDocumentStatus(doc.status)), [documents]);
 
   const canStartAnalysis = useMemo(() => {
-    if (!activeDeal) return false;
-    if (!isFlowiseReady) return false;
-    if (selectedDocumentIds.length === 0) return false;
-    if (selectedAnalysisTypes.length === 0) return false;
+    if (!activeDeal || !isFlowiseReady) return false;
+    if (selectedDocumentIds.length === 0 || selectedAnalysisTypes.length === 0) return false;
     if (currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running') return false;
 
-    const selectedDocs = documents.filter((d) => selectedDocumentIds.includes(d.id));
-    return selectedDocs.length > 0 && selectedDocs.every((d) => d.status === 'completed');
-  }, [activeDeal, isFlowiseReady, selectedDocumentIds, selectedAnalysisTypes, currentAnalysis.status, documents]);
+    const selectedDocs = documents.filter((doc) => selectedDocumentIds.includes(doc.id));
+    return selectedDocs.length > 0 && selectedDocs.every((doc) => doc.status === 'completed');
+  }, [activeDeal, currentAnalysis.status, documents, isFlowiseReady, selectedAnalysisTypes, selectedDocumentIds]);
 
   const announcement = useMemo(() => {
     if (currentAnalysis.status === 'initializing') return t('ma.dueDiligence.progress.stages.initializing');
@@ -448,10 +490,10 @@ export function DueDiligencePage() {
     } catch (error) {
       Message.error(error instanceof Error ? error.message : t('ma.dueDiligence.messages.analysisFailed'));
     }
-  }, [canStartAnalysis, selectedDocumentIds, selectedAnalysisTypes, startAnalysis, t]);
+  }, [canStartAnalysis, selectedAnalysisTypes, selectedDocumentIds, startAnalysis, t]);
 
   const handleCompare = useCallback(async () => {
-    const activeDeals = deals.filter((d) => d.status === 'active');
+    const activeDeals = deals.filter((deal) => deal.status === 'active');
     if (activeDeals.length < 2) {
       Message.warning(t('ma.dueDiligence.messages.needTwoDeals'));
       return;
@@ -459,7 +501,7 @@ export function DueDiligencePage() {
 
     setIsComparing(true);
     try {
-      const result = await compareDeals(activeDeals.map((d) => d.id));
+      const result = await compareDeals(activeDeals.map((deal) => deal.id));
       setComparisonResult(result);
       setViewMode('comparison');
     } catch (error) {
@@ -467,7 +509,7 @@ export function DueDiligencePage() {
     } finally {
       setIsComparing(false);
     }
-  }, [deals, compareDeals, t]);
+  }, [compareDeals, deals, t]);
 
   const latestAnalysis = analyses[0];
 
@@ -483,7 +525,6 @@ export function DueDiligencePage() {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <Title heading={4}>{t('ma.dueDiligence.title')}</Title>
@@ -497,16 +538,14 @@ export function DueDiligencePage() {
             icon={<CompareIcon />}
             onClick={handleCompare}
             loading={isComparing}
-            disabled={deals.filter((d) => d.status === 'active').length < 2}
+            disabled={deals.filter((deal) => deal.status === 'active').length < 2}
           >
             {t('ma.dueDiligence.actions.compareDeals')}
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={styles.content}>
-        {/* Left Panel - Configuration */}
         <div className={styles.configPanel}>
           <Card className={styles.configCard}>
             <Title heading={5}>{t('ma.dueDiligence.documents.title')}</Title>
@@ -544,28 +583,23 @@ export function DueDiligencePage() {
           </div>
         </div>
 
-        {/* Right Panel - Results */}
         <div className={styles.resultsPanel}>
-          {/* Accessible live region for screen readers */}
           <div aria-live='polite' aria-atomic='true' className={styles.srOnly}>
             {announcement}
           </div>
 
-          {/* Documents Loading */}
           {documentsLoading && (
             <div className={styles.emptyResults}>
               <Skeleton variant='card' />
             </div>
           )}
 
-          {/* Readiness Loading */}
           {!documentsLoading && readinessLoading && (
             <div className={styles.emptyResults}>
               <Skeleton variant='card' />
             </div>
           )}
 
-          {/* Readiness Blocked */}
           {!documentsLoading && !readinessLoading && !isFlowiseReady && (
             <div className={styles.emptyResults}>
               <EmptyState
@@ -577,7 +611,6 @@ export function DueDiligencePage() {
             </div>
           )}
 
-          {/* No Documents */}
           {!documentsLoading && !readinessLoading && isFlowiseReady && documents.length === 0 && (
             <div className={styles.emptyResults}>
               <EmptyState
@@ -589,7 +622,6 @@ export function DueDiligencePage() {
             </div>
           )}
 
-          {/* Documents Processing */}
           {!documentsLoading && !readinessLoading && isFlowiseReady && documents.length > 0 && hasActiveDocuments && (
             <div className={styles.emptyResults}>
               <EmptyState
@@ -601,7 +633,6 @@ export function DueDiligencePage() {
             </div>
           )}
 
-          {/* Progress Display */}
           {(currentAnalysis.status === 'initializing' || currentAnalysis.status === 'running') &&
             currentAnalysis.progress && (
               <Card className={styles.progressCard}>
@@ -609,7 +640,6 @@ export function DueDiligencePage() {
               </Card>
             )}
 
-          {/* Failure Display */}
           {currentAnalysis.status === 'failed' && (
             <ErrorState
               error={currentAnalysis.error ?? t('ma.dueDiligence.messages.analysisFailed')}
@@ -617,7 +647,6 @@ export function DueDiligencePage() {
             />
           )}
 
-          {/* Comparison View */}
           {viewMode === 'comparison' && comparisonResult && (
             <ComparisonDisplay
               comparison={comparisonResult}
@@ -628,7 +657,6 @@ export function DueDiligencePage() {
             />
           )}
 
-          {/* Results Display */}
           {viewMode === 'analysis' &&
             latestAnalysis &&
             currentAnalysis.status !== 'initializing' &&
@@ -636,7 +664,6 @@ export function DueDiligencePage() {
               <ResultsDisplay result={latestAnalysis} onCompare={handleCompare} />
             )}
 
-          {/* Empty State - prerequisites met but no analysis yet */}
           {viewMode === 'analysis' &&
             !latestAnalysis &&
             currentAnalysis.status !== 'initializing' &&
@@ -655,7 +682,6 @@ export function DueDiligencePage() {
               </div>
             )}
 
-          {/* History */}
           {viewMode === 'history' && (
             <Card>
               <Title heading={5}>{t('ma.dueDiligence.history.title')}</Title>
@@ -666,7 +692,7 @@ export function DueDiligencePage() {
                   {analyses.map((analysis) => (
                     <div key={analysis.id} className={styles.historyItem}>
                       <div className={styles.historyInfo}>
-                        <Text>{new Date(analysis.generatedAt).toLocaleString()}</Text>
+                        <Text>{formatDateTime(analysis.generatedAt)}</Text>
                         <Tag>{t('ma.dueDiligence.history.riskScore', { score: analysis.overallRiskScore })}</Tag>
                       </div>
                       <Text type='secondary'>

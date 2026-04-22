@@ -8,17 +8,28 @@ Project documentation covering architecture, design, conventions, features, and 
 
 ### Root Documentation Files
 
-- **ACCESSIBILITY.md** (11KB) - Accessibility guidelines and standards
+#### User Documentation
+
+- **USER_GUIDE.md** (12KB) - End-user guide for M&A professionals
+- **ASSISTANT_GUIDE.md** (10KB) - Assistant customization guide
+- **MCP_CONFIGURATION.md** (9KB) - MCP server configuration guide
+- **WEBUI_GUIDE.md** (15KB) - WebUI usage and configuration guide
+- **SERVER_DEPLOY_GUIDE.md** (17KB) - Production server deployment guide
+
+#### Technical Documentation
+
 - **ARCHITECTURE.md** (56KB) - Technical architecture and system design
-- **CODE_STYLE.md** (3KB) - Code style and formatting guidelines
+- **SECURITY.md** (52KB) - Security model, threat analysis, and best practices
 - **DESIGN_SYSTEM.md** (34KB) - Mint Whisper design system specifications
+- **ACCESSIBILITY.md** (11KB) - Accessibility guidelines and standards
+
+#### Developer Documentation
+
+- **CODE_STYLE.md** (3KB) - Code style and formatting guidelines
+- **development.md** (8KB) - Development workflow and setup
 - **HUB_TEST_GUIDE.md** (6KB) - Extension hub testing guide
 - **LARGO_CONVERGENCE_ANALYSIS.md** (8KB) - Largo convergence analysis
-- **SECURITY.md** (52KB) - Security model, threat analysis, and best practices
-- **SERVER_DEPLOY_GUIDE.md** (17KB) - Production server deployment guide
-- **WEBUI_GUIDE.md** (15KB) - WebUI usage and configuration guide
 - **cdp.md** (6KB) - Chrome DevTools Protocol documentation
-- **development.md** (8KB) - Development workflow and setup
 - **pr/** - Pull request documentation (2 items)
 - **research/** - Research documents (3 items)
 - **ru-RU-instruction.md** (5KB) - Russian language instructions
@@ -71,6 +82,41 @@ Technical documentation.
 - **team-mode-performance.md** (14KB) - Team mode performance analysis
 
 ## Key Documentation
+
+### User Guide (USER_GUIDE.md)
+
+Complete end-user documentation for M&A professionals:
+
+- Getting started with Largo
+- Assistant presets and use cases
+- Document automation (Excel, PowerPoint, Word, PDF)
+- Valuation tools and methods
+- Company research workflows
+- Multi-agent team mode
+- Extension management
+- Keyboard shortcuts
+
+### Assistant Guide (ASSISTANT_GUIDE.md)
+
+Guide to creating and customizing AI assistants:
+
+- Understanding assistants vs agents
+- Built-in assistant profiles
+- Creating custom assistants
+- System prompt best practices
+- Tool and capability configuration
+- Exporting and sharing assistants
+
+### MCP Configuration (MCP_CONFIGURATION.md)
+
+Model Context Protocol server setup and configuration:
+
+- MCP server types (stdio, SSE, HTTP)
+- Built-in MCP servers
+- Adding custom MCP servers
+- Configuration schema
+- Security considerations
+- Troubleshooting
 
 ### Architecture (ARCHITECTURE.md)
 

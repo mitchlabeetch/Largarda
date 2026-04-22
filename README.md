@@ -180,17 +180,27 @@ Largo's visual identity is built on the **Mint Whisper** theme — a fresh, airy
 
 ## 📚 Documentation
 
-| Document                                     | Description                                  |
-| -------------------------------------------- | -------------------------------------------- |
-| [Architecture](docs/ARCHITECTURE.md)         | 3-process model, IPC bridge, module layout   |
-| [Design System](docs/DESIGN_SYSTEM.md)       | Mint Whisper theme, typography, color tokens |
-| [Security](docs/SECURITY.md)                 | Auth, encryption, threat model, privacy      |
-| [Roadmap](ROADMAP.md)                        | Planned features and milestones              |
-| [Contributing](CONTRIBUTING.md)              | Development workflow, PR guidelines          |
-| [Contributing (中文)](CONTRIBUTING.zh.md)    | Contribution guide in Chinese                |
-| [Code Style](docs/CODE_STYLE.md)             | Naming, linting, formatting rules            |
-| [WebUI Guide](docs/WEBUI_GUIDE.md)           | Browser-based deployment and usage           |
-| [Server Deploy](docs/SERVER_DEPLOY_GUIDE.md) | Production server deployment                 |
+### User Guides
+
+| Document                                       | Description                            |
+| ---------------------------------------------- | -------------------------------------- |
+| [User Guide](docs/USER_GUIDE.md)               | End-user guide for M&A professionals   |
+| [Assistant Guide](docs/ASSISTANT_GUIDE.md)     | Creating and customizing AI assistants |
+| [MCP Configuration](docs/MCP_CONFIGURATION.md) | MCP server setup and configuration     |
+| [WebUI Guide](docs/WEBUI_GUIDE.md)             | Browser-based deployment and usage     |
+| [Server Deploy](docs/SERVER_DEPLOY_GUIDE.md)   | Production server deployment           |
+
+### Technical Documentation
+
+| Document                                  | Description                                  |
+| ----------------------------------------- | -------------------------------------------- |
+| [Architecture](docs/ARCHITECTURE.md)      | 3-process model, IPC bridge, module layout   |
+| [Design System](docs/DESIGN_SYSTEM.md)    | Mint Whisper theme, typography, color tokens |
+| [Security](docs/SECURITY.md)              | Auth, encryption, threat model, privacy      |
+| [Roadmap](ROADMAP.md)                     | Planned features and milestones              |
+| [Contributing](CONTRIBUTING.md)           | Development workflow, PR guidelines          |
+| [Contributing (中文)](CONTRIBUTING.zh.md) | Contribution guide in Chinese                |
+| [Code Style](docs/CODE_STYLE.md)          | Naming, linting, formatting rules            |
 
 ---
 

@@ -26,7 +26,7 @@ import type {
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
-import { createFloWiseConnection, FloWiseError } from '@process/agent/flowise/FloWiseConnection';
+import { createFloWiseConnectionSync, FloWiseError } from '@process/agent/flowise/FloWiseConnection';
 import type { FloWiseConnection } from '@process/agent/flowise/FloWiseConnection';
 import type { IQueryResult } from '@process/services/database/types';
 import {
@@ -37,6 +37,7 @@ import {
   FLOW_CATALOG,
   type FlowKey,
   type FlowSpec,
+  type FlowProvenance,
 } from '@/common/ma/flowise';
 
 // ============================================================================
@@ -59,14 +60,6 @@ export interface DueDiligenceRequest {
   };
 }
 
-export interface FlowProvenance {
-  flowKey: FlowKey;
-  flowId: string;
-  promptVersionId: string;
-  flowDescription: string;
-  resolvedAt: number;
-}
-
 export interface DueDiligenceResult {
   id: string;
   dealId: string;
@@ -87,7 +80,7 @@ interface FlowiseAnalysisOutcome {
   executionSource: Extract<AnalysisExecutionSource, 'flowise' | 'local_fallback'>;
 }
 
-interface PersistedDueDiligencePayload {
+interface PersistedDueDiligencePayload extends Record<string, unknown> {
   risks: string[];
   riskScores: Record<RiskCategory, number>;
   overallRiskScore: number;
@@ -542,7 +535,7 @@ export class DueDiligenceService {
     if (!this.flowiseConnection) {
       // When baseUrl is undefined, createFloWiseConnection falls back to
       // FLOWISE_DEFAULT_CONFIG.baseUrl (FLOWISE_PRODUCTION_URL by default).
-      this.flowiseConnection = createFloWiseConnection({ baseUrl, apiKey });
+      this.flowiseConnection = createFloWiseConnectionSync({ baseUrl, apiKey });
     }
     return this.flowiseConnection;
   }
@@ -1262,7 +1255,7 @@ export class DueDiligenceService {
             break;
           }
 
-          yield next.value;
+          yield next.value as AnalysisProgress;
         }
       } else {
         // Local analysis

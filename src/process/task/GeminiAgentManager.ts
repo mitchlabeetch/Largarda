@@ -33,6 +33,10 @@ import { extractTextFromMessage, processCronInMessage } from './MessageMiddlewar
 import { stripThinkTags, extractAndStripThinkTags } from './ThinkTagDetector';
 import { teamEventBus } from '@process/team/teamEventBus';
 import * as fs from 'node:fs';
+import { createLogger, generateCorrelationId } from '@/common/utils/structuredLogger';
+import { recordAiFailure, AiFailureType } from '@/common/utils/aiObservability';
+
+const logger = createLogger('GeminiAgentManager');
 
 // gemini agent管理器类
 type UiMcpServerConfig = {
@@ -182,7 +186,18 @@ export class GeminiAgentManager extends BaseAgentManager<
     // Prevent unhandled rejection when bootstrap fails (e.g. missing OAuth credentials).
     // The error still propagates when sendMessage() awaits this.bootstrap.
     this.bootstrap.catch((e) => {
+      const correlationId = generateCorrelationId();
       mainLog('[GeminiAgentManager]', 'bootstrap failed:', e?.message || String(e));
+      logger.error('Bootstrap failed', { error: e, correlationId, conversation_id: this.conversation_id });
+      recordAiFailure({
+        failureType: AiFailureType.CONFIG_ERROR,
+        component: 'GeminiAgentManager',
+        message: 'Bootstrap failed',
+        error: e,
+        context: { conversation_id: this.conversation_id, agentType: 'gemini' },
+        agentType: 'gemini',
+        correlationId,
+      });
     });
   }
 
@@ -483,11 +498,26 @@ export class GeminiAgentManager extends BaseAgentManager<
 
     const result = await this.bootstrap
       .catch((e) => {
+        const correlationId = generateCorrelationId();
         cronBusyGuard.setProcessing(this.conversation_id, false);
         this.emit('gemini.message', {
           type: 'error',
           data: e.message || JSON.stringify(e),
           msg_id: data.msg_id,
+        });
+        logger.error('Bootstrap failed during sendMessage', {
+          error: e,
+          correlationId,
+          conversation_id: this.conversation_id,
+        });
+        recordAiFailure({
+          failureType: AiFailureType.CONFIG_ERROR,
+          component: 'GeminiAgentManager',
+          message: 'Bootstrap failed during sendMessage',
+          error: e,
+          context: { conversation_id: this.conversation_id, msg_id: data.msg_id },
+          agentType: 'gemini',
+          correlationId,
         });
         return new Promise((_, reject) => {
           nextTickToLocalFinish(() => {
@@ -512,10 +542,16 @@ export class GeminiAgentManager extends BaseAgentManager<
       const currentFingerprint = GeminiAgentManager.computeMcpFingerprint(mcpServers);
 
       if (currentFingerprint !== this.mcpFingerprint) {
+        const correlationId = generateCorrelationId();
         mainLog(
           '[GeminiAgentManager]',
           `MCP config changed (${this.mcpFingerprint} -> ${currentFingerprint}), re-bootstrapping worker...`
         );
+        logger.info('MCP config changed, re-bootstrapping worker', {
+          oldFingerprint: this.mcpFingerprint,
+          newFingerprint: currentFingerprint,
+          correlationId,
+        });
         // Kill old worker process and its child processes (MCP server connections)
         this.kill();
         // Re-bootstrap with fresh config (getMcpServers will update the fingerprint)
@@ -524,7 +560,22 @@ export class GeminiAgentManager extends BaseAgentManager<
         mainLog('[GeminiAgentManager]', 'Worker re-bootstrapped with updated MCP config');
       }
     } catch (error) {
+      const correlationId = generateCorrelationId();
       mainWarn('[GeminiAgentManager]', 'Failed to check MCP config changes', error);
+      logger.warn('Failed to check MCP config changes', {
+        error,
+        correlationId,
+        conversation_id: this.conversation_id,
+      });
+      recordAiFailure({
+        failureType: AiFailureType.CONFIG_ERROR,
+        component: 'GeminiAgentManager',
+        message: 'Failed to check MCP config changes',
+        error,
+        context: { conversation_id: this.conversation_id },
+        agentType: 'gemini',
+        correlationId,
+      });
       // Don't block message sending on MCP check failure
     }
   }

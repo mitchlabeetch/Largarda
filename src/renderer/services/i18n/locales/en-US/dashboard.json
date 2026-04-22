@@ -1,0 +1,66 @@
+{
+  "shell": {
+    "title": "Dashboard",
+    "home": "Home",
+    "brief": "Daily Brief",
+    "aria": {
+      "topBar": "Dashboard top bar",
+      "breadcrumbs": "Dashboard navigation breadcrumbs",
+      "extensionSlots": "Dashboard extension slots"
+    }
+  },
+  "landing": {
+    "title": "Analytics Dashboard",
+    "empty": "No widgets configured yet",
+    "description": "Configure analytics widgets to display data visualizations and metrics."
+  },
+  "analytics": {
+    "title": "Analytics"
+  },
+  "charts": {
+    "title": "Charts"
+  },
+  "brief": {
+    "title": "Daily Brief",
+    "loading": "Loading daily brief...",
+    "error": "Failed to load brief: {{message}}",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "activityTimeline": "Activity Timeline",
+    "generatedAt": "Generated {{time}}",
+    "provenanceTooltip": "Click to navigate to source",
+    "itemDeal": "Deal: {{name}}",
+    "timeWindow": {
+      "24h": "24 Hours",
+      "7d": "7 Days",
+      "30d": "30 Days"
+    },
+    "time": {
+      "justNow": "Just now",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "summary": {
+      "deals": "Deals",
+      "active": "active",
+      "documents": "Documents",
+      "processed": "{{count}} processed",
+      "analyses": "Analyses",
+      "risks": "Risks Identified"
+    },
+    "itemType": {
+      "dealCreated": "Deal Created",
+      "documentUploaded": "Document Uploaded",
+      "documentProcessed": "Document Processed",
+      "analysisCompleted": "Analysis Completed",
+      "riskFound": "Risk Found",
+      "integrationConnected": "Integration Connected",
+      "syncCompleted": "Sync Completed",
+      "unknown": "Unknown"
+    },
+    "empty": {
+      "noActivity": "No activity in the selected time window",
+      "noDealActivity": "No activity for this deal"
+    }
+  }
+}

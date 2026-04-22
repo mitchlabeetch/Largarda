@@ -184,6 +184,10 @@ export interface IConfigStorageRefer {
   };
   // Skills Market: whether the aionui-skills builtin skill is enabled
   'skillsMarket.enabled'?: boolean;
+  // Onboarding: whether the user has completed the first-run tutorial
+  'onboarding.completed'?: boolean;
+  // Onboarding: which step the user was on (for resuming)
+  'onboarding.lastStep'?: number;
   // Desktop Pet: whether the desktop pet feature is enabled
   'pet.enabled'?: boolean;
   // Desktop Pet: size in pixels (200, 280, or 360)
@@ -193,6 +197,11 @@ export interface IConfigStorageRefer {
   // Desktop Pet: whether tool-call confirmations are routed to the pet's bubble
   // (true) or remain in the main chat window (false). Default true.
   'pet.confirmEnabled'?: boolean;
+  // Flowise backend configuration for M&A Assistant
+  'flowise.config'?: {
+    baseUrl?: string;
+    apiKey?: string;
+  };
 }
 
 export interface IEnvStorageRefer {

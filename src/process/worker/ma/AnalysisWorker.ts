@@ -33,7 +33,7 @@ import {
 import { AnalysisRepository } from '@process/services/database/repositories/ma/AnalysisRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
-import { createFloWiseConnection, FloWiseError } from '@process/agent/flowise/FloWiseConnection';
+import { createFloWiseConnectionSync, FloWiseError } from '@process/agent/flowise/FloWiseConnection';
 
 // ============================================================================
 // Types
@@ -313,7 +313,7 @@ async function analyzeWithFlowise(
 ): Promise<RiskFinding[]> {
   // When flowiseBaseUrl is undefined, createFloWiseConnection falls back to
   // FLOWISE_DEFAULT_CONFIG.baseUrl (FLOWISE_PRODUCTION_URL by default).
-  const connection = createFloWiseConnection({
+  const connection = createFloWiseConnectionSync({
     baseUrl: flowiseBaseUrl,
     apiKey: flowiseApiKey,
   });

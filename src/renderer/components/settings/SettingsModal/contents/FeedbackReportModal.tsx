@@ -256,9 +256,10 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({ visible, onCa
       >
         <div className='flex flex-col gap-16px'>
           {/* Module Select */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>
-              {t('settings.bugReportModuleLabel')} <span className='text-red-500'>*</span>
+          <div className='flex flex-col gap-4px' role='group' aria-labelledby='bug-report-module-label'>
+            <label id='bug-report-module-label' className='text-13px text-t-secondary'>
+              {t('settings.bugReportModuleLabel')} <span className='text-red-500' aria-hidden='true'>*</span>
+              <span className='sr-only'> {t('settings.requiredField')}</span>
             </label>
             <Select
               placeholder={t('settings.bugReportModulePlaceholder')}
@@ -280,9 +281,10 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({ visible, onCa
           </div>
 
           {/* Description */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>
-              {t('settings.bugReportDescriptionLabel')} <span className='text-red-500'>*</span>
+          <div className='flex flex-col gap-4px' role='group' aria-labelledby='bug-report-description-label'>
+            <label id='bug-report-description-label' className='text-13px text-t-secondary'>
+              {t('settings.bugReportDescriptionLabel')} <span className='text-red-500' aria-hidden='true'>*</span>
+              <span className='sr-only'> {t('settings.requiredField')}</span>
             </label>
             <Input.TextArea
               placeholder={t('settings.bugReportDescriptionPlaceholder')}
@@ -298,8 +300,8 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({ visible, onCa
           </div>
 
           {/* Screenshot Upload */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>{t('settings.bugReportScreenshotLabel')}</label>
+          <div className='flex flex-col gap-4px' role='group' aria-labelledby='bug-report-screenshot-label'>
+            <label id='bug-report-screenshot-label' className='text-13px text-t-secondary'>{t('settings.bugReportScreenshotLabel')}</label>
             <Upload
               className='[&_.arco-upload-trigger]:w-full'
               drag

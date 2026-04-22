@@ -26,6 +26,10 @@ import { ipcBridge } from '@/common';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { ExtensionRegistry } from '@process/extensions';
 import { BedrockClient, ListInferenceProfilesCommand } from '@aws-sdk/client-bedrock';
+import { createLogger, ErrorCategory, ErrorSeverity, generateCorrelationId } from '@/common/utils/structuredLogger';
+import { recordAiFailure, AiFailureType } from '@/common/utils/aiObservability';
+
+const logger = createLogger('ModelBridge');
 
 /**
  * OpenAI 兼容 API 的常见路径格式
@@ -95,7 +99,7 @@ export function initModelBridge(): void {
     // 如果是 Vertex AI 平台，直接返回 Vertex AI 支持的模型列表
     // For Vertex AI platform, return the supported model list directly
     if (platform?.includes('vertex-ai')) {
-      console.log('Using Vertex AI model list');
+      logger.info('Using Vertex AI model list', { platform });
       const vertexAIModels = ['gemini-2.5-pro', 'gemini-2.5-flash'];
       return { success: true, data: { mode: vertexAIModels } };
     }
@@ -104,7 +108,7 @@ export function initModelBridge(): void {
     // MiniMax does not provide /v1/models endpoint (verified 2026-02), return hardcoded list
     // For MiniMax platform, return the supported model list directly
     if (base_url && isMiniMaxAPI(base_url)) {
-      console.log('Using MiniMax model list (text models only)');
+      logger.info('Using MiniMax model list (text models only)', { baseUrl: base_url });
       const minimaxModels = [
         // Text/Chat Models - For conversational AI use
         'MiniMax-M2.7',
@@ -188,7 +192,20 @@ export function initModelBridge(): void {
       } catch (e: unknown) {
         // Fall back to default model list on API failure
         const errorMessage = e instanceof Error ? e.message : String(e);
-        console.warn('Failed to fetch Anthropic models via API, falling back to default list:', errorMessage);
+        const correlationId = generateCorrelationId();
+        logger.warn('Failed to fetch Anthropic models via API, falling back to default list', {
+          error: errorMessage,
+          correlationId,
+        });
+        recordAiFailure({
+          failureType: AiFailureType.MODEL_API_FAILURE,
+          component: 'ModelBridge',
+          message: 'Failed to fetch Anthropic models via API',
+          error: e,
+          context: { baseUrl: base_url },
+          provider: 'anthropic',
+          correlationId,
+        });
         const defaultAnthropicModels = [
           'claude-sonnet-4-20250514',
           'claude-opus-4-20250514',
@@ -558,7 +575,7 @@ export function initModelBridge(): void {
 
           return [...userProviders, ...mergedExtensionProviders];
         } catch (error) {
-          console.warn('[ModelBridge] Failed to merge extension model providers:', error);
+          logger.warn('Failed to merge extension model providers', { error });
           return normalizedProviders;
         }
       })

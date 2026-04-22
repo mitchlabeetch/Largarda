@@ -8,4 +8,4 @@ export { KNOWN_FLOW_KEYS, FlowKeySchema, isFlowKey } from './flowKey';
 export type { FlowKey } from './flowKey';
 
 export { FLOW_CATALOG, resolveFlowSpec, isFlowCallableInProd } from './catalog';
-export type { FlowSpec, FlowStatus, FlowKind } from './catalog';
+export type { FlowSpec, FlowStatus, FlowKind, FlowProvenance } from './catalog';

@@ -20,6 +20,7 @@ import MentionDropdown, { MentionSelectorBadge } from './components/MentionDropd
 import QuickActionButtons from './components/QuickActionButtons';
 import SkillsMarketBanner from './components/SkillsMarketBanner';
 import FeedbackReportModal from '@/renderer/components/settings/SettingsModal/contents/FeedbackReportModal';
+import { OnboardingModal, useOnboarding } from '@renderer/pages/onboarding';
 import { useGuidAgentSelection } from './hooks/useGuidAgentSelection';
 import { useGuidInput } from './hooks/useGuidInput';
 import { useGuidMention } from './hooks/useGuidMention';
@@ -49,6 +50,7 @@ const GuidPage: React.FC = () => {
   const { availableBackends, extensionAcpAdapters } = useAssistantBackends();
   const localeKey = resolveLocaleKey(i18n.language);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const { showOnboarding, isLoading: isOnboardingLoading, completeOnboarding, skipOnboarding } = useOnboarding();
 
   // Open external link
   const openLink = useCallback(async (url: string) => {
@@ -57,6 +59,21 @@ const GuidPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to open external link:', error);
     }
+  }, []);
+
+  // Keyboard shortcut for feedback modal (Ctrl/Cmd+Shift+F)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'F') {
+        event.preventDefault();
+        setShowFeedbackModal(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // --- Hooks ---
@@ -729,6 +746,11 @@ const GuidPage: React.FC = () => {
           activeShadow={activeShadow}
         />
         <FeedbackReportModal visible={showFeedbackModal} onCancel={() => setShowFeedbackModal(false)} />
+        <OnboardingModal
+          visible={showOnboarding && !isOnboardingLoading}
+          onComplete={completeOnboarding}
+          onSkip={skipOnboarding}
+        />
       </div>
     </ConfigProvider>
   );

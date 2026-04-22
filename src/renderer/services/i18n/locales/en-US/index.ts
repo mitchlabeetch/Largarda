@@ -24,6 +24,8 @@ import agent from './agent.json';
 import team from './team.json';
 import pet from './pet.json';
 import ma from './ma.json';
+import dashboard from './dashboard.json';
+import onboarding from './onboarding.json';
 
 export default {
   common,
@@ -47,4 +49,6 @@ export default {
   team,
   pet,
   ma,
+  dashboard,
+  onboarding,
 };

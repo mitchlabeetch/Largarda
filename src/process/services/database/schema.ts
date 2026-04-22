@@ -123,6 +123,87 @@ export function initSchema(db: ISqliteDriver): void {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_team ON team_tasks(team_id, status)');
 
+  // ===== RBAC Tables =====
+
+  // Permissions table
+  db.exec(`CREATE TABLE IF NOT EXISTS permissions (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    action TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(name)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_permissions_resource ON permissions(resource_type, action)');
+
+  // Roles table
+  db.exec(`CREATE TABLE IF NOT EXISTS roles (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    is_system INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_roles_is_system ON roles(is_system)');
+
+  // Role-Permission mapping table
+  db.exec(`CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id TEXT NOT NULL,
+    permission_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id)');
+
+  // User-Role mapping table
+  db.exec(`CREATE TABLE IF NOT EXISTS user_roles (
+    user_id TEXT NOT NULL,
+    role_id TEXT NOT NULL,
+    assigned_at INTEGER NOT NULL,
+    assigned_by TEXT,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id)');
+
+  // ===== Audit Log Table =====
+
+  db.exec(`CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    timestamp INTEGER NOT NULL,
+    user_id TEXT,
+    username TEXT,
+    action TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    resource_type TEXT,
+    resource_id TEXT,
+    description TEXT NOT NULL,
+    metadata TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    success INTEGER NOT NULL DEFAULT 1,
+    error_message TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp DESC)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_action_timestamp ON audit_logs(action, timestamp DESC)');
+
   console.log('[Database] Schema initialized successfully');
 }
 
@@ -151,4 +232,4 @@ export function setDatabaseVersion(db: ISqliteDriver, version: number): void {
  * Current database schema version
  * Update this when adding new migrations in migrations.ts
  */
-export const CURRENT_DB_VERSION = 29;
+export const CURRENT_DB_VERSION = 32;

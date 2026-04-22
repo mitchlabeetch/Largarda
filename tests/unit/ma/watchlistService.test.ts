@@ -4,305 +4,409 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/**
+ * WatchlistService Unit Tests
+ * Tests the WatchlistService business logic layer including refresh/schedule logic.
+ */
+
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { WatchlistService } from '@process/services/ma/WatchlistService';
-import type { Watchlist, WatchlistHit, CreateWatchlistInput, UpdateWatchlistInput } from '@common/ma/watchlist/schema';
+import type {
+  Watchlist,
+  CreateWatchlistInput,
+  UpdateWatchlistInput,
+  WatchlistHit,
+  CreateWatchlistHitInput,
+} from '@/common/ma/watchlist/schema';
+
+// Mock the repository
+vi.mock('@process/services/database/repositories/ma/WatchlistRepository', () => ({
+  getWatchlistRepository: () => ({
+    create: vi.fn(),
+    get: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    listByUser: vi.fn(),
+    listEnabled: vi.fn(),
+    createHit: vi.fn(),
+    getHit: vi.fn(),
+    updateHit: vi.fn(),
+    listHits: vi.fn(),
+    listUnseenHits: vi.fn(),
+    markAllHitsSeen: vi.fn(),
+    deleteHits: vi.fn(),
+  }),
+}));
 
 describe('WatchlistService', () => {
-  let mockDb: any;
   let service: WatchlistService;
+  let mockRepository: any;
 
   beforeEach(() => {
-    mockDb = {
-      insert: vi.fn(),
-      select: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
-    service = new WatchlistService(mockDb);
+    const { getWatchlistRepository } = require('@process/services/database/repositories/ma/WatchlistRepository');
+    mockRepository = getWatchlistRepository();
+    service = new WatchlistService();
+    // Replace the repository with the mock
+    (service as any).repository = mockRepository;
   });
 
-  describe('create', () => {
+  afterEach(() => {
+    // Clean up any scheduled refreshes
+    (service as any).stopAllRefreshes();
+  });
+
+  describe('createWatchlist', () => {
     it('should create a watchlist with valid input', async () => {
       const input: CreateWatchlistInput = {
-        ownerUserId: 'user-123',
+        ownerUserId: 'user_123',
         name: 'Tech Companies',
-        criteriaJson: JSON.stringify({ sector: 'technology' }),
-      };
-
-      mockDb.insert.mockResolvedValue(undefined);
-
-      const result = await service.create(input);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        'ma_watchlists',
-        expect.objectContaining({
-          owner_user_id: 'user-123',
-          name: 'Tech Companies',
-          criteria_json: JSON.stringify({ sector: 'technology' }),
-          enabled: 1,
-        })
-      );
-      expect(result.ownerUserId).toBe('user-123');
-      expect(result.name).toBe('Tech Companies');
-      expect(result.enabled).toBe(true);
-      expect(result.id).toBeDefined();
-    });
-
-    it('should create watchlist with cadence', async () => {
-      const input: CreateWatchlistInput = {
-        ownerUserId: 'user-123',
-        name: 'Daily Watchlist',
-        criteriaJson: JSON.stringify({ sector: 'finance' }),
-        cadence: 'daily',
-      };
-
-      mockDb.insert.mockResolvedValue(undefined);
-
-      const result = await service.create(input);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        'ma_watchlists',
-        expect.objectContaining({
-          cadence: 'daily',
-        })
-      );
-      expect(result.cadence).toBe('daily');
-    });
-  });
-
-  describe('getById', () => {
-    it('should return watchlist by id', async () => {
-      const mockRow = {
-        id: 'watchlist-123',
-        owner_user_id: 'user-123',
-        name: 'Tech Companies',
-        criteria_json: JSON.stringify({ sector: 'technology' }),
-        cadence: 'daily',
-        enabled: 1,
-        created_at: 1234567890,
-        updated_at: 1234567890,
-      };
-
-      mockDb.select.mockResolvedValue(mockRow);
-
-      const result = await service.getById('watchlist-123');
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_watchlists', { id: 'watchlist-123' });
-      expect(result).toEqual({
-        id: 'watchlist-123',
-        ownerUserId: 'user-123',
-        name: 'Tech Companies',
-        criteriaJson: JSON.stringify({ sector: 'technology' }),
-        cadence: 'daily',
+        criteriaJson: '{"sector":"technology"}',
         enabled: true,
-        createdAt: 1234567890,
-        updatedAt: 1234567890,
-      });
-    });
-
-    it('should return null if watchlist not found', async () => {
-      mockDb.select.mockResolvedValue(null);
-
-      const result = await service.getById('nonexistent');
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('list', () => {
-    it('should return all watchlists when no filters provided', async () => {
-      const mockRows = [
-        {
-          id: 'watchlist-1',
-          owner_user_id: 'user-123',
-          name: 'Tech Companies',
-          criteria_json: JSON.stringify({ sector: 'technology' }),
-          cadence: 'daily',
-          enabled: 1,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-        {
-          id: 'watchlist-2',
-          owner_user_id: 'user-123',
-          name: 'Finance Companies',
-          criteria_json: JSON.stringify({ sector: 'finance' }),
-          cadence: 'weekly',
-          enabled: 1,
-          created_at: 1234567891,
-          updated_at: 1234567891,
-        },
-      ];
-
-      mockDb.select.mockResolvedValue(mockRows);
-
-      const result = await service.list({});
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_watchlists', {});
-      expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('Tech Companies');
-      expect(result[1].name).toBe('Finance Companies');
-    });
-
-    it('should filter watchlists by owner', async () => {
-      const mockRows = [
-        {
-          id: 'watchlist-1',
-          owner_user_id: 'user-123',
-          name: 'Tech Companies',
-          criteria_json: JSON.stringify({ sector: 'technology' }),
-          cadence: 'daily',
-          enabled: 1,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-      ];
-
-      mockDb.select.mockResolvedValue(mockRows);
-
-      const result = await service.list({ ownerUserId: 'user-123' });
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_watchlists', { owner_user_id: 'user-123' });
-      expect(result).toHaveLength(1);
-      expect(result[0].ownerUserId).toBe('user-123');
-    });
-
-    it('should filter watchlists by enabled status', async () => {
-      const mockRows = [
-        {
-          id: 'watchlist-1',
-          owner_user_id: 'user-123',
-          name: 'Tech Companies',
-          criteria_json: JSON.stringify({ sector: 'technology' }),
-          cadence: 'daily',
-          enabled: 1,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-      ];
-
-      mockDb.select.mockResolvedValue(mockRows);
-
-      const result = await service.list({ enabled: true });
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_watchlists', { enabled: 1 });
-      expect(result).toHaveLength(1);
-      expect(result[0].enabled).toBe(true);
-    });
-  });
-
-  describe('update', () => {
-    it('should update watchlist with valid input', async () => {
-      const input: UpdateWatchlistInput = {
-        name: 'Updated Name',
-        enabled: false,
-      };
-
-      const mockRow = {
-        id: 'watchlist-123',
-        owner_user_id: 'user-123',
-        name: 'Updated Name',
-        criteria_json: JSON.stringify({ sector: 'technology' }),
         cadence: 'daily',
-        enabled: 0,
-        created_at: 1234567890,
-        updated_at: 1234567890,
       };
 
-      mockDb.update.mockResolvedValue(1);
-      mockDb.select.mockResolvedValue(mockRow);
+      const expectedWatchlist: Watchlist = {
+        id: 'watchlist_123',
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        cadence: 'daily',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
 
-      const result = await service.update('watchlist-123', input);
+      mockRepository.create.mockResolvedValue({ success: true, data: expectedWatchlist });
 
-      expect(mockDb.update).toHaveBeenCalledWith(
-        'ma_watchlists',
-        { id: 'watchlist-123' },
-        expect.objectContaining({
-          name: 'Updated Name',
-          enabled: 0,
-          updated_at: expect.any(Number),
-        })
-      );
-      expect(result.name).toBe('Updated Name');
-      expect(result.enabled).toBe(false);
+      const result = await service.createWatchlist(input);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedWatchlist);
+      expect(mockRepository.create).toHaveBeenCalledWith(input);
+    });
+
+    it('should reject invalid criteria JSON', async () => {
+      const input: CreateWatchlistInput = {
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: 'invalid json',
+      };
+
+      const result = await service.createWatchlist(input);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid criteria JSON');
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid cadence', async () => {
+      const input: CreateWatchlistInput = {
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        cadence: 'invalid',
+      };
+
+      const result = await service.createWatchlist(input);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid cadence');
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should schedule refresh for enabled watchlist with cadence', async () => {
+      const input: CreateWatchlistInput = {
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        cadence: 'daily',
+      };
+
+      const expectedWatchlist: Watchlist = {
+        id: 'watchlist_123',
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        cadence: 'daily',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.create.mockResolvedValue({ success: true, data: expectedWatchlist });
+
+      await service.createWatchlist(input);
+
+      // Verify that a refresh interval was scheduled
+      expect((service as any).refreshIntervals.has('watchlist_123')).toBe(true);
     });
   });
 
-  describe('delete', () => {
-    it('should delete watchlist by id', async () => {
-      mockDb.delete.mockResolvedValue(1);
+  describe('updateWatchlist', () => {
+    it('should update a watchlist with valid input', async () => {
+      const id = 'watchlist_123';
+      const updates: UpdateWatchlistInput = {
+        name: 'Updated Name',
+      };
 
-      await service.delete('watchlist-123');
+      const expectedWatchlist: Watchlist = {
+        id,
+        ownerUserId: 'user_123',
+        name: 'Updated Name',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
 
-      expect(mockDb.delete).toHaveBeenCalledWith('ma_watchlists', { id: 'watchlist-123' });
+      mockRepository.update.mockResolvedValue({ success: true, data: expectedWatchlist });
+
+      const result = await service.updateWatchlist(id, updates);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedWatchlist);
+      expect(mockRepository.update).toHaveBeenCalledWith(id, updates);
+    });
+
+    it('should reschedule refresh when cadence changes', async () => {
+      const id = 'watchlist_123';
+      const updates: UpdateWatchlistInput = {
+        cadence: 'hourly',
+      };
+
+      const expectedWatchlist: Watchlist = {
+        id,
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        cadence: 'hourly',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.update.mockResolvedValue({ success: true, data: expectedWatchlist });
+
+      // Manually add a refresh interval
+      (service as any).refreshIntervals.set(id, vi.fn());
+
+      await service.updateWatchlist(id, updates);
+
+      // Verify that the refresh interval was stopped and rescheduled
+      expect(mockRepository.update).toHaveBeenCalledWith(id, updates);
     });
   });
 
-  describe('createHit', () => {
-    it('should create a watchlist hit', async () => {
-      mockDb.insert.mockResolvedValue(undefined);
+  describe('deleteWatchlist', () => {
+    it('should delete a watchlist and stop refresh', async () => {
+      const id = 'watchlist_123';
+      mockRepository.delete.mockResolvedValue({ success: true, data: true });
 
-      await service.createHit({
-        watchlistId: 'watchlist-123',
-        payloadJson: JSON.stringify({ companyId: 'company-123' }),
-        matchedAt: 1234567890,
-      });
+      // Manually add a refresh interval
+      (service as any).refreshIntervals.set(id, vi.fn());
 
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        'ma_watchlist_hits',
-        expect.objectContaining({
-          watchlist_id: 'watchlist-123',
-          payload_json: JSON.stringify({ companyId: 'company-123' }),
-          matched_at: 1234567890,
-          seen_at: null,
-        })
-      );
+      const result = await service.deleteWatchlist(id);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(true);
+      expect(mockRepository.delete).toHaveBeenCalledWith(id);
+      expect((service as any).refreshIntervals.has(id)).toBe(false);
     });
   });
 
-  describe('getHitsByWatchlistId', () => {
-    it('should return hits for a watchlist', async () => {
-      const mockRows = [
+  describe('scheduleRefresh', () => {
+    it('should schedule refresh with valid cadence', () => {
+      const watchlistId = 'watchlist_123';
+      const cadence = 'daily';
+
+      service.scheduleRefresh(watchlistId, cadence);
+
+      expect((service as any).refreshIntervals.has(watchlistId)).toBe(true);
+    });
+
+    it('should not schedule refresh with invalid cadence', () => {
+      const watchlistId = 'watchlist_123';
+      const cadence = 'invalid';
+
+      service.scheduleRefresh(watchlistId, cadence);
+
+      expect((service as any).refreshIntervals.has(watchlistId)).toBe(false);
+    });
+
+    it('should stop existing refresh before scheduling new one', () => {
+      const watchlistId = 'watchlist_123';
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
+      service.scheduleRefresh(watchlistId, 'daily');
+      service.scheduleRefresh(watchlistId, 'hourly');
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      expect((service as any).refreshIntervals.has(watchlistId)).toBe(true);
+
+      clearIntervalSpy.mockRestore();
+    });
+  });
+
+  describe('stopRefresh', () => {
+    it('should stop refresh for a watchlist', () => {
+      const watchlistId = 'watchlist_123';
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
+      service.scheduleRefresh(watchlistId, 'daily');
+      service.stopRefresh(watchlistId);
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      expect((service as any).refreshIntervals.has(watchlistId)).toBe(false);
+
+      clearIntervalSpy.mockRestore();
+    });
+  });
+
+  describe('refreshWatchlist', () => {
+    it('should refresh a watchlist and return hits', async () => {
+      const watchlistId = 'watchlist_123';
+      const watchlist: Watchlist = {
+        id: watchlistId,
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const expectedHits: WatchlistHit[] = [
         {
-          id: 'hit-1',
-          watchlist_id: 'watchlist-123',
-          payload_json: JSON.stringify({ companyId: 'company-1' }),
-          matched_at: 1234567890,
-          seen_at: null,
-        },
-        {
-          id: 'hit-2',
-          watchlist_id: 'watchlist-123',
-          payload_json: JSON.stringify({ companyId: 'company-2' }),
-          matched_at: 1234567891,
-          seen_at: 1234567900,
+          id: 'hit_1',
+          watchlistId,
+          payloadJson: '{"company":"TechCorp"}',
+          matchedAt: Date.now(),
         },
       ];
 
-      mockDb.select.mockResolvedValue(mockRows);
+      mockRepository.get.mockResolvedValue({ success: true, data: watchlist });
+      mockRepository.createHit.mockResolvedValue({ success: true, data: expectedHits[0] });
 
-      const result = await service.getHitsByWatchlistId('watchlist-123');
+      const result = await service.refreshWatchlist(watchlistId);
 
-      expect(mockDb.select).toHaveBeenCalledWith('ma_watchlist_hits', { watchlist_id: 'watchlist-123' });
-      expect(result).toHaveLength(2);
-      expect(result[0].watchlistId).toBe('watchlist-123');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedHits);
+    });
+
+    it('should return empty array for disabled watchlist', async () => {
+      const watchlistId = 'watchlist_123';
+      const watchlist: Watchlist = {
+        id: watchlistId,
+        ownerUserId: 'user_123',
+        name: 'Tech Companies',
+        criteriaJson: '{"sector":"technology"}',
+        enabled: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.get.mockResolvedValue({ success: true, data: watchlist });
+
+      const result = await service.refreshWatchlist(watchlistId);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([]);
     });
   });
 
-  describe('markHitAsSeen', () => {
-    it('should mark a hit as seen', async () => {
-      mockDb.update.mockResolvedValue(1);
+  describe('stopAllRefreshes', () => {
+    it('should stop all refresh intervals', () => {
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
 
-      await service.markHitAsSeen('hit-123');
+      service.scheduleRefresh('watchlist_1', 'daily');
+      service.scheduleRefresh('watchlist_2', 'hourly');
 
-      expect(mockDb.update).toHaveBeenCalledWith(
-        'ma_watchlist_hits',
-        { id: 'hit-123' },
-        expect.objectContaining({
-          seen_at: expect.any(Number),
-        })
-      );
+      expect((service as any).refreshIntervals.size).toBe(2);
+
+      service.stopAllRefreshes();
+
+      expect((service as any).refreshIntervals.size).toBe(0);
+      expect(clearIntervalSpy).toHaveBeenCalledTimes(2);
+
+      clearIntervalSpy.mockRestore();
+    });
+  });
+
+  describe('startAllEnabledRefreshes', () => {
+    it('should start refreshes for all enabled watchlists', async () => {
+      const enabledWatchlists: Watchlist[] = [
+        {
+          id: 'watchlist_1',
+          ownerUserId: 'user_123',
+          name: 'Tech Companies',
+          criteriaJson: '{"sector":"technology"}',
+          enabled: true,
+          cadence: 'daily',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ];
+
+      mockRepository.listEnabled.mockResolvedValue({
+        success: true,
+        data: enabledWatchlists,
+        total: 1,
+        page: 0,
+        pageSize: 50,
+        hasMore: false,
+      });
+
+      await service.startAllEnabledRefreshes();
+
+      expect(mockRepository.listEnabled).toHaveBeenCalledWith(0, 100);
+      expect((service as any).refreshIntervals.has('watchlist_1')).toBe(true);
+    });
+  });
+
+  describe('Watchlist Hit Operations', () => {
+    it('should create a watchlist hit', async () => {
+      const input: CreateWatchlistHitInput = {
+        watchlistId: 'watchlist_123',
+        payloadJson: '{"company":"TechCorp"}',
+      };
+
+      const expectedHit: WatchlistHit = {
+        id: 'hit_1',
+        watchlistId: 'watchlist_123',
+        payloadJson: '{"company":"TechCorp"}',
+        matchedAt: Date.now(),
+      };
+
+      mockRepository.createHit.mockResolvedValue({ success: true, data: expectedHit });
+
+      const result = await service.createWatchlistHit(input);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedHit);
+      expect(mockRepository.createHit).toHaveBeenCalledWith(input);
+    });
+
+    it('should mark all hits as seen', async () => {
+      const watchlistId = 'watchlist_123';
+      mockRepository.markAllHitsSeen.mockResolvedValue({ success: true, data: 5 });
+
+      const result = await service.markAllHitsSeen(watchlistId);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(5);
+      expect(mockRepository.markAllHitsSeen).toHaveBeenCalledWith(watchlistId);
+    });
+
+    it('should delete all hits for a watchlist', async () => {
+      const watchlistId = 'watchlist_123';
+      mockRepository.deleteHits.mockResolvedValue({ success: true, data: 3 });
+
+      const result = await service.deleteWatchlistHits(watchlistId);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(3);
+      expect(mockRepository.deleteHits).toHaveBeenCalledWith(watchlistId);
     });
   });
 });

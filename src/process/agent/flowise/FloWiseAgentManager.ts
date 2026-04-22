@@ -14,7 +14,7 @@ import type { IAgentEventEmitter } from '@process/task/IAgentEventEmitter';
 import type { IConfirmation } from '@/common/chat/chatLib';
 import type { DealContext, FlowInput, FlowResult, FlowEvent } from '@/common/ma/types';
 import type { FloWiseConnection } from './FloWiseConnection';
-import { FloWiseError, createFloWiseConnection } from './FloWiseConnection';
+import { FloWiseError, createFloWiseConnectionSync } from './FloWiseConnection';
 import { getIntegrationService } from '@process/services/ma/IntegrationService';
 
 export type FloWiseAgentType = 'flowise';
@@ -56,7 +56,7 @@ export class FloWiseAgentManager extends BaseAgentManager<FloWiseAgentManagerDat
     this.dealContext = data.dealContext ?? null;
 
     // Initialize Flowise connection
-    this.connection = createFloWiseConnection({
+    this.connection = createFloWiseConnectionSync({
       baseUrl: data.baseUrl,
       apiKey: data.apiKey,
     });

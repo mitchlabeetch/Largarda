@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { Button, Typography } from '@arco-design/web-react';
-import { Folder, Analysis } from '@icon-park/react';
+import { Folder, Analysis, Search, Peoples, Data } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styles from './MaLandingPage.module.css';
@@ -36,6 +36,27 @@ export function MaLandingPage() {
       title: t('dueDiligence.title'),
       description: t('dueDiligence.empty.selectDeal'),
       path: '/ma/due-diligence',
+    },
+    {
+      key: 'company-enrichment',
+      icon: <Search size={48} />,
+      title: t('companyEnrichment.title'),
+      description: t('companyEnrichment.empty.description'),
+      path: '/ma/company-enrichment',
+    },
+    {
+      key: 'contacts',
+      icon: <Peoples size={48} />,
+      title: t('contacts.title'),
+      description: t('contacts.description'),
+      path: '/ma/contacts',
+    },
+    {
+      key: 'pipeline',
+      icon: <Data size={48} />,
+      title: t('pipeline.title'),
+      description: t('pipeline.description'),
+      path: '/ma/pipeline',
     },
   ];
 

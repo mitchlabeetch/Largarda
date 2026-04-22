@@ -1,0 +1,199 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.modal {
+  :global(.arco-modal) {
+    max-width: 600px;
+  }
+
+  :global(.arco-modal-body) {
+    padding: 0;
+  }
+}
+
+.commandPalette {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+  gap: 12px;
+}
+
+.searchIcon {
+  color: var(--color-text-3);
+  font-size: 20px;
+}
+
+.searchInput {
+  flex: 1;
+  :global(.arco-input) {
+    font-size: 16px;
+    background: transparent;
+  }
+}
+
+.keyboardIcon {
+  color: var(--color-text-3);
+  font-size: 16px;
+}
+
+.keyboardHint {
+  font-size: 12px;
+  color: var(--color-text-3);
+  padding: 4px 8px;
+  background-color: var(--color-fill-2);
+  border-radius: 4px;
+}
+
+.resultsContainer {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+  padding: 8px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--color-text-3);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
+.category {
+  margin-bottom: 16px;
+}
+
+.category:last-child {
+  margin-bottom: 0;
+}
+
+.categoryLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  padding: 8px 12px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 2px 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  gap: 12px;
+  text-align: left;
+}
+
+.item:hover {
+  background-color: var(--color-fill-1);
+}
+
+.itemActive {
+  background-color: var(--color-fill-2);
+  border-color: var(--color-primary-light-3);
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--color-text-2);
+  flex-shrink: 0;
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.itemActive .itemLabel {
+  color: var(--color-text-1);
+  font-weight: 600;
+}
+
+.itemDescription {
+  font-size: 12px;
+  color: var(--color-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemShortcut {
+  font-size: 11px;
+  color: var(--color-text-3);
+  padding: 2px 6px;
+  background-color: var(--color-fill-2);
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-2);
+}
+
+.footerHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.footerIcon {
+  font-size: 14px;
+}
+
+.footerText {
+  font-size: 12px;
+}
+
+.footerCount {
+  font-size: 12px;
+  color: var(--color-text-3);
+}

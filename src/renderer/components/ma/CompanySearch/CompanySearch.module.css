@@ -1,0 +1,60 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.searchBar {
+  display: flex;
+  gap: 8px;
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+}
+
+.resultsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resultsCount {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.resultsList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.resultItem {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.resultItem:hover {
+  background-color: var(--color-fill-2);
+}
+
+.resultItem.selected {
+  background-color: var(--color-fill-3);
+}
+
+.resultDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

@@ -28,3 +28,59 @@ export type {
 } from './DueDiligenceService';
 
 export { IntegrationService, getIntegrationService } from './IntegrationService';
+
+export {
+  PappersEnricher,
+  getPappersEnricher,
+  SOURCE_PRECEDENCE,
+  MergeStrategy,
+  FIELD_MERGE_CONFIG,
+  type SourcePrecedenceKey,
+  type Disagreement,
+  type FieldProvenance,
+  type ProvenanceJson,
+} from './PappersEnricher';
+
+export {
+  EnrichmentMergeHelper,
+  getEnrichmentMergeHelper,
+  type EnrichmentSourceData,
+  type MergeResult,
+  type MergeOptions,
+} from './EnrichmentMergeHelper';
+
+export { ContactService, getContactService } from './ContactService';
+export type { Contact, CreateContactInput, UpdateContactInput } from './ContactService';
+
+export { WatchlistService, getWatchlistService } from './WatchlistService';
+export type {
+  Watchlist,
+  CreateWatchlistInput,
+  UpdateWatchlistInput,
+  WatchlistHit,
+  CreateWatchlistHitInput,
+  UpdateWatchlistHitInput,
+} from './WatchlistService';
+
+export {
+  DocumentGenerator,
+  getDocumentGenerator,
+  initDocumentGenerator,
+  GenerationCancelledError,
+  MissingVariablesError,
+  TemplateNotCallableError,
+} from './DocumentGenerator';
+export type { FlowRunner, GenerateInput, GenerationProgress, GeneratorCancelSignal } from './DocumentGenerator';
+
+export { ChecklistGenerator, getChecklistGenerator } from './ChecklistGenerator';
+export type { ChecklistGenerateInput, ChecklistGenerateResult } from './ChecklistGenerator';
+
+export {
+  KnowledgeBaseService,
+  getKnowledgeBaseService,
+  type IngestionResult,
+  type RetrievalOptions,
+  type ChunkSearchResult,
+  type KbStats,
+  type KnowledgeBaseServiceDeps,
+} from './KnowledgeBaseService';

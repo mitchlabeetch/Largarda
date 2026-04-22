@@ -1,11 +1,15 @@
 /**
- * Integration tests for the Flowise env-var fallback and readiness probe.
+ * Integration tests for the Flowise env-var fallback, settings layer, and readiness probe.
  *
- * Exercises `resolveFlowiseConfig`, `createFloWiseConnection` and
- * `probeFlowiseReadiness` with a mocked `fetch` so no network calls are
- * made. Also regression-covers the argument precedence contract so we
- * never accidentally let the env override an explicit caller-supplied
- * API key.
+ * Exercises `resolveFlowiseConfig`, `resolveFlowiseConfigSync`, `createFloWiseConnection`,
+ * `createFloWiseConnectionSync`, and `probeFlowiseReadiness` with a mocked `fetch` so no
+ * network calls are made. Also regression-covers the argument precedence contract so we
+ * never accidentally let the env override an explicit caller-supplied API key.
+ *
+ * Tests cover:
+ * - Settings coverage: settings are read and applied correctly
+ * - Readiness coverage: health probe works end-to-end
+ * - Config precedence coverage: settings > args > env > default
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,8 +17,10 @@ import { FLOWISE_PRODUCTION_URL } from '../../src/common/ma/constants';
 import {
   FLOWISE_ENV,
   createFloWiseConnection,
+  createFloWiseConnectionSync,
   probeFlowiseReadiness,
   resolveFlowiseConfig,
+  resolveFlowiseConfigSync,
 } from '../../src/process/agent/flowise/FloWiseConnection';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -35,12 +41,12 @@ afterEach(() => {
 });
 
 // ============================================================================
-// resolveFlowiseConfig
+// resolveFlowiseConfigSync (backward compatibility)
 // ============================================================================
 
-describe('resolveFlowiseConfig', () => {
+describe('resolveFlowiseConfigSync', () => {
   it('defaults to FLOWISE_PRODUCTION_URL and apiKeySource="none" when nothing is set', () => {
-    const resolved = resolveFlowiseConfig();
+    const resolved = resolveFlowiseConfigSync();
     expect(resolved.baseUrl).toBe(FLOWISE_PRODUCTION_URL);
     expect(resolved.apiKey).toBeUndefined();
     expect(resolved.apiKeySource).toBe('none');
@@ -50,7 +56,7 @@ describe('resolveFlowiseConfig', () => {
     process.env[FLOWISE_ENV.baseUrl] = 'https://env.flowise.test';
     process.env[FLOWISE_ENV.apiKey] = 'env-key';
 
-    const resolved = resolveFlowiseConfig();
+    const resolved = resolveFlowiseConfigSync();
     expect(resolved.baseUrl).toBe('https://env.flowise.test');
     expect(resolved.apiKey).toBe('env-key');
     expect(resolved.apiKeySource).toBe('env');
@@ -60,7 +66,7 @@ describe('resolveFlowiseConfig', () => {
     process.env[FLOWISE_ENV.baseUrl] = 'https://env.flowise.test';
     process.env[FLOWISE_ENV.apiKey] = 'env-key';
 
-    const resolved = resolveFlowiseConfig({ baseUrl: 'https://arg.flowise.test', apiKey: 'arg-key' });
+    const resolved = resolveFlowiseConfigSync({ baseUrl: 'https://arg.flowise.test', apiKey: 'arg-key' });
     expect(resolved.baseUrl).toBe('https://arg.flowise.test');
     expect(resolved.apiKey).toBe('arg-key');
     expect(resolved.apiKeySource).toBe('arg');
@@ -68,23 +74,134 @@ describe('resolveFlowiseConfig', () => {
 
   it('treats empty-string env values as unset (no accidental empty bearer)', () => {
     process.env[FLOWISE_ENV.apiKey] = '';
-    const resolved = resolveFlowiseConfig();
+    const resolved = resolveFlowiseConfigSync();
     expect(resolved.apiKey).toBeUndefined();
     expect(resolved.apiKeySource).toBe('none');
   });
 });
 
 // ============================================================================
-// createFloWiseConnection (smoke — just verifies wiring, behaviour covered via probeFlowiseReadiness)
+// resolveFlowiseConfig (async with settings layer)
+// ============================================================================
+
+describe('resolveFlowiseConfig (with settings layer)', () => {
+  it('defaults to FLOWISE_PRODUCTION_URL and apiKeySource="none" when nothing is set', async () => {
+    const resolved = await resolveFlowiseConfig();
+    expect(resolved.baseUrl).toBe(FLOWISE_PRODUCTION_URL);
+    expect(resolved.apiKey).toBeUndefined();
+    expect(resolved.apiKeySource).toBe('none');
+  });
+
+  it('reads baseUrl and apiKey from settings when no args or env are given', async () => {
+    const resolved = await resolveFlowiseConfig(undefined, {
+      baseUrl: 'https://settings.flowise.test',
+      apiKey: 'settings-key',
+    });
+    expect(resolved.baseUrl).toBe('https://settings.flowise.test');
+    expect(resolved.apiKey).toBe('settings-key');
+    expect(resolved.apiKeySource).toBe('settings');
+  });
+
+  it('reads baseUrl and apiKey from env when no args or settings are given', async () => {
+    process.env[FLOWISE_ENV.baseUrl] = 'https://env.flowise.test';
+    process.env[FLOWISE_ENV.apiKey] = 'env-key';
+
+    const resolved = await resolveFlowiseConfig();
+    expect(resolved.baseUrl).toBe('https://env.flowise.test');
+    expect(resolved.apiKey).toBe('env-key');
+    expect(resolved.apiKeySource).toBe('env');
+  });
+
+  it('prefers explicit args over settings (apiKeySource="arg")', async () => {
+    const resolved = await resolveFlowiseConfig(
+      { baseUrl: 'https://arg.flowise.test', apiKey: 'arg-key' },
+      { baseUrl: 'https://settings.flowise.test', apiKey: 'settings-key' }
+    );
+    expect(resolved.baseUrl).toBe('https://arg.flowise.test');
+    expect(resolved.apiKey).toBe('arg-key');
+    expect(resolved.apiKeySource).toBe('arg');
+  });
+
+  it('prefers settings over env (apiKeySource="settings")', async () => {
+    process.env[FLOWISE_ENV.baseUrl] = 'https://env.flowise.test';
+    process.env[FLOWISE_ENV.apiKey] = 'env-key';
+
+    const resolved = await resolveFlowiseConfig(undefined, {
+      baseUrl: 'https://settings.flowise.test',
+      apiKey: 'settings-key',
+    });
+    expect(resolved.baseUrl).toBe('https://settings.flowise.test');
+    expect(resolved.apiKey).toBe('settings-key');
+    expect(resolved.apiKeySource).toBe('settings');
+  });
+
+  it('config precedence: args > settings > env > default for baseUrl', async () => {
+    process.env[FLOWISE_ENV.baseUrl] = 'https://env.flowise.test';
+
+    let resolved = await resolveFlowiseConfig();
+    expect(resolved.baseUrl).toBe('https://env.flowise.test');
+
+    resolved = await resolveFlowiseConfig(undefined, { baseUrl: 'https://settings.flowise.test' });
+    expect(resolved.baseUrl).toBe('https://settings.flowise.test');
+
+    resolved = await resolveFlowiseConfig(
+      { baseUrl: 'https://arg.flowise.test' },
+      { baseUrl: 'https://settings.flowise.test' }
+    );
+    expect(resolved.baseUrl).toBe('https://arg.flowise.test');
+  });
+
+  it('config precedence: args > settings > env > default for apiKey', async () => {
+    process.env[FLOWISE_ENV.apiKey] = 'env-key';
+
+    let resolved = await resolveFlowiseConfig();
+    expect(resolved.apiKey).toBe('env-key');
+    expect(resolved.apiKeySource).toBe('env');
+
+    resolved = await resolveFlowiseConfig(undefined, { apiKey: 'settings-key' });
+    expect(resolved.apiKey).toBe('settings-key');
+    expect(resolved.apiKeySource).toBe('settings');
+
+    resolved = await resolveFlowiseConfig({ apiKey: 'arg-key' }, { apiKey: 'settings-key' });
+    expect(resolved.apiKey).toBe('arg-key');
+    expect(resolved.apiKeySource).toBe('arg');
+  });
+
+  it('treats empty-string settings values as unset', async () => {
+    const resolved = await resolveFlowiseConfig(undefined, { apiKey: '' });
+    expect(resolved.apiKey).toBeUndefined();
+    expect(resolved.apiKeySource).toBe('none');
+  });
+
+  it('treats empty-string env values as unset', async () => {
+    process.env[FLOWISE_ENV.apiKey] = '';
+    const resolved = await resolveFlowiseConfig();
+    expect(resolved.apiKey).toBeUndefined();
+    expect(resolved.apiKeySource).toBe('none');
+  });
+});
+
+// ============================================================================
+// createFloWiseConnectionSync (smoke — just verifies wiring, behaviour covered via probeFlowiseReadiness)
+// ============================================================================
+
+describe('createFloWiseConnectionSync', () => {
+  it('returns a connection instance that uses the resolved config', () => {
+    process.env[FLOWISE_ENV.apiKey] = 'env-key';
+    const conn = createFloWiseConnectionSync();
+    expect(conn).toBeDefined();
+    expect(typeof conn.healthCheck).toBe('function');
+  });
+});
+
+// ============================================================================
+// createFloWiseConnection (async with settings)
 // ============================================================================
 
 describe('createFloWiseConnection', () => {
-  it('returns a connection instance that uses the resolved config', () => {
-    process.env[FLOWISE_ENV.apiKey] = 'env-key';
-    const conn = createFloWiseConnection();
+  it('returns a connection instance that uses the resolved config with settings', async () => {
+    const conn = await createFloWiseConnection(undefined, { apiKey: 'settings-key' });
     expect(conn).toBeDefined();
-    // healthCheck is the simplest public surface; we just verify it exists
-    // (full behaviour is covered by the probe tests below).
     expect(typeof conn.healthCheck).toBe('function');
   });
 });
@@ -123,6 +240,30 @@ describe('probeFlowiseReadiness', () => {
     expect(result.pingOk).toBe(true);
     expect(result.authOk).toBe(true);
     expect(result.flowCount).toBe(3);
+    expect(result.error).toBeUndefined();
+    expect(result.checkedAt).toBeGreaterThan(0);
+  });
+
+  it('happy path with settings: pingOk + authOk + flowCount with apiKeySource="settings"', async () => {
+    const fetchMock = vi.fn(async (_url: string | URL): Promise<Response> => {
+      const url = String(_url);
+      if (url.endsWith('/api/v1/ping')) return makeResponse(200, 'pong');
+      if (url.endsWith('/api/v1/chatflows')) return makeResponse(200, [{ id: 'a' }, { id: 'b' }]);
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await probeFlowiseReadiness(undefined, {
+      baseUrl: 'https://settings.test',
+      apiKey: 'settings-key',
+    });
+
+    expect(result.baseUrl).toBe('https://settings.test');
+    expect(result.hasApiKey).toBe(true);
+    expect(result.apiKeySource).toBe('settings');
+    expect(result.pingOk).toBe(true);
+    expect(result.authOk).toBe(true);
+    expect(result.flowCount).toBe(2);
     expect(result.error).toBeUndefined();
     expect(result.checkedAt).toBeGreaterThan(0);
   });
@@ -189,5 +330,48 @@ describe('probeFlowiseReadiness', () => {
     expect(result.baseUrl).toBe('https://f.test');
     expect(String(calls[0][0])).toBe('https://f.test/api/v1/ping');
     expect(String(calls[1][0])).toBe('https://f.test/api/v1/chatflows');
+  });
+
+  it('respects config precedence: args override settings in readiness probe', async () => {
+    const fetchMock = vi.fn(async (_url: string | URL): Promise<Response> => {
+      const url = String(_url);
+      if (url.endsWith('/api/v1/ping')) return makeResponse(200, 'pong');
+      if (url.endsWith('/api/v1/chatflows')) return makeResponse(200, [{ id: 'a' }]);
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await probeFlowiseReadiness(
+      { baseUrl: 'https://arg.test', apiKey: 'arg-key' },
+      { baseUrl: 'https://settings.test', apiKey: 'settings-key' }
+    );
+
+    expect(result.baseUrl).toBe('https://arg.test');
+    expect(result.apiKeySource).toBe('arg');
+    expect(result.pingOk).toBe(true);
+    expect(result.authOk).toBe(true);
+  });
+
+  it('respects config precedence: settings override env in readiness probe', async () => {
+    process.env[FLOWISE_ENV.baseUrl] = 'https://env.test';
+    process.env[FLOWISE_ENV.apiKey] = 'env-key';
+
+    const fetchMock = vi.fn(async (_url: string | URL): Promise<Response> => {
+      const url = String(_url);
+      if (url.endsWith('/api/v1/ping')) return makeResponse(200, 'pong');
+      if (url.endsWith('/api/v1/chatflows')) return makeResponse(200, [{ id: 'a' }]);
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await probeFlowiseReadiness(undefined, {
+      baseUrl: 'https://settings.test',
+      apiKey: 'settings-key',
+    });
+
+    expect(result.baseUrl).toBe('https://settings.test');
+    expect(result.apiKeySource).toBe('settings');
+    expect(result.pingOk).toBe(true);
+    expect(result.authOk).toBe(true);
   });
 });

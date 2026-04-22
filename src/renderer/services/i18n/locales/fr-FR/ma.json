@@ -355,6 +355,63 @@
     "primaryText": "Cliquez ou glissez des fichiers pour les télécharger",
     "secondaryText": "Supporte le téléchargement par lot de plusieurs documents"
   },
+  "companyEnrichment": {
+    "title": "Enrichissement d'entreprise",
+    "search": {
+      "placeholder": "Rechercher par nom d'entreprise...",
+      "button": "Rechercher",
+      "searching": "Recherche en cours...",
+      "noResults": "Aucune entreprise trouvée",
+      "resultsCount": "{{count}} résultats trouvés"
+    },
+    "actions": {
+      "enrich": "Enrichir les données",
+      "enriching": "Enrichissement en cours...",
+      "batchEnrich": "Enrichissement par lot",
+      "viewProfile": "Voir le profil",
+      "createDeal": "Créer une transaction"
+    },
+    "fields": {
+      "siren": "SIREN",
+      "siret": "SIRET",
+      "name": "Nom de l'entreprise",
+      "legalForm": "Forme juridique",
+      "nafCode": "Code NAF",
+      "headquartersAddress": "Siège social",
+      "registeredAt": "Date d'immatriculation",
+      "employeeCount": "Salariés",
+      "revenue": "Chiffre d'affaires",
+      "lastEnriched": "Dernière enrichment"
+    },
+    "empty": {
+      "title": "Aucune entreprise sélectionnée",
+      "description": "Recherchez une entreprise par nom ou saisissez un numéro SIREN pour enrichir ses données depuis des sources officielles.",
+      "searchPrompt": "Commencez par rechercher une entreprise ci-dessus"
+    },
+    "loading": {
+      "searching": "Recherche d'entreprises...",
+      "enriching": "Récupération des données...",
+      "batchEnriching": "Enrichissement de {{count}} entreprises..."
+    },
+    "error": {
+      "searchFailed": "La recherche a échoué. Veuillez réessayer.",
+      "enrichFailed": "Échec de l'enrichissement. Veuillez réessayer.",
+      "batchEnrichFailed": "Certaines entreprises n'ont pas pu être enrichies.",
+      "invalidSiren": "Format SIREN invalide. Doit comporter 9 chiffres.",
+      "rateLimit": "Limite de taux API atteinte. Veuillez patienter."
+    },
+    "messages": {
+      "enrichSuccess": "Données enrichies avec succès",
+      "batchEnrichSuccess": "{{count}} entreprises enrichies avec succès",
+      "companyCreated": "Nouvelle entreprise créée",
+      "companyUpdated": "Entreprise existante mise à jour"
+    },
+    "sources": {
+      "title": "Sources de données",
+      "rechercheEntreprises": "API Recherche d'entreprises",
+      "lastFetched": "Dernière récupération: {{date}}"
+    }
+  },
   "riskScoreCard": {
     "categories": {
       "financial": {
@@ -390,6 +447,16 @@
     "riskComparison": "Comparaison des risques",
     "summary": {
       "totalFindings": "Total des constats"
+    }
+  },
+  "shell": {
+    "title": "Fusions & Acquisitions",
+    "home": "Accueil",
+    "aria": {
+      "topBar": "Barre de navigation M&A",
+      "extensionSlots": "Emplacements d'extension dans la barre supérieure",
+      "breadcrumbs": "Navigation par fil d'Ariane",
+      "extensionSidebar": "Barre latérale d'extension"
     }
   }
 }

@@ -1,0 +1,330 @@
+/**
+ * MarketingDocumentViewer Styles
+ */
+
+/* Container */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-1);
+  border-radius: var(--border-radius-medium);
+  overflow: hidden;
+}
+
+.loadingState {
+  padding: var(--spacing-6);
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4) var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-2);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.documentTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.statusTag {
+  font-weight: 500;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+/* Main Content Layout */
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-2);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Section Navigator */
+.sectionNavigator {
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.navigatorTitle {
+  margin: 0 0 var(--spacing-3) 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sectionItem {
+  margin: 2px 0;
+}
+
+.sectionButton {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--border-radius-small);
+}
+
+.sectionItem.active .sectionButton {
+  background: var(--color-fill-2);
+}
+
+.sectionIcon {
+  flex-shrink: 0;
+  margin-right: var(--spacing-2);
+  color: var(--color-text-3);
+}
+
+.sectionItem.active .sectionIcon {
+  color: var(--primary);
+  transform: rotate(90deg);
+  transition: transform 0.2s;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Validation Summary in Sidebar */
+.validationSummary {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3);
+  background: var(--color-bg-1);
+  border-radius: var(--border-radius-small);
+}
+
+.validationMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.metricLabel {
+  color: var(--color-text-2);
+}
+
+.metricValue {
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.validationAlert {
+  margin-top: var(--spacing-3);
+}
+
+/* Provenance Panel */
+.provenancePanel {
+  padding: var(--spacing-4);
+  flex: 1;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-3) 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-2);
+}
+
+.provenanceList {
+  margin: 0;
+  padding: 0;
+}
+
+.provenanceList dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-3);
+  margin-top: var(--spacing-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.provenanceList dd {
+  margin: var(--spacing-1) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-1);
+  word-break: break-word;
+}
+
+.codeValue {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-2);
+  background: var(--color-fill-2);
+  padding: 2px var(--spacing-2);
+  border-radius: var(--border-radius-small);
+}
+
+/* Document Area */
+.documentArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs {
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabs :global(.arco-tabs-content) {
+  height: calc(100% - 48px);
+  overflow: auto;
+}
+
+/* Document Content */
+.documentContent {
+  padding: var(--spacing-6);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.section {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4);
+  border-radius: var(--border-radius-medium);
+  transition: background 0.2s;
+}
+
+.section.highlighted {
+  background: var(--color-fill-2);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* Source View */
+.sourceView {
+  padding: var(--spacing-6);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-1);
+  background: var(--color-fill-2);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Validation View */
+.validationView {
+  padding: var(--spacing-6);
+}
+
+.validationReport {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+/* Action Bar */
+.actionBar {
+  padding: var(--spacing-4) var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-2);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reviewActions {
+  display: flex;
+  gap: var(--spacing-3);
+}
+
+/* Reject Textarea */
+.rejectTextarea {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-small);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.rejectTextarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 200px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

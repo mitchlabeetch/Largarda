@@ -34,21 +34,25 @@
   overflow-y: auto;
 }
 
-.dealItem {
+.dealItemButton {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  height: auto;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color 0.2s;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
-.dealItem:hover {
+.dealItemButton:hover {
   background-color: var(--fill-0);
 }
 
-.dealItem.active {
+.dealItemButton.active {
   background-color: var(--aou-1);
   border: 1px solid var(--primary);
 }
@@ -57,6 +61,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .dealName {

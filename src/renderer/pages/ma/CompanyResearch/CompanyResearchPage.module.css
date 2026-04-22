@@ -1,0 +1,117 @@
+/**
+ * CompanyResearchPage Styles
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-2);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--bg-3);
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Content */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
+  overflow-y: auto;
+}
+
+/* Cards */
+.card {
+  flex-shrink: 0;
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+}
+
+/* Error Card */
+.errorCard {
+  max-width: 600px;
+  margin: 24px auto;
+}
+
+/* Provenance Section */
+.freshnessSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--bg-3);
+}
+
+.enrichedAt {
+  font-size: 12px;
+}
+
+.provenanceDetails {
+  margin-bottom: 16px;
+}
+
+.sourcesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sourcesTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.sourceTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+
+  .content {
+    padding: 12px 16px;
+  }
+}

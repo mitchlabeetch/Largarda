@@ -35,14 +35,16 @@ export class KbSourceRepository {
         lastIngestedAt: undefined,
         status: input.status ?? 'pending',
         errorText: undefined,
+        provenanceJson: input.provenanceJson,
+        freshness: input.freshness,
         createdAt: now,
         updatedAt: now,
       };
 
       const row = kbSourceToRow(source);
       const stmt = driver.prepare(`
-        INSERT INTO ma_kb_sources (id, scope, scope_id, flowise_document_store_id, embedding_model, chunk_count, last_ingested_at, status, error_text, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ma_kb_sources (id, scope, scope_id, flowise_document_store_id, embedding_model, chunk_count, last_ingested_at, status, error_text, provenance_json, freshness, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -55,6 +57,8 @@ export class KbSourceRepository {
         row.last_ingested_at,
         row.status,
         row.error_text,
+        row.provenance_json,
+        row.freshness,
         row.created_at,
         row.updated_at
       );
@@ -129,13 +133,15 @@ export class KbSourceRepository {
         lastIngestedAt: input.lastIngestedAt ?? existing.data.lastIngestedAt,
         status: input.status ?? existing.data.status,
         errorText: input.errorText ?? existing.data.errorText,
+        provenanceJson: input.provenanceJson ?? existing.data.provenanceJson,
+        freshness: input.freshness ?? existing.data.freshness,
         updatedAt: Date.now(),
       };
 
       const row = kbSourceToRow(updated);
       const stmt = driver.prepare(`
         UPDATE ma_kb_sources
-        SET flowise_document_store_id = ?, embedding_model = ?, chunk_count = ?, last_ingested_at = ?, status = ?, error_text = ?, updated_at = ?
+        SET flowise_document_store_id = ?, embedding_model = ?, chunk_count = ?, last_ingested_at = ?, status = ?, error_text = ?, provenance_json = ?, freshness = ?, updated_at = ?
         WHERE id = ?
       `);
 
@@ -146,6 +152,8 @@ export class KbSourceRepository {
         row.last_ingested_at,
         row.status,
         row.error_text,
+        row.provenance_json,
+        row.freshness,
         row.updated_at,
         id
       );

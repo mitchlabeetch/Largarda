@@ -1688,3 +1688,14 @@ export function closeDatabase(): void {
   }
   dbInstancePromise = null;
 }
+
+// ===== RBAC and Audit Log Exports =====
+
+export { IAuditLogRepository } from './IAuditLogRepository';
+export { IPermissionRepository } from './IPermissionRepository';
+export { IRoleRepository } from './IRoleRepository';
+export { SqliteAuditLogRepository } from './SqliteAuditLogRepository';
+export { SqlitePermissionRepository } from './SqlitePermissionRepository';
+export { SqliteRoleRepository } from './SqliteRoleRepository';
+export { AuditLogService } from './auditLogService';
+export { RbacService } from './rbacService';

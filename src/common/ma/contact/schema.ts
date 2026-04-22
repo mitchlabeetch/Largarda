@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import type { FreshnessStatus } from '@/common/ma/sourceCache/schema';
 
 // ============================================================================
 // Contact Types
@@ -26,6 +27,8 @@ export const ContactSchema = z.object({
   phone: z.string().optional(),
   linkedinUrl: z.string().url().optional(),
   notes: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
   createdAt: z.number().int().positive(),
   updatedAt: z.number().int().positive(),
 });
@@ -39,6 +42,8 @@ export const CreateContactInputSchema = z.object({
   phone: z.string().optional(),
   linkedinUrl: z.string().url().optional(),
   notes: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 export const UpdateContactInputSchema = z.object({
@@ -50,6 +55,8 @@ export const UpdateContactInputSchema = z.object({
   phone: z.string().optional(),
   linkedinUrl: z.string().url().optional(),
   notes: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 // ============================================================================
@@ -66,6 +73,8 @@ export interface Contact {
   phone?: string;
   linkedinUrl?: string;
   notes?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
   createdAt: number;
   updatedAt: number;
 }
@@ -79,6 +88,8 @@ export interface CreateContactInput {
   phone?: string;
   linkedinUrl?: string;
   notes?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 export interface UpdateContactInput {
@@ -90,6 +101,8 @@ export interface UpdateContactInput {
   phone?: string;
   linkedinUrl?: string;
   notes?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 // ============================================================================
@@ -106,6 +119,8 @@ export interface IMaContactRow {
   phone: string | null;
   linkedin_url: string | null;
   notes: string | null;
+  provenance_json: string | null;
+  freshness: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -125,6 +140,8 @@ export function contactToRow(contact: Contact): IMaContactRow {
     phone: contact.phone ?? null,
     linkedin_url: contact.linkedinUrl ?? null,
     notes: contact.notes ?? null,
+    provenance_json: contact.provenanceJson ?? null,
+    freshness: contact.freshness ?? null,
     created_at: contact.createdAt,
     updated_at: contact.updatedAt,
   };
@@ -141,6 +158,8 @@ export function rowToContact(row: IMaContactRow): Contact {
     phone: row.phone ?? undefined,
     linkedinUrl: row.linkedin_url ?? undefined,
     notes: row.notes ?? undefined,
+    provenanceJson: row.provenance_json ?? undefined,
+    freshness: (row.freshness as FreshnessStatus) ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

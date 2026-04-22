@@ -39,14 +39,16 @@ export class CompanyRepository {
         employeeCount: input.employeeCount,
         revenue: input.revenue,
         sourcesJson: input.sourcesJson,
+        provenanceJson: input.provenanceJson,
+        freshness: input.freshness,
         createdAt: now,
         updatedAt: now,
       };
 
       const row = companyToRow(company);
       const stmt = driver.prepare(`
-        INSERT INTO ma_companies (id, siren, siret, name, legal_form, naf_code, sector_id, jurisdiction, headquarters_address, registered_at, employee_count, revenue, sources_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ma_companies (id, siren, siret, name, legal_form, naf_code, sector_id, jurisdiction, headquarters_address, registered_at, employee_count, revenue, sources_json, provenance_json, freshness, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -63,6 +65,8 @@ export class CompanyRepository {
         row.employee_count,
         row.revenue,
         row.sources_json,
+        row.provenance_json,
+        row.freshness,
         row.created_at,
         row.updated_at
       );
@@ -141,13 +145,15 @@ export class CompanyRepository {
         revenue: input.revenue ?? existing.data.revenue,
         sourcesJson: input.sourcesJson ?? existing.data.sourcesJson,
         lastEnrichedAt: input.lastEnrichedAt ?? existing.data.lastEnrichedAt,
+        provenanceJson: input.provenanceJson ?? existing.data.provenanceJson,
+        freshness: input.freshness ?? existing.data.freshness,
         updatedAt: Date.now(),
       };
 
       const row = companyToRow(updated);
       const stmt = driver.prepare(`
         UPDATE ma_companies
-        SET siret = ?, name = ?, legal_form = ?, naf_code = ?, sector_id = ?, jurisdiction = ?, headquarters_address = ?, registered_at = ?, employee_count = ?, revenue = ?, sources_json = ?, last_enriched_at = ?, updated_at = ?
+        SET siret = ?, name = ?, legal_form = ?, naf_code = ?, sector_id = ?, jurisdiction = ?, headquarters_address = ?, registered_at = ?, employee_count = ?, revenue = ?, sources_json = ?, last_enriched_at = ?, provenance_json = ?, freshness = ?, updated_at = ?
         WHERE id = ?
       `);
 
@@ -164,6 +170,8 @@ export class CompanyRepository {
         row.revenue,
         row.sources_json,
         row.last_enriched_at,
+        row.provenance_json,
+        row.freshness,
         row.updated_at,
         id
       );

@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Progress, Tooltip, Collapse, Tag } from '@arco-design/web-react';
+import { Button, Progress, Tooltip, Tag } from '@arco-design/web-react';
 import {
   Caution,
   CloseOne,
@@ -68,22 +68,22 @@ interface CategoryConfig {
 // ============================================================================
 
 function getScoreColor(score: number): string {
-  if (score >= 76) return '#722ED1'; // Critical
-  if (score >= 51) return '#F53F3F'; // High
-  if (score >= 26) return '#FF7D00'; // Medium
-  return '#00B42A'; // Low
+  if (score >= 76) return 'var(--danger)'; // Critical
+  if (score >= 51) return 'var(--warning)'; // High
+  if (score >= 26) return 'var(--info)'; // Medium
+  return 'var(--success)'; // Low
 }
 
 function getSeverityIcon(severity: RiskSeverity): React.ReactNode {
   switch (severity) {
     case 'critical':
-      return <CloseOne theme='filled' fill='#722ED1' />;
+      return <CloseOne theme='filled' style={{ fill: 'var(--danger)' }} />;
     case 'high':
-      return <Caution theme='filled' fill='#F53F3F' />;
+      return <Caution theme='filled' style={{ fill: 'var(--warning)' }} />;
     case 'medium':
-      return <Attention theme='filled' fill='#FF7D00' />;
+      return <Attention theme='filled' style={{ fill: 'var(--info)' }} />;
     case 'low':
-      return <Success theme='filled' fill='#00B42A' />;
+      return <Success theme='filled' style={{ fill: 'var(--success)' }} />;
     default:
       return <Help />;
   }
@@ -118,7 +118,7 @@ function CategoryBar({
 
   return (
     <div className={styles.categoryBar}>
-      <div className={styles.categoryHeader} onClick={onClick}>
+      <Button type='text' className={styles.categoryTrigger} onClick={onClick} aria-expanded={isExpanded} long>
         <div className={styles.categoryInfo}>
           {config.icon}
           <span className={styles.categoryLabel}>{config.label}</span>
@@ -138,7 +138,7 @@ function CategoryBar({
           )}
           {categoryFindings.length > 0 && (isExpanded ? <Down /> : <Right />)}
         </div>
-      </div>
+      </Button>
       <Progress
         percent={score}
         color={color}
@@ -160,7 +160,7 @@ function CategoryBar({
               <p className={styles.findingDescription}>{finding.description}</p>
               {finding.recommendation && (
                 <p className={styles.findingRecommendation}>
-                  <Attention theme='filled' size='14' fill='#FF7D00' style={{ marginRight: '4px' }} />
+                  <Attention theme='filled' size='14' style={{ fill: 'var(--info)', marginRight: '4px' }} />
                   {finding.recommendation}
                 </p>
               )}
@@ -237,41 +237,41 @@ export function RiskScoreCard({
   const CATEGORY_CONFIG: Record<RiskCategory, CategoryConfig> = {
     financial: {
       label: t('riskScoreCard.categories.financial.label'),
-      color: '#165DFF',
-      icon: <Wallet theme='filled' size='16' fill='#165DFF' />,
+      color: 'var(--primary)',
+      icon: <Wallet theme='filled' size='16' style={{ fill: 'var(--primary)' }} />,
       description: t('riskScoreCard.categories.financial.description'),
     },
     legal: {
       label: t('riskScoreCard.categories.legal.label'),
-      color: '#722ED1',
-      icon: <Scale theme='filled' size='16' fill='#722ED1' />,
+      color: 'var(--danger)',
+      icon: <Scale theme='filled' size='16' style={{ fill: 'var(--danger)' }} />,
       description: t('riskScoreCard.categories.legal.description'),
     },
     operational: {
       label: t('riskScoreCard.categories.operational.label'),
-      color: '#0FC6C2',
-      icon: <Tool theme='filled' size='16' fill='#0FC6C2' />,
+      color: 'var(--info)',
+      icon: <Tool theme='filled' size='16' style={{ fill: 'var(--info)' }} />,
       description: t('riskScoreCard.categories.operational.description'),
     },
     regulatory: {
       label: t('riskScoreCard.categories.regulatory.label'),
-      color: '#F53F3F',
-      icon: <FileText theme='filled' size='16' fill='#F53F3F' />,
+      color: 'var(--warning)',
+      icon: <FileText theme='filled' size='16' style={{ fill: 'var(--warning)' }} />,
       description: t('riskScoreCard.categories.regulatory.description'),
     },
     reputational: {
       label: t('riskScoreCard.categories.reputational.label'),
-      color: '#FF7D00',
-      icon: <Trophy theme='filled' size='16' fill='#FF7D00' />,
+      color: 'var(--warning)',
+      icon: <Trophy theme='filled' size='16' style={{ fill: 'var(--warning)' }} />,
       description: t('riskScoreCard.categories.reputational.description'),
     },
   };
 
   const SEVERITY_CONFIG: Record<RiskSeverity, { label: string; color: string }> = {
-    low: { label: t('riskScoreCard.severity.low'), color: '#00B42A' },
-    medium: { label: t('riskScoreCard.severity.medium'), color: '#FF7D00' },
-    high: { label: t('riskScoreCard.severity.high'), color: '#F53F3F' },
-    critical: { label: t('riskScoreCard.severity.critical'), color: '#722ED1' },
+    low: { label: t('riskScoreCard.severity.low'), color: 'var(--success)' },
+    medium: { label: t('riskScoreCard.severity.medium'), color: 'var(--info)' },
+    high: { label: t('riskScoreCard.severity.high'), color: 'var(--warning)' },
+    critical: { label: t('riskScoreCard.severity.critical'), color: 'var(--danger)' },
   };
 
   const getScoreLabel = (score: number): string => {
@@ -328,8 +328,9 @@ export function RiskScoreCard({
       <div className={`${styles.container} ${className || ''}`}>
         <EmptyState
           icon={<FileText size={64} />}
-          title='No risk data available'
-          description='Upload documents to analyze risks'
+          title='riskScoreCard.noData'
+          description='dueDiligence.prerequisites.noDocumentsDescription'
+          i18nNs='ma'
         />
       </div>
     );
@@ -400,25 +401,25 @@ export function RiskScoreCard({
           </div>
           <div className={styles.summaryItem}>
             <span className={styles.summaryLabel}>{t('riskScoreCard.severity.critical')}</span>
-            <span className={styles.summaryValue} style={{ color: '#722ED1' }}>
+            <span className={styles.summaryValue} style={{ color: 'var(--danger)' }}>
               {risks.filter((r) => r.severity === 'critical').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
             <span className={styles.summaryLabel}>{t('riskScoreCard.severity.high')}</span>
-            <span className={styles.summaryValue} style={{ color: '#F53F3F' }}>
+            <span className={styles.summaryValue} style={{ color: 'var(--warning)' }}>
               {risks.filter((r) => r.severity === 'high').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
             <span className={styles.summaryLabel}>{t('riskScoreCard.severity.medium')}</span>
-            <span className={styles.summaryValue} style={{ color: '#FF7D00' }}>
+            <span className={styles.summaryValue} style={{ color: 'var(--info)' }}>
               {risks.filter((r) => r.severity === 'medium').length}
             </span>
           </div>
           <div className={styles.summaryItem}>
             <span className={styles.summaryLabel}>{t('riskScoreCard.severity.low')}</span>
-            <span className={styles.summaryValue} style={{ color: '#00B42A' }}>
+            <span className={styles.summaryValue} style={{ color: 'var(--success)' }}>
               {risks.filter((r) => r.severity === 'low').length}
             </span>
           </div>

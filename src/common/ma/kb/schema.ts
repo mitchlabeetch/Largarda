@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import type { FreshnessStatus } from '@/common/ma/sourceCache/schema';
 
 // ============================================================================
 // KB Source Types
@@ -32,6 +33,8 @@ export const KbSourceSchema = z.object({
   lastIngestedAt: z.number().int().positive().optional(),
   status: KbStatusSchema,
   errorText: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
   createdAt: z.number().int().positive(),
   updatedAt: z.number().int().positive(),
 });
@@ -42,6 +45,8 @@ export const CreateKbSourceInputSchema = z.object({
   flowiseDocumentStoreId: z.string().optional(),
   embeddingModel: z.string().optional(),
   status: KbStatusSchema.optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 export const UpdateKbSourceInputSchema = z.object({
@@ -51,6 +56,8 @@ export const UpdateKbSourceInputSchema = z.object({
   lastIngestedAt: z.number().int().positive().optional(),
   status: KbStatusSchema.optional(),
   errorText: z.string().optional(),
+  provenanceJson: z.string().optional(),
+  freshness: z.enum(['fresh', 'stale', 'expired', 'unknown']).optional(),
 });
 
 // ============================================================================
@@ -100,6 +107,8 @@ export interface KbSource {
   lastIngestedAt?: number;
   status: KbStatus;
   errorText?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
   createdAt: number;
   updatedAt: number;
 }
@@ -110,6 +119,8 @@ export interface CreateKbSourceInput {
   flowiseDocumentStoreId?: string;
   embeddingModel?: string;
   status?: KbStatus;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 export interface UpdateKbSourceInput {
@@ -119,6 +130,8 @@ export interface UpdateKbSourceInput {
   lastIngestedAt?: number;
   status?: KbStatus;
   errorText?: string;
+  provenanceJson?: string;
+  freshness?: FreshnessStatus;
 }
 
 // ============================================================================
@@ -168,6 +181,8 @@ export interface IMaKbSourceRow {
   last_ingested_at: number | null;
   status: string;
   error_text: string | null;
+  provenance_json: string | null;
+  freshness: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -199,6 +214,8 @@ export function kbSourceToRow(source: KbSource): IMaKbSourceRow {
     last_ingested_at: source.lastIngestedAt ?? null,
     status: source.status,
     error_text: source.errorText ?? null,
+    provenance_json: source.provenanceJson ?? null,
+    freshness: source.freshness ?? null,
     created_at: source.createdAt,
     updated_at: source.updatedAt,
   };
@@ -215,6 +232,8 @@ export function rowToKbSource(row: IMaKbSourceRow): KbSource {
     lastIngestedAt: row.last_ingested_at ?? undefined,
     status: row.status as KbStatus,
     errorText: row.error_text ?? undefined,
+    provenanceJson: row.provenance_json ?? undefined,
+    freshness: (row.freshness as FreshnessStatus) ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

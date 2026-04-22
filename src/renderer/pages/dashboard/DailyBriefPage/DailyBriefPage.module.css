@@ -1,0 +1,198 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.errorContainer {
+  padding: 24px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summaryCard {
+  cursor: default;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryLabel {
+  font-size: 14px;
+  color: var(--color-text-3);
+}
+
+.summaryValue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.summaryNumber {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  line-height: 1;
+}
+
+.summarySubtext {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.badge :global(.arco-badge-text) {
+  transform: translate(50%, -50%);
+}
+
+.timelineCard {
+  margin-top: 24px;
+}
+
+.timelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.timeline {
+  padding-left: 8px;
+}
+
+.timelineItem {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+  padding: 8px;
+  margin-left: -8px;
+}
+
+.timelineItem:hover {
+  background-color: var(--color-fill-2);
+}
+
+.timeLabel {
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+}
+
+.itemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemTitle {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.itemDescription {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-2);
+  line-height: 1.5;
+}
+
+.itemDeal {
+  font-size: 12px;
+}
+
+.provenance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.provenanceIcon {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.provenanceText {
+  font-size: 11px;
+}
+
+.iconDeal {
+  color: rgb(var(--blue-6));
+}
+
+.iconDocument {
+  color: rgb(var(--cyan-6));
+}
+
+.iconSuccess {
+  color: rgb(var(--green-6));
+}
+
+.iconAnalysis {
+  color: rgb(var(--purple-6));
+}
+
+.iconRisk {
+  color: rgb(var(--red-6));
+}
+
+.iconIntegration {
+  color: rgb(var(--orange-6));
+}
+
+.iconSync {
+  color: rgb(var(--green-6));
+}
+
+.iconDefault {
+  color: var(--color-text-3);
+}
+
+.empty {
+  padding: 48px 0;
+}
+
+.errorActions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}

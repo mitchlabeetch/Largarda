@@ -1,0 +1,126 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.onboardingModal :global(.arco-modal-content) {
+  padding: 0;
+}
+
+.onboardingContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 32px 32px;
+}
+
+.steps {
+  margin-bottom: 8px;
+}
+
+.steps :global(.arco-steps-item-title) {
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+
+.steps :global(.arco-steps-item-active) .steps :global(.arco-steps-item-title) {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.activeStep :global(.arco-steps-item-title) {
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 200px;
+  padding: 16px 0;
+}
+
+.stepIconWrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--color-fill-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+}
+
+.stepIconWrapper:hover {
+  transform: scale(1.05);
+}
+
+.stepIcon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.stepDescription {
+  font-size: 14px;
+  color: var(--color-text-2);
+  line-height: 1.6;
+  max-width: 480px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.skipButton {
+  color: var(--color-text-3);
+}
+
+.skipButton:hover {
+  color: var(--color-text-2);
+}
+
+.nextButton {
+  min-width: 120px;
+}
+
+.progressIndicator {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: -8px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .stepIconWrapper {
+    transition: none;
+  }
+  
+  .stepIconWrapper:hover {
+    transform: none;
+  }
+}
+
+/* Focus visible styles for accessibility */
+.steps :global(.arco-steps-item):focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
+  border-radius: 4px;
+}

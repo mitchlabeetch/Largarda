@@ -139,16 +139,6 @@ export function DocumentUpload({
     input?.click();
   }, []);
 
-  const handleDropzoneKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        triggerFileInput();
-      }
-    },
-    [triggerFileInput]
-  );
-
   const renderUploadList = useCallback(() => {
     const entries = Array.from(uploadStatus.entries());
     if (entries.length === 0) return null;
@@ -235,12 +225,12 @@ export function DocumentUpload({
         showUploadList={false}
         tip={<div className={styles.tip}>{t('documentUpload.tip')}</div>}
       >
-        <div
+        <Button
+          type='text'
           className={styles.dropzone}
-          tabIndex={0}
-          role='button'
+          onClick={triggerFileInput}
           aria-label={t('documentUpload.primaryText')}
-          onKeyDown={handleDropzoneKeyDown}
+          long
         >
           <div className={styles.dropzoneContent}>
             <UploadIcon className={styles.uploadIcon} />
@@ -249,7 +239,7 @@ export function DocumentUpload({
               <span className={styles.secondaryText}>{t('documentUpload.secondaryText')}</span>
             </div>
           </div>
-        </div>
+        </Button>
       </Upload>
       {renderUploadList()}
     </div>

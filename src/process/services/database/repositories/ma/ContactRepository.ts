@@ -35,14 +35,16 @@ export class ContactRepository {
         phone: input.phone,
         linkedinUrl: input.linkedinUrl,
         notes: input.notes,
+        provenanceJson: input.provenanceJson,
+        freshness: input.freshness,
         createdAt: now,
         updatedAt: now,
       };
 
       const row = contactToRow(contact);
       const stmt = driver.prepare(`
-        INSERT INTO ma_contacts (id, company_id, deal_id, full_name, role, email, phone, linkedin_url, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ma_contacts (id, company_id, deal_id, full_name, role, email, phone, linkedin_url, notes, provenance_json, freshness, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -55,6 +57,8 @@ export class ContactRepository {
         row.phone,
         row.linkedin_url,
         row.notes,
+        row.provenance_json,
+        row.freshness,
         row.created_at,
         row.updated_at
       );
@@ -109,13 +113,15 @@ export class ContactRepository {
         phone: input.phone ?? existing.data.phone,
         linkedinUrl: input.linkedinUrl ?? existing.data.linkedinUrl,
         notes: input.notes ?? existing.data.notes,
+        provenanceJson: input.provenanceJson ?? existing.data.provenanceJson,
+        freshness: input.freshness ?? existing.data.freshness,
         updatedAt: Date.now(),
       };
 
       const row = contactToRow(updated);
       const stmt = driver.prepare(`
         UPDATE ma_contacts
-        SET company_id = ?, deal_id = ?, full_name = ?, role = ?, email = ?, phone = ?, linkedin_url = ?, notes = ?, updated_at = ?
+        SET company_id = ?, deal_id = ?, full_name = ?, role = ?, email = ?, phone = ?, linkedin_url = ?, notes = ?, provenance_json = ?, freshness = ?, updated_at = ?
         WHERE id = ?
       `);
 
@@ -128,6 +134,8 @@ export class ContactRepository {
         row.phone,
         row.linkedin_url,
         row.notes,
+        row.provenance_json,
+        row.freshness,
         row.updated_at,
         id
       );

@@ -1,0 +1,28 @@
+{
+  "title": "Welcome to AionUi",
+  "step1": {
+    "title": "Welcome!",
+    "description": "AionUi is your local, open-source AI assistant. Chat with AI agents, manage files, and automate tasks—all while keeping your data private."
+  },
+  "step2": {
+    "title": "Choose Your Agent",
+    "description": "Connect to Gemini CLI, AionRS, or custom agents. Select different AI models and assistants for different tasks. Your AI, your choice."
+  },
+  "step3": {
+    "title": "Start Chatting",
+    "description": "Upload files, open folders, or just start typing. AionUi supports multi-turn conversations, file previews, and real-time collaboration."
+  },
+  "step4": {
+    "title": "You're All Set!",
+    "description": "Need help? Click the feedback button anytime. Enjoy your AI-powered workflow with AionUi!"
+  },
+  "next": "Next",
+  "nextAriaLabel": "Go to next step",
+  "finish": "Get Started",
+  "finishAriaLabel": "Complete onboarding and start using AionUi",
+  "skip": "Skip Tour",
+  "skipAriaLabel": "Skip the onboarding tour",
+  "stepLabel": "Onboarding step {{step}}",
+  "progressLabel": "Onboarding progress",
+  "stepCounter": "Step {{current}} of {{total}}"
+}

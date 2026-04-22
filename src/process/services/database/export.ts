@@ -35,3 +35,25 @@ export type {
 
 // Re-export conversion functions
 export { conversationToRow, rowToConversation, messageToRow, rowToMessage } from './types';
+
+// Audit log exports
+export { AuditLogService } from './auditLogService';
+export type { IAuditLogRepository } from './IAuditLogRepository';
+export { SqliteAuditLogRepository } from './SqliteAuditLogRepository';
+
+// RBAC exports
+export { RbacService } from './rbacService';
+export type { IRoleRepository } from './IRoleRepository';
+export type { IPermissionRepository } from './IPermissionRepository';
+export { SqliteRoleRepository } from './SqliteRoleRepository';
+export { SqlitePermissionRepository } from './SqlitePermissionRepository';
+
+// Compliance repository exports
+export type {
+  IGdprExportRepository,
+  IGdprErasureRepository,
+  IRetentionPolicyRepository,
+  IVdrAccessRepository,
+  IComplianceWorkflowRepository,
+  IDestructiveActionReviewRepository,
+} from './IComplianceRepository';

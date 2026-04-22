@@ -47,6 +47,13 @@ export function DealSelector({
     closed: t('dealSelector.status.closed'),
   };
 
+  const transactionTypeLabels: Record<DealContext['transactionType'], string> = {
+    acquisition: t('dealForm.transactionTypes.acquisition'),
+    merger: t('dealForm.transactionTypes.merger'),
+    divestiture: t('dealForm.transactionTypes.divestiture'),
+    joint_venture: t('dealForm.transactionTypes.jointVenture'),
+  };
+
   const handleSelect = useCallback(
     (deal: DealContext) => {
       onSelect(deal);
@@ -60,10 +67,13 @@ export function DealSelector({
       const isActive = activeDeal?.id === deal.id;
 
       return (
-        <div
+        <Button
           key={deal.id}
-          className={`${styles.dealItem} ${isActive ? styles.active : ''}`}
+          type='text'
+          className={`${styles.dealItemButton} ${isActive ? styles.active : ''}`}
           onClick={() => handleSelect(deal)}
+          aria-pressed={isActive}
+          long
         >
           <div className={styles.dealInfo}>
             <span className={styles.dealName}>
@@ -71,14 +81,14 @@ export function DealSelector({
               {deal.name}
             </span>
             <span className={styles.dealMeta}>
-              {deal.transactionType} • {deal.targetCompany.name}
+              {transactionTypeLabels[deal.transactionType]} - {deal.targetCompany.name}
             </span>
           </div>
           <span className={`${styles.dealStatus} ${styles[deal.status]}`}>{statusLabels[deal.status]}</span>
-        </div>
+        </Button>
       );
     },
-    [activeDeal, handleSelect]
+    [activeDeal, handleSelect, statusLabels, transactionTypeLabels]
   );
 
   const dropdownContent = (

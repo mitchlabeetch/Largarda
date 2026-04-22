@@ -32,6 +32,10 @@ import type {
   IntegrationSessionResult,
   IntegrationProxyRequest,
   IntegrationProxyResponse,
+  SyncJobProgress,
+  SyncJob,
+  CreateSyncJobInput,
+  SyncReadiness,
 } from '@/common/ma/types';
 import { DealRepository } from '@process/services/database/repositories/ma/DealRepository';
 import { DocumentRepository } from '@process/services/database/repositories/ma/DocumentRepository';
@@ -45,6 +49,21 @@ import type { DocumentIngestionService } from '@process/services/ma/DocumentInge
 import { initDocumentIngestionService } from '@process/services/ma/DocumentIngestionService';
 import { getIntegrationService, type IntegrationService } from '@process/services/ma/IntegrationService';
 import { probeFlowiseReadiness } from '@process/agent/flowise/FloWiseConnection';
+import {
+  getCompanyEnrichmentService,
+  type ICompanyEnrichmentService,
+} from '@process/services/ma/CompanyEnrichmentService';
+import type { Company } from '@/common/ma/company/schema';
+import { getIntegrationConnectionRepository } from '@process/services/database/repositories/ma/IntegrationConnectionRepository';
+import {
+  getSyncJobRepository,
+  type SyncJobRepository,
+} from '@process/services/database/repositories/ma/SyncJobRepository';
+import { initEmailSyncService, type EmailSyncService } from '@process/services/ma/EmailSyncService';
+import { initCrmSyncService, type CrmSyncService } from '@process/services/ma/CrmSyncService';
+import type { DailyBriefService } from '@process/services/ma/DailyBriefService';
+import { getDailyBriefService } from '@process/services/ma/DailyBriefService';
+import type { GenerateBriefInput, GenerateReportInput, DailyBrief, Report } from '@/common/ma/types';
 
 // Repository instances
 let dealRepo: DealRepository | null = null;
@@ -54,6 +73,11 @@ let dealContextService: DealContextService | null = null;
 let flowiseSessionRepo: FlowiseSessionRepository | null = null;
 let integrationService: IntegrationService | null = null;
 let ingestionService: DocumentIngestionService | null = null;
+let companyEnrichmentService: ICompanyEnrichmentService | null = null;
+let syncJobRepo: SyncJobRepository | null = null;
+let emailSyncService: EmailSyncService | null = null;
+let crmSyncService: CrmSyncService | null = null;
+let dailyBriefService: DailyBriefService | null = null;
 
 function getDealRepo(): DealRepository {
   if (!dealRepo) {
@@ -101,6 +125,89 @@ function getIngestionService(): DocumentIngestionService {
     });
   }
   return ingestionService;
+}
+
+function getCompanyEnrichmentServiceInstance(): ICompanyEnrichmentService {
+  if (!companyEnrichmentService) {
+    // Create a db adapter that uses the actual database
+    const dbAdapter = {
+      select: async (table: string, where: Record<string, unknown>): Promise<unknown> => {
+        const db = await import('@process/services/database').then((m) => m.getDatabase());
+        const driver = db.getDriver();
+        const conditions = Object.entries(where)
+          .map(([key]) => `${key} = ?`)
+          .join(' AND ');
+        const stmt = driver.prepare(`SELECT * FROM ${table} WHERE ${conditions} LIMIT 1`);
+        return stmt.get(...Object.values(where)) as unknown;
+      },
+      insert: async (table: string, row: Record<string, unknown>): Promise<void> => {
+        const db = await import('@process/services/database').then((m) => m.getDatabase());
+        const driver = db.getDriver();
+        const columns = Object.keys(row).join(', ');
+        const placeholders = Object.keys(row)
+          .map(() => '?')
+          .join(', ');
+        const stmt = driver.prepare(`INSERT INTO ${table} (${columns}) VALUES (${placeholders})`);
+        stmt.run(...Object.values(row));
+      },
+      update: async (
+        table: string,
+        where: Record<string, unknown>,
+        updates: Record<string, unknown>
+      ): Promise<void> => {
+        const db = await import('@process/services/database').then((m) => m.getDatabase());
+        const driver = db.getDriver();
+        const setClause = Object.keys(updates)
+          .map((key) => `${key} = ?`)
+          .join(', ');
+        const whereClause = Object.entries(where)
+          .map(([key]) => `${key} = ?`)
+          .join(' AND ');
+        const stmt = driver.prepare(`UPDATE ${table} SET ${setClause} WHERE ${whereClause}`);
+        stmt.run(...Object.values(updates), ...Object.values(where));
+      },
+    };
+    companyEnrichmentService = getCompanyEnrichmentService(dbAdapter);
+  }
+  return companyEnrichmentService;
+}
+
+function getSyncJobRepoInstance(): SyncJobRepository {
+  syncJobRepo ??= getSyncJobRepository();
+  return syncJobRepo;
+}
+
+function getEmailSyncServiceInstance(): EmailSyncService {
+  if (!emailSyncService) {
+    emailSyncService = initEmailSyncService({
+      syncJobRepo: getSyncJobRepoInstance(),
+      integrationConnectionRepo: getIntegrationConnectionRepository(),
+      integrationService: getIntegrationServiceInstance(),
+      jobType: 'email',
+      emit: (event: SyncJobProgress) => ipcBridge.ma.emailSync.progress.emit(event),
+    });
+  }
+  return emailSyncService;
+}
+
+function getCrmSyncServiceInstance(): CrmSyncService {
+  if (!crmSyncService) {
+    crmSyncService = initCrmSyncService({
+      syncJobRepo: getSyncJobRepoInstance(),
+      integrationConnectionRepo: getIntegrationConnectionRepository(),
+      integrationService: getIntegrationServiceInstance(),
+      jobType: 'crm',
+      emit: (event: SyncJobProgress) => ipcBridge.ma.crmSync.progress.emit(event),
+    });
+  }
+  return crmSyncService;
+}
+
+function getDailyBriefServiceInstance(): DailyBriefService {
+  if (!dailyBriefService) {
+    dailyBriefService = getDailyBriefService();
+  }
+  return dailyBriefService;
 }
 
 /**
@@ -541,5 +648,124 @@ export function initMaBridge(): void {
       throw new Error(result.error ?? 'Failed to compare deals');
     }
     return result.data;
+  });
+
+  // ============================================================================
+  // Company Enrichment Operations (ENABLED in 4B)
+  // ============================================================================
+
+  // Enrich/create company by SIREN
+  ipcBridge.ma.companyEnrichment.enrichBySiren.provider(async (params): Promise<Company> => {
+    const { siren } = params as { siren: string };
+    const result = await getCompanyEnrichmentServiceInstance().enrichBySiren(siren);
+    if (!result) {
+      throw new Error(`Failed to enrich company with SIREN: ${siren}`);
+    }
+    return result;
+  });
+
+  // Enrich existing company by ID
+  ipcBridge.ma.companyEnrichment.enrichCompany.provider(async (params): Promise<Company> => {
+    const { companyId } = params as { companyId: string };
+    const result = await getCompanyEnrichmentServiceInstance().enrichCompany(companyId);
+    if (!result) {
+      throw new Error(`Failed to enrich company: ${companyId}`);
+    }
+    return result;
+  });
+
+  // Search companies by name
+  ipcBridge.ma.companyEnrichment.searchByName.provider(async (params): Promise<Array<Partial<Company>>> => {
+    const { query, limit = 10 } = params as { query: string; limit?: number };
+    return getCompanyEnrichmentServiceInstance().searchByName(query, limit);
+  });
+
+  // Batch enrich multiple companies
+  ipcBridge.ma.companyEnrichment.batchEnrich.provider(async (params): Promise<Map<string, Company>> => {
+    const { companyIds } = params as { companyIds: string[] };
+    return getCompanyEnrichmentServiceInstance().batchEnrich(companyIds);
+  });
+
+  // NOTE: Contact and Watchlist operations were removed in Wave 4 / Batch 4A
+  // See docs/audit/2026-04-22-wave-4-batch-4a-pass.md for disposition rationale
+
+  // ============================================================================
+  // Email Sync Operations (Wave 8 / Batch 8B)
+  // ============================================================================
+
+  ipcBridge.ma.emailSync.getReadiness.provider(async (): Promise<SyncReadiness> => {
+    return getEmailSyncServiceInstance().getReadiness();
+  });
+
+  ipcBridge.ma.emailSync.start.provider(async (params): Promise<SyncJob> => {
+    const input = params as CreateSyncJobInput;
+    return getEmailSyncServiceInstance().startSync(input);
+  });
+
+  ipcBridge.ma.emailSync.getJob.provider(async (params): Promise<SyncJob | null> => {
+    const { id } = params as { id: string };
+    return getEmailSyncServiceInstance().getJob(id);
+  });
+
+  ipcBridge.ma.emailSync.listJobs.provider(async (params): Promise<SyncJob[]> => {
+    const { status } = params as { status?: string };
+    return getEmailSyncServiceInstance().listJobs(status ? { status } : undefined);
+  });
+
+  ipcBridge.ma.emailSync.cancel.provider(async (params): Promise<boolean> => {
+    const { id } = params as { id: string };
+    return getEmailSyncServiceInstance().cancel(id);
+  });
+
+  // ============================================================================
+  // CRM Sync Operations (Wave 8 / Batch 8B)
+  // ============================================================================
+
+  ipcBridge.ma.crmSync.getReadiness.provider(async (): Promise<SyncReadiness> => {
+    return getCrmSyncServiceInstance().getReadiness();
+  });
+
+  ipcBridge.ma.crmSync.start.provider(async (params): Promise<SyncJob> => {
+    const input = params as CreateSyncJobInput;
+    return getCrmSyncServiceInstance().startSync(input);
+  });
+
+  ipcBridge.ma.crmSync.getJob.provider(async (params): Promise<SyncJob | null> => {
+    const { id } = params as { id: string };
+    return getCrmSyncServiceInstance().getJob(id);
+  });
+
+  ipcBridge.ma.crmSync.listJobs.provider(async (params): Promise<SyncJob[]> => {
+    const { status } = params as { status?: string };
+    return getCrmSyncServiceInstance().listJobs(status ? { status } : undefined);
+  });
+
+  ipcBridge.ma.crmSync.cancel.provider(async (params): Promise<boolean> => {
+    const { id } = params as { id: string };
+    return getCrmSyncServiceInstance().cancel(id);
+  });
+
+  // ============================================================================
+  // Daily Brief and Reporting (Wave 10 / Batch 10C)
+  // ============================================================================
+
+  // Generate daily brief
+  ipcBridge.ma.brief.generateDaily.provider(async (params): Promise<DailyBrief> => {
+    const input = params as GenerateBriefInput;
+    const result = await getDailyBriefServiceInstance().generateDailyBrief(input);
+    if (!result.success || !result.brief) {
+      throw new Error(result.error ?? 'Failed to generate daily brief');
+    }
+    return result.brief;
+  });
+
+  // Generate report
+  ipcBridge.ma.report.generate.provider(async (params): Promise<Report> => {
+    const input = params as GenerateReportInput;
+    const result = await getDailyBriefServiceInstance().generateReport(input);
+    if (!result.success || !result.report) {
+      throw new Error(result.error ?? 'Failed to generate report');
+    }
+    return result.report;
   });
 }

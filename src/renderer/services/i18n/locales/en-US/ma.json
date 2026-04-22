@@ -88,6 +88,10 @@
     }
   },
   "valuation": {
+    "title": "Valuation Workbench",
+    "description": "Analyze company value using multiple valuation methods",
+    "assumptions": "Assumptions",
+    "run": "Run Valuation",
     "methods": {
       "dcf": "Discounted Cash Flow",
       "multiples": "Comparable Multiples",
@@ -108,6 +112,7 @@
       "totalLiabilities": "Total liabilities"
     },
     "results": {
+      "title": "Results",
       "enterpriseValue": "Enterprise value",
       "equityValue": "Equity value",
       "terminalValue": "Terminal value",
@@ -127,7 +132,8 @@
     },
     "footballField": {
       "title": "Football field",
-      "overall": "Overall range"
+      "overall": "Overall range",
+      "empty": "Run DCF and/or Multiples valuations first to generate the football field."
     },
     "errors": {
       "invalidWacc": "WACC must be strictly greater than the terminal growth rate.",
@@ -355,6 +361,63 @@
     "primaryText": "Click or drag files to upload",
     "secondaryText": "Support batch upload of multiple documents"
   },
+  "companyEnrichment": {
+    "title": "Company Enrichment",
+    "search": {
+      "placeholder": "Search by company name...",
+      "button": "Search",
+      "searching": "Searching...",
+      "noResults": "No companies found",
+      "resultsCount": "{{count}} results found"
+    },
+    "actions": {
+      "enrich": "Enrich Data",
+      "enriching": "Enriching...",
+      "batchEnrich": "Batch Enrich",
+      "viewProfile": "View Profile",
+      "createDeal": "Create Deal"
+    },
+    "fields": {
+      "siren": "SIREN",
+      "siret": "SIRET",
+      "name": "Company Name",
+      "legalForm": "Legal Form",
+      "nafCode": "NAF Code",
+      "headquartersAddress": "Headquarters",
+      "registeredAt": "Registration Date",
+      "employeeCount": "Employees",
+      "revenue": "Revenue",
+      "lastEnriched": "Last Enriched"
+    },
+    "empty": {
+      "title": "No Company Selected",
+      "description": "Search for a company by name or enter a SIREN number to enrich its data from official sources.",
+      "searchPrompt": "Start by searching for a company above"
+    },
+    "loading": {
+      "searching": "Searching companies...",
+      "enriching": "Fetching company data...",
+      "batchEnriching": "Enriching {{count}} companies..."
+    },
+    "error": {
+      "searchFailed": "Search failed. Please try again.",
+      "enrichFailed": "Failed to enrich company data. Please try again.",
+      "batchEnrichFailed": "Some companies failed to enrich. Check individual results.",
+      "invalidSiren": "Invalid SIREN format. Must be 9 digits.",
+      "rateLimit": "API rate limit reached. Please wait a moment and try again."
+    },
+    "messages": {
+      "enrichSuccess": "Company data enriched successfully",
+      "batchEnrichSuccess": "Enriched {{count}} companies successfully",
+      "companyCreated": "New company created from enrichment",
+      "companyUpdated": "Existing company updated with new data"
+    },
+    "sources": {
+      "title": "Data Sources",
+      "rechercheEntreprises": "API Recherche d'entreprises",
+      "lastFetched": "Last fetched: {{date}}"
+    }
+  },
   "riskScoreCard": {
     "categories": {
       "financial": {
@@ -390,6 +453,76 @@
     "riskComparison": "Risk Comparison",
     "summary": {
       "totalFindings": "Total Findings"
+    }
+  },
+  "shell": {
+    "title": "Mergers & Acquisitions",
+    "home": "Home",
+    "aria": {
+      "topBar": "M&A top navigation bar",
+      "extensionSlots": "Extension slots in top bar",
+      "breadcrumbs": "Breadcrumb navigation",
+      "extensionSidebar": "Extension sidebar"
+    }
+  },
+  "companyResearch": {
+    "title": "Company Research",
+    "loading": "Loading company data...",
+    "empty": {
+      "noCompany": "No company data available. Provide a company ID or SIREN to view company research."
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "retry": "Retry"
+    },
+    "profile": {
+      "title": "Company Profile",
+      "unknown": "Unknown",
+      "sector": "Sector",
+      "jurisdiction": "Jurisdiction",
+      "headquarters": "Headquarters",
+      "registeredAt": "Registered",
+      "revenue": "Revenue"
+    },
+    "provenance": {
+      "title": "Data Provenance",
+      "empty": "No provenance information available",
+      "enrichedAt": "Enriched",
+      "source": "Source",
+      "version": "Version",
+      "policy": "Policy",
+      "sources": "Data Sources"
+    },
+    "freshness": {
+      "title": "Data Freshness",
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "expired": "Expired",
+      "unknown": "Unknown"
+    }
+  },
+  "sectorResearch": {
+    "title": "Sector Research",
+    "description": "Browse and analyze sectors with company data",
+    "searchPlaceholder": "Search sectors...",
+    "nafFilterPlaceholder": "NAF code filter",
+    "nafPrefixes": "NAF prefixes",
+    "ruleOfThumb": "Rule of thumb",
+    "sectorsList": "Sectors",
+    "sectors": "sectors",
+    "actions": {
+      "close": "Close"
+    },
+    "details": {
+      "title": "Sector Details",
+      "id": "Sector ID",
+      "nafPrefixes": "NAF Prefixes",
+      "ruleOfThumb": "Rule of Thumb"
+    },
+    "companies": {
+      "title": "Companies in this Sector",
+      "empty": "No companies found in this sector",
+      "name": "Company Name"
     }
   }
 }

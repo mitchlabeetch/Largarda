@@ -355,6 +355,63 @@
     "primaryText": "点击或拖拽文件上传",
     "secondaryText": "支持批量上传多个文档"
   },
+  "companyEnrichment": {
+    "title": "Company Enrichment",
+    "search": {
+      "placeholder": "Search by company name...",
+      "button": "Search",
+      "searching": "Searching...",
+      "noResults": "No companies found",
+      "resultsCount": "{{count}} results found"
+    },
+    "actions": {
+      "enrich": "Enrich Data",
+      "enriching": "Enriching...",
+      "batchEnrich": "Batch Enrich",
+      "viewProfile": "View Profile",
+      "createDeal": "Create Deal"
+    },
+    "fields": {
+      "siren": "SIREN",
+      "siret": "SIRET",
+      "name": "Company Name",
+      "legalForm": "Legal Form",
+      "nafCode": "NAF Code",
+      "headquartersAddress": "Headquarters",
+      "registeredAt": "Registration Date",
+      "employeeCount": "Employees",
+      "revenue": "Revenue",
+      "lastEnriched": "Last Enriched"
+    },
+    "empty": {
+      "title": "No Company Selected",
+      "description": "Search for a company by name or enter a SIREN number to enrich its data from official sources.",
+      "searchPrompt": "Start by searching for a company above"
+    },
+    "loading": {
+      "searching": "Searching companies...",
+      "enriching": "Fetching company data...",
+      "batchEnriching": "Enriching {{count}} companies..."
+    },
+    "error": {
+      "searchFailed": "Search failed. Please try again.",
+      "enrichFailed": "Failed to enrich company data. Please try again.",
+      "batchEnrichFailed": "Some companies failed to enrich. Check individual results.",
+      "invalidSiren": "Invalid SIREN format. Must be 9 digits.",
+      "rateLimit": "API rate limit reached. Please wait a moment and try again."
+    },
+    "messages": {
+      "enrichSuccess": "Company data enriched successfully",
+      "batchEnrichSuccess": "Enriched {{count}} companies successfully",
+      "companyCreated": "New company created from enrichment",
+      "companyUpdated": "Existing company updated with new data"
+    },
+    "sources": {
+      "title": "Data Sources",
+      "rechercheEntreprises": "API Recherche d'entreprises",
+      "lastFetched": "Last fetched: {{date}}"
+    }
+  },
   "riskScoreCard": {
     "categories": {
       "financial": {
@@ -390,6 +447,16 @@
     "riskComparison": "风险比较",
     "summary": {
       "totalFindings": "总发现数"
+    }
+  },
+  "shell": {
+    "title": "并购",
+    "home": "首页",
+    "aria": {
+      "topBar": "M&A 顶部导航栏",
+      "extensionSlots": "顶部栏扩展位",
+      "breadcrumbs": "面包屑导航",
+      "extensionSidebar": "扩展侧边栏"
     }
   }
 }

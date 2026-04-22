@@ -1,0 +1,88 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-bg-2);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: var(--color-bg-1);
+  border-bottom: 1px solid var(--color-border);
+  min-height: 64px;
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+}
+
+.shellTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.extensionSlots {
+  display: flex;
+  gap: 12px;
+}
+
+.extensionSlot {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.breadcrumbs {
+  padding: 12px 24px;
+  background-color: var(--color-bg-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.breadcrumbActive {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.mainContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.extensionSidebar {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .mainContent {
+    flex: 1;
+  }
+
+  .extensionSidebar {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+    border-left: 1px solid var(--color-border);
+    padding: 16px;
+    gap: 16px;
+  }
+}

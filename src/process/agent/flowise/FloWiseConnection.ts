@@ -406,14 +406,67 @@ export class FloWiseError extends Error {
  * order (most explicit wins):
  *
  *   1. Values passed in `config`.
- *   2. `process.env.FLOWISE_BASE_URL` / `process.env.FLOWISE_API_KEY`.
- *   3. `FLOWISE_DEFAULT_CONFIG.baseUrl` (no env-default for apiKey).
+ *   2. Settings from `ConfigStorage` ('flowise.config').
+ *   3. `process.env.FLOWISE_BASE_URL` / `process.env.FLOWISE_API_KEY`.
+ *   4. `FLOWISE_DEFAULT_CONFIG.baseUrl` (no env-default for apiKey).
  *
  * Exported separately from `createFloWiseConnection` so the readiness
  * probe and tests can reason about the layering without instantiating
  * a connection.
+ *
+ * This is the async version that includes settings layer. Use
+ * `resolveFlowiseConfigSync` for backward compatibility when settings
+ * are not available.
  */
-export function resolveFlowiseConfig(config: Partial<FlowiseConfig> = {}): {
+export async function resolveFlowiseConfig(
+  config: Partial<FlowiseConfig> = {},
+  settingsFlowiseConfig?: { baseUrl?: string; apiKey?: string }
+): Promise<{
+  baseUrl: string;
+  apiKey: string | undefined;
+  apiKeySource: 'arg' | 'settings' | 'env' | 'none';
+}> {
+  const envBaseUrl = typeof process !== 'undefined' ? process.env[FLOWISE_ENV.baseUrl] : undefined;
+  const envApiKey = typeof process !== 'undefined' ? process.env[FLOWISE_ENV.apiKey] : undefined;
+  const settingsBaseUrl = settingsFlowiseConfig?.baseUrl;
+  const settingsApiKey = settingsFlowiseConfig?.apiKey;
+
+  const baseUrl =
+    config.baseUrl ??
+    (settingsBaseUrl && settingsBaseUrl.length > 0 ? settingsBaseUrl : undefined) ??
+    (envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : undefined) ??
+    FLOWISE_DEFAULT_CONFIG.baseUrl;
+
+  let apiKey: string | undefined;
+  let apiKeySource: 'arg' | 'settings' | 'env' | 'none';
+  if (config.apiKey && config.apiKey.length > 0) {
+    apiKey = config.apiKey;
+    apiKeySource = 'arg';
+  } else if (settingsApiKey && settingsApiKey.length > 0) {
+    apiKey = settingsApiKey;
+    apiKeySource = 'settings';
+  } else if (envApiKey && envApiKey.length > 0) {
+    apiKey = envApiKey;
+    apiKeySource = 'env';
+  } else {
+    apiKey = undefined;
+    apiKeySource = 'none';
+  }
+
+  return { baseUrl, apiKey, apiKeySource };
+}
+
+/**
+ * Synchronous version of `resolveFlowiseConfig` that does not include
+ * the settings layer. Use this when settings are not available or for
+ * backward compatibility.
+ *
+ * Layering order (most explicit wins):
+ *   1. Values passed in `config`.
+ *   2. `process.env.FLOWISE_BASE_URL` / `process.env.FLOWISE_API_KEY`.
+ *   3. `FLOWISE_DEFAULT_CONFIG.baseUrl` (no env-default for apiKey).
+ */
+export function resolveFlowiseConfigSync(config: Partial<FlowiseConfig> = {}): {
   baseUrl: string;
   apiKey: string | undefined;
   apiKeySource: 'arg' | 'env' | 'none';
@@ -440,11 +493,31 @@ export function resolveFlowiseConfig(config: Partial<FlowiseConfig> = {}): {
 }
 
 /**
+ * Synchronous version of `createFloWiseConnection` that does not include
+ * the settings layer. Use this when settings are not available or for
+ * backward compatibility.
+ */
+export function createFloWiseConnectionSync(config: Partial<FlowiseConfig> = {}): FloWiseConnection {
+  const resolved = resolveFlowiseConfigSync(config);
+  return new FloWiseConnection({
+    baseUrl: resolved.baseUrl,
+    apiKey: resolved.apiKey,
+    timeout: config.timeout,
+    retryAttempts: config.retryAttempts,
+    retryBaseDelay: config.retryBaseDelay,
+    retryMaxDelay: config.retryMaxDelay,
+  });
+}
+
+/**
  * Create a FloWiseConnection with default configuration, applying the
  * env-var fallback described in `resolveFlowiseConfig`.
  */
-export function createFloWiseConnection(config: Partial<FlowiseConfig> = {}): FloWiseConnection {
-  const resolved = resolveFlowiseConfig(config);
+export async function createFloWiseConnection(
+  config: Partial<FlowiseConfig> = {},
+  settingsFlowiseConfig?: { baseUrl?: string; apiKey?: string }
+): Promise<FloWiseConnection> {
+  const resolved = await resolveFlowiseConfig(config, settingsFlowiseConfig);
   return new FloWiseConnection({
     baseUrl: resolved.baseUrl,
     apiKey: resolved.apiKey,
@@ -469,8 +542,11 @@ export function createFloWiseConnection(config: Partial<FlowiseConfig> = {}): Fl
  *   Flowise.
  * - Performs no mutations and does not affect the connection singleton.
  */
-export async function probeFlowiseReadiness(config: Partial<FlowiseConfig> = {}): Promise<FlowiseReadiness> {
-  const { baseUrl, apiKey, apiKeySource } = resolveFlowiseConfig(config);
+export async function probeFlowiseReadiness(
+  config: Partial<FlowiseConfig> = {},
+  settingsFlowiseConfig?: { baseUrl?: string; apiKey?: string }
+): Promise<FlowiseReadiness> {
+  const { baseUrl, apiKey, apiKeySource } = await resolveFlowiseConfig(config, settingsFlowiseConfig);
   const normalisedBase = baseUrl.replace(/\/$/, '');
   const checkedAt = Date.now();
   const hasApiKey = apiKey !== undefined && apiKey.length > 0;

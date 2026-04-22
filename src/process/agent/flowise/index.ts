@@ -9,7 +9,15 @@
  * Exports for Flowise backend integration.
  */
 
-export { FloWiseConnection, FloWiseError, createFloWiseConnection } from './FloWiseConnection';
+export {
+  FloWiseConnection,
+  FloWiseError,
+  createFloWiseConnection,
+  createFloWiseConnectionSync,
+  resolveFlowiseConfig,
+  resolveFlowiseConfigSync,
+  probeFlowiseReadiness,
+} from './FloWiseConnection';
 export type { FlowiseConfig, FlowInput, FlowResult, FlowEvent, FlowMeta, FlowDetail } from './FloWiseConnection';
 
 export {

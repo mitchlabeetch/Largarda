@@ -14,10 +14,7 @@ import type { RiskCategory, RiskSeverity } from '@/common/ma/types';
 /**
  * Risk category configuration with i18n keys
  */
-export const RISK_CATEGORIES: Record<
-  RiskCategory,
-  { label: string; description: string; color: string }
-> = {
+export const RISK_CATEGORIES: Record<RiskCategory, { label: string; description: string; color: string }> = {
   financial: {
     label: 'ma.riskScoreCard.categories.financial.label',
     description: 'ma.riskScoreCard.categories.financial.description',

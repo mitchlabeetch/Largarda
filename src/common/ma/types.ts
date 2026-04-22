@@ -829,7 +829,7 @@ export interface FlowEdge {
 export type FlowiseReadiness = {
   baseUrl: string;
   hasApiKey: boolean;
-  apiKeySource: 'arg' | 'env' | 'none';
+  apiKeySource: 'arg' | 'settings' | 'env' | 'none';
   pingOk: boolean;
   authOk?: boolean;
   flowCount?: number;
@@ -1189,3 +1189,537 @@ export function rowToIntegrationConnection(row: IMaIntegrationConnectionRow): Ma
     updatedAt: row.updated_at,
   };
 }
+
+// ============================================================================
+// Sync Job Types (Email & CRM)
+// ============================================================================
+
+export type SyncJobType = 'email' | 'crm';
+export type SyncJobStatus =
+  | 'pending'
+  | 'queued'
+  | 'connecting'
+  | 'fetching'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'retrying';
+
+/** Terminal statuses — once set, the sync job is finished. */
+export const SYNC_JOB_TERMINAL_STATUSES = ['completed', 'failed', 'cancelled'] as const;
+export type SyncJobTerminalStatus = (typeof SYNC_JOB_TERMINAL_STATUSES)[number];
+
+/** Active statuses — sync is in progress. */
+export const SYNC_JOB_ACTIVE_STATUSES = ['queued', 'connecting', 'fetching', 'processing', 'retrying'] as const;
+export type SyncJobActiveStatus = (typeof SYNC_JOB_ACTIVE_STATUSES)[number];
+
+export function isTerminalSyncJobStatus(s: SyncJobStatus): boolean {
+  return (SYNC_JOB_TERMINAL_STATUSES as readonly string[]).includes(s);
+}
+
+export function isActiveSyncJobStatus(s: SyncJobStatus): boolean {
+  return (SYNC_JOB_ACTIVE_STATUSES as readonly string[]).includes(s);
+}
+
+/** Progress stage emitted during sync. */
+export type SyncJobStage =
+  | 'queued'
+  | 'connecting'
+  | 'fetching'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'retrying';
+
+/** Truthful progress event emitted while sync runs. */
+export interface SyncJobProgress {
+  jobId: string;
+  jobType: SyncJobType;
+  providerId: string;
+  stage: SyncJobStage;
+  progress: number; // 0-100, monotonically non-decreasing
+  message?: string;
+  timestamp: number;
+  terminal: boolean;
+  error?: string;
+}
+
+export interface SyncJob {
+  id: string;
+  jobType: SyncJobType;
+  providerId: string;
+  status: SyncJobStatus;
+  config?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  error?: string;
+  retryCount: number;
+  maxRetries: number;
+  itemsProcessed: number;
+  itemsTotal: number;
+  startedAt?: number;
+  completedAt?: number;
+  nextRetryAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateSyncJobInput {
+  jobType: SyncJobType;
+  providerId: string;
+  config?: Record<string, unknown>;
+  maxRetries?: number;
+}
+
+export interface UpdateSyncJobInput {
+  status?: SyncJobStatus;
+  result?: Record<string, unknown>;
+  error?: string;
+  retryCount?: number;
+  nextRetryAt?: number;
+  itemsProcessed?: number;
+  itemsTotal?: number;
+  startedAt?: number;
+  completedAt?: number;
+}
+
+/** Readiness snapshot for email/CRM sync. */
+export interface SyncReadiness {
+  jobType: SyncJobType;
+  ready: boolean;
+  hasConnection: boolean;
+  connectionStatus?: MaIntegrationStatus;
+  activeJobs: number;
+  lastSyncAt?: number;
+  error?: string;
+  checkedAt: number;
+}
+
+// Zod Schemas
+export const SyncJobTypeSchema = z.enum(['email', 'crm']);
+export const SyncJobStatusSchema = z.enum([
+  'pending',
+  'queued',
+  'connecting',
+  'fetching',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+  'retrying',
+]);
+export const SyncJobStageSchema = z.enum([
+  'queued',
+  'connecting',
+  'fetching',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+  'retrying',
+]);
+
+export const SyncJobProgressSchema = z.object({
+  jobId: z.string().uuid(),
+  jobType: SyncJobTypeSchema,
+  providerId: z.string().min(1),
+  stage: SyncJobStageSchema,
+  progress: z.number().int().min(0).max(100),
+  message: z.string().optional(),
+  timestamp: z.number().int().positive(),
+  terminal: z.boolean(),
+  error: z.string().optional(),
+});
+
+export const SyncJobSchema = z.object({
+  id: z.string().uuid(),
+  jobType: SyncJobTypeSchema,
+  providerId: z.string().min(1),
+  status: SyncJobStatusSchema,
+  config: z.record(z.unknown()).optional(),
+  result: z.record(z.unknown()).optional(),
+  error: z.string().optional(),
+  retryCount: z.number().int().min(0),
+  maxRetries: z.number().int().min(0),
+  itemsProcessed: z.number().int().min(0),
+  itemsTotal: z.number().int().min(0),
+  startedAt: z.number().int().positive().optional(),
+  completedAt: z.number().int().positive().optional(),
+  nextRetryAt: z.number().int().positive().optional(),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+});
+
+export const CreateSyncJobInputSchema = z.object({
+  jobType: SyncJobTypeSchema,
+  providerId: z.string().min(1),
+  config: z.record(z.unknown()).optional(),
+  maxRetries: z.number().int().min(0).optional(),
+});
+
+export const UpdateSyncJobInputSchema = z.object({
+  status: SyncJobStatusSchema.optional(),
+  result: z.record(z.unknown()).optional(),
+  error: z.string().optional(),
+  retryCount: z.number().int().min(0).optional(),
+  nextRetryAt: z.number().int().positive().optional(),
+  itemsProcessed: z.number().int().min(0).optional(),
+  itemsTotal: z.number().int().min(0).optional(),
+  startedAt: z.number().int().positive().optional(),
+  completedAt: z.number().int().positive().optional(),
+});
+
+export const SyncReadinessSchema = z.object({
+  jobType: SyncJobTypeSchema,
+  ready: z.boolean(),
+  hasConnection: z.boolean(),
+  connectionStatus: MaIntegrationStatusSchema.optional(),
+  activeJobs: z.number().int().min(0),
+  lastSyncAt: z.number().int().positive().optional(),
+  error: z.string().optional(),
+  checkedAt: z.number().int().positive(),
+});
+
+// ============================================================================
+// Sync Job Database Row Types
+// ============================================================================
+
+export interface IMaSyncJobRow {
+  id: string;
+  job_type: string;
+  provider_id: string;
+  status: string;
+  config: string | null;
+  result: string | null;
+  error: string | null;
+  retry_count: number;
+  max_retries: number;
+  items_processed: number;
+  items_total: number;
+  started_at: number | null;
+  completed_at: number | null;
+  next_retry_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export function syncJobToRow(job: SyncJob): IMaSyncJobRow {
+  return {
+    id: job.id,
+    job_type: job.jobType,
+    provider_id: job.providerId,
+    status: job.status,
+    config: job.config ? JSON.stringify(job.config) : null,
+    result: job.result ? JSON.stringify(job.result) : null,
+    error: job.error ?? null,
+    retry_count: job.retryCount,
+    max_retries: job.maxRetries,
+    items_processed: job.itemsProcessed,
+    items_total: job.itemsTotal,
+    started_at: job.startedAt ?? null,
+    completed_at: job.completedAt ?? null,
+    next_retry_at: job.nextRetryAt ?? null,
+    created_at: job.createdAt,
+    updated_at: job.updatedAt,
+  };
+}
+
+export function rowToSyncJob(row: IMaSyncJobRow): SyncJob {
+  return {
+    id: row.id,
+    jobType: row.job_type as SyncJobType,
+    providerId: row.provider_id,
+    status: row.status as SyncJobStatus,
+    config: row.config ? JSON.parse(row.config) : undefined,
+    result: row.result ? JSON.parse(row.result) : undefined,
+    error: row.error ?? undefined,
+    retryCount: row.retry_count,
+    maxRetries: row.max_retries,
+    itemsProcessed: row.items_processed,
+    itemsTotal: row.items_total,
+    startedAt: row.started_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    nextRetryAt: row.next_retry_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ============================================================================
+// Daily Brief and Reporting Types (Wave 10 / Batch 10C)
+// ============================================================================
+
+/** Time window for brief generation. */
+export type BriefTimeWindow = '24h' | '7d' | '30d' | 'custom';
+
+/** Provenance trail for traceability. */
+export interface DataProvenance {
+  /** Source entity type. */
+  sourceType: 'document' | 'analysis' | 'deal' | 'integration' | 'sync';
+  /** Source entity ID. */
+  sourceId: string;
+  /** Human-readable source name. */
+  sourceName: string;
+  /** Timestamp when data was generated. */
+  generatedAt: number;
+  /** Path to navigate to source (for drill-down). */
+  drillDownPath: string;
+}
+
+/** Brief item with provenance. */
+export interface BriefItem {
+  /** Unique item ID. */
+  id: string;
+  /** Item type. */
+  type:
+    | 'document_uploaded'
+    | 'document_processed'
+    | 'analysis_completed'
+    | 'risk_found'
+    | 'deal_created'
+    | 'sync_completed'
+    | 'integration_connected';
+  /** Human-readable title. */
+  title: string;
+  /** Detailed description. */
+  description: string;
+  /** Timestamp. */
+  timestamp: number;
+  /** Associated deal ID (if applicable). */
+  dealId?: string;
+  /** Associated deal name (if applicable). */
+  dealName?: string;
+  /** Provenance information for traceability. */
+  provenance: DataProvenance;
+  /** Additional metadata. */
+  metadata?: Record<string, unknown>;
+}
+
+/** Daily brief summary. */
+export interface DailyBrief {
+  /** Brief generation timestamp. */
+  generatedAt: number;
+  /** Time window used. */
+  timeWindow: BriefTimeWindow;
+  /** Brief start timestamp. */
+  windowStart: number;
+  /** Brief end timestamp. */
+  windowEnd: number;
+  /** Summary counts. */
+  summary: {
+    totalDeals: number;
+    activeDeals: number;
+    documentsUploaded: number;
+    documentsProcessed: number;
+    analysesCompleted: number;
+    risksIdentified: number;
+    integrationsConnected: number;
+  };
+  /** Chronological brief items. */
+  items: BriefItem[];
+  /** Items grouped by deal. */
+  byDeal: Record<string, BriefItem[]>;
+}
+
+/** Report section with provenance. */
+export interface ReportSection {
+  /** Section ID. */
+  id: string;
+  /** Section title. */
+  title: string;
+  /** Section type. */
+  type: 'summary' | 'chart' | 'table' | 'list' | 'detail';
+  /** Section content. */
+  content: unknown;
+  /** Data provenance for this section. */
+  provenance: DataProvenance[];
+  /** Drill-down path. */
+  drillDownPath?: string;
+}
+
+/** Filter options for report generation. */
+export interface ReportFilter {
+  /** Deal IDs to include. */
+  dealIds?: string[];
+  /** Date range start. */
+  startDate?: number;
+  /** Date range end. */
+  endDate?: number;
+  /** Document types to include. */
+  documentTypes?: DocumentType[];
+  /** Analysis types to include. */
+  analysisTypes?: AnalysisType[];
+  /** Risk categories to include. */
+  riskCategories?: RiskCategory[];
+  /** Severity levels to include. */
+  severityLevels?: RiskSeverity[];
+}
+
+/** Report type. */
+export type ReportType =
+  | 'executive_summary'
+  | 'due_diligence'
+  | 'risk_assessment'
+  | 'document_status'
+  | 'deal_comparison';
+
+/** Report definition. */
+export interface Report {
+  /** Report ID. */
+  id: string;
+  /** Report type. */
+  type: ReportType;
+  /** Report title. */
+  title: string;
+  /** Generation timestamp. */
+  generatedAt: number;
+  /** Filter used. */
+  filter: ReportFilter;
+  /** Report sections. */
+  sections: ReportSection[];
+  /** Total item count across all sections. */
+  totalItems: number;
+}
+
+/** Input for brief generation. */
+export interface GenerateBriefInput {
+  /** Time window. */
+  timeWindow?: BriefTimeWindow;
+  /** Custom start (for 'custom' window). */
+  customStart?: number;
+  /** Custom end (for 'custom' window). */
+  customEnd?: number;
+  /** Deal IDs to filter (optional). */
+  dealIds?: string[];
+}
+
+/** Input for report generation. */
+export interface GenerateReportInput {
+  /** Report type. */
+  type: ReportType;
+  /** Report title. */
+  title?: string;
+  /** Filter options. */
+  filter?: ReportFilter;
+}
+
+/** Brief generation result. */
+export interface BriefGenerationResult {
+  /** Success flag. */
+  success: boolean;
+  /** Generated brief (if success). */
+  brief?: DailyBrief;
+  /** Error message (if failed). */
+  error?: string;
+}
+
+/** Report generation result. */
+export interface ReportGenerationResult {
+  /** Success flag. */
+  success: boolean;
+  /** Generated report (if success). */
+  report?: Report;
+  /** Error message (if failed). */
+  error?: string;
+}
+
+// Zod Schemas for Daily Brief and Reporting
+
+export const BriefTimeWindowSchema = z.enum(['24h', '7d', '30d', 'custom']);
+
+export const DataProvenanceSchema = z.object({
+  sourceType: z.enum(['document', 'analysis', 'deal', 'integration', 'sync']),
+  sourceId: z.string().min(1),
+  sourceName: z.string().min(1),
+  generatedAt: z.number().int().positive(),
+  drillDownPath: z.string().min(1),
+});
+
+export const BriefItemSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum([
+    'document_uploaded',
+    'document_processed',
+    'analysis_completed',
+    'risk_found',
+    'deal_created',
+    'sync_completed',
+    'integration_connected',
+  ]),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  timestamp: z.number().int().positive(),
+  dealId: z.string().optional(),
+  dealName: z.string().optional(),
+  provenance: DataProvenanceSchema,
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const DailyBriefSchema = z.object({
+  generatedAt: z.number().int().positive(),
+  timeWindow: BriefTimeWindowSchema,
+  windowStart: z.number().int().positive(),
+  windowEnd: z.number().int().positive(),
+  summary: z.object({
+    totalDeals: z.number().int().nonnegative(),
+    activeDeals: z.number().int().nonnegative(),
+    documentsUploaded: z.number().int().nonnegative(),
+    documentsProcessed: z.number().int().nonnegative(),
+    analysesCompleted: z.number().int().nonnegative(),
+    risksIdentified: z.number().int().nonnegative(),
+    integrationsConnected: z.number().int().nonnegative(),
+  }),
+  items: z.array(BriefItemSchema),
+  byDeal: z.record(z.array(BriefItemSchema)),
+});
+
+export const ReportTypeSchema = z.enum([
+  'executive_summary',
+  'due_diligence',
+  'risk_assessment',
+  'document_status',
+  'deal_comparison',
+]);
+
+export const ReportFilterSchema = z.object({
+  dealIds: z.array(z.string()).optional(),
+  startDate: z.number().int().positive().optional(),
+  endDate: z.number().int().positive().optional(),
+  documentTypes: z.array(DocumentTypeSchema).optional(),
+  analysisTypes: z.array(AnalysisTypeSchema).optional(),
+  riskCategories: z.array(RiskCategorySchema).optional(),
+  severityLevels: z.array(RiskSeveritySchema).optional(),
+});
+
+export const ReportSectionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  type: z.enum(['summary', 'chart', 'table', 'list', 'detail']),
+  content: z.unknown(),
+  provenance: z.array(DataProvenanceSchema),
+  drillDownPath: z.string().optional(),
+});
+
+export const ReportSchema = z.object({
+  id: z.string().min(1),
+  type: ReportTypeSchema,
+  title: z.string().min(1),
+  generatedAt: z.number().int().positive(),
+  filter: ReportFilterSchema,
+  sections: z.array(ReportSectionSchema),
+  totalItems: z.number().int().nonnegative(),
+});
+
+export const GenerateBriefInputSchema = z.object({
+  timeWindow: BriefTimeWindowSchema.optional(),
+  customStart: z.number().int().positive().optional(),
+  customEnd: z.number().int().positive().optional(),
+  dealIds: z.array(z.string()).optional(),
+});
+
+export const GenerateReportInputSchema = z.object({
+  type: ReportTypeSchema,
+  title: z.string().optional(),
+  filter: ReportFilterSchema.optional(),
+});

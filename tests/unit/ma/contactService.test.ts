@@ -4,267 +4,270 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * ContactService Unit Tests
+ * Tests the ContactService business logic layer.
+ */
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContactService } from '@process/services/ma/ContactService';
-import type { Contact, CreateContactInput, UpdateContactInput } from '@common/ma/contact/schema';
+import type { Contact, CreateContactInput, UpdateContactInput } from '@/common/ma/contact/schema';
+
+// Mock the repository
+vi.mock('@process/services/database/repositories/ma/ContactRepository', () => ({
+  getContactRepository: () => ({
+    create: vi.fn(),
+    get: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    listByCompany: vi.fn(),
+    listByDeal: vi.fn(),
+    deleteByCompany: vi.fn(),
+    deleteByDeal: vi.fn(),
+  }),
+}));
 
 describe('ContactService', () => {
-  let mockDb: any;
   let service: ContactService;
+  let mockRepository: any;
 
   beforeEach(() => {
-    mockDb = {
-      insert: vi.fn(),
-      select: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
-    service = new ContactService(mockDb);
+    const { getContactRepository } = require('@process/services/database/repositories/ma/ContactRepository');
+    mockRepository = getContactRepository();
+    service = new ContactService();
+    // Replace the repository with the mock
+    (service as any).repository = mockRepository;
   });
 
-  describe('create', () => {
+  describe('createContact', () => {
     it('should create a contact with valid input', async () => {
       const input: CreateContactInput = {
         fullName: 'John Doe',
         email: 'john@example.com',
-        companyId: 'company-123',
-      };
-
-      mockDb.insert.mockResolvedValue(undefined);
-
-      const result = await service.create(input);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        'ma_contacts',
-        expect.objectContaining({
-          full_name: 'John Doe',
-          email: 'john@example.com',
-          company_id: 'company-123',
-        })
-      );
-      expect(result.fullName).toBe('John Doe');
-      expect(result.email).toBe('john@example.com');
-      expect(result.companyId).toBe('company-123');
-      expect(result.id).toBeDefined();
-    });
-
-    it('should create contact with minimal required fields', async () => {
-      const input: CreateContactInput = {
-        fullName: 'Jane Smith',
-      };
-
-      mockDb.insert.mockResolvedValue(undefined);
-
-      const result = await service.create(input);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        'ma_contacts',
-        expect.objectContaining({
-          full_name: 'Jane Smith',
-          company_id: null,
-          deal_id: null,
-          email: null,
-          phone: null,
-        })
-      );
-      expect(result.fullName).toBe('Jane Smith');
-    });
-  });
-
-  describe('getById', () => {
-    it('should return contact by id', async () => {
-      const mockRow = {
-        id: 'contact-123',
-        company_id: 'company-123',
-        deal_id: 'deal-123',
-        full_name: 'John Doe',
         role: 'CEO',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        linkedin_url: 'https://linkedin.com/in/john',
-        notes: 'Important contact',
-        created_at: 1234567890,
-        updated_at: 1234567890,
       };
 
-      mockDb.select.mockResolvedValue(mockRow);
-
-      const result = await service.getById('contact-123');
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_contacts', { id: 'contact-123' });
-      expect(result).toEqual({
-        id: 'contact-123',
-        companyId: 'company-123',
-        dealId: 'deal-123',
+      const expectedContact: Contact = {
+        id: 'contact_123',
         fullName: 'John Doe',
-        role: 'CEO',
         email: 'john@example.com',
-        phone: '+1234567890',
-        linkedinUrl: 'https://linkedin.com/in/john',
-        notes: 'Important contact',
-        createdAt: 1234567890,
-        updatedAt: 1234567890,
+        role: 'CEO',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.create.mockResolvedValue({ success: true, data: expectedContact });
+
+      const result = await service.createContact(input);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedContact);
+      expect(mockRepository.create).toHaveBeenCalledWith(input);
+    });
+
+    it('should reject invalid email format', async () => {
+      const input: CreateContactInput = {
+        fullName: 'John Doe',
+        email: 'invalid-email',
+      };
+
+      const result = await service.createContact(input);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid email format');
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid LinkedIn URL format', async () => {
+      const input: CreateContactInput = {
+        fullName: 'John Doe',
+        linkedinUrl: 'not-a-url',
+      };
+
+      const result = await service.createContact(input);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid LinkedIn URL format');
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject empty full name', async () => {
+      const input: CreateContactInput = {
+        fullName: '   ',
+      };
+
+      const result = await service.createContact(input);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Full name is required');
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateContact', () => {
+    it('should update a contact with valid input', async () => {
+      const id = 'contact_123';
+      const updates: UpdateContactInput = {
+        email: 'newemail@example.com',
+      };
+
+      const expectedContact: Contact = {
+        id,
+        fullName: 'John Doe',
+        email: 'newemail@example.com',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.update.mockResolvedValue({ success: true, data: expectedContact });
+
+      const result = await service.updateContact(id, updates);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedContact);
+      expect(mockRepository.update).toHaveBeenCalledWith(id, updates);
+    });
+
+    it('should reject invalid email format on update', async () => {
+      const id = 'contact_123';
+      const updates: UpdateContactInput = {
+        email: 'invalid-email',
+      };
+
+      const result = await service.updateContact(id, updates);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid email format');
+      expect(mockRepository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getContact', () => {
+    it('should get a contact by ID', async () => {
+      const id = 'contact_123';
+      const expectedContact: Contact = {
+        id,
+        fullName: 'John Doe',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      mockRepository.get.mockResolvedValue({ success: true, data: expectedContact });
+
+      const result = await service.getContact(id);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedContact);
+      expect(mockRepository.get).toHaveBeenCalledWith(id);
+    });
+
+    it('should return null for non-existent contact', async () => {
+      const id = 'nonexistent';
+      mockRepository.get.mockResolvedValue({ success: true, data: null });
+
+      const result = await service.getContact(id);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeNull();
+    });
+  });
+
+  describe('deleteContact', () => {
+    it('should delete a contact', async () => {
+      const id = 'contact_123';
+      mockRepository.delete.mockResolvedValue({ success: true, data: true });
+
+      const result = await service.deleteContact(id);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(true);
+      expect(mockRepository.delete).toHaveBeenCalledWith(id);
+    });
+  });
+
+  describe('listContactsByCompany', () => {
+    it('should list contacts for a company', async () => {
+      const companyId = 'company_123';
+      const expectedContacts: Contact[] = [
+        {
+          id: 'contact_1',
+          companyId,
+          fullName: 'John Doe',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ];
+
+      mockRepository.listByCompany.mockResolvedValue({
+        success: true,
+        data: expectedContacts,
+        total: 1,
+        page: 0,
+        pageSize: 50,
+        hasMore: false,
       });
-    });
 
-    it('should return null if contact not found', async () => {
-      mockDb.select.mockResolvedValue(null);
+      const result = await service.listContactsByCompany(companyId);
 
-      const result = await service.getById('nonexistent');
-
-      expect(result).toBeNull();
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedContacts);
+      expect(mockRepository.listByCompany).toHaveBeenCalledWith(companyId, 0, 50);
     });
   });
 
-  describe('list', () => {
-    it('should return all contacts when no filters provided', async () => {
-      const mockRows = [
+  describe('listContactsByDeal', () => {
+    it('should list contacts for a deal', async () => {
+      const dealId = 'deal_123';
+      const expectedContacts: Contact[] = [
         {
-          id: 'contact-1',
-          company_id: 'company-1',
-          deal_id: null,
-          full_name: 'John Doe',
-          role: null,
-          email: 'john@example.com',
-          phone: null,
-          linkedin_url: null,
-          notes: null,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-        {
-          id: 'contact-2',
-          company_id: 'company-2',
-          deal_id: null,
-          full_name: 'Jane Smith',
-          role: null,
-          email: 'jane@example.com',
-          phone: null,
-          linkedin_url: null,
-          notes: null,
-          created_at: 1234567891,
-          updated_at: 1234567891,
+          id: 'contact_1',
+          dealId,
+          fullName: 'John Doe',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         },
       ];
 
-      mockDb.select.mockResolvedValue(mockRows);
+      mockRepository.listByDeal.mockResolvedValue({
+        success: true,
+        data: expectedContacts,
+        total: 1,
+        page: 0,
+        pageSize: 50,
+        hasMore: false,
+      });
 
-      const result = await service.list({});
+      const result = await service.listContactsByDeal(dealId);
 
-      expect(mockDb.select).toHaveBeenCalledWith('ma_contacts', {});
-      expect(result).toHaveLength(2);
-      expect(result[0].fullName).toBe('John Doe');
-      expect(result[1].fullName).toBe('Jane Smith');
-    });
-
-    it('should filter contacts by company', async () => {
-      const mockRows = [
-        {
-          id: 'contact-1',
-          company_id: 'company-123',
-          deal_id: null,
-          full_name: 'John Doe',
-          role: null,
-          email: 'john@example.com',
-          phone: null,
-          linkedin_url: null,
-          notes: null,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-      ];
-
-      mockDb.select.mockResolvedValue(mockRows);
-
-      const result = await service.list({ companyId: 'company-123' });
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_contacts', { company_id: 'company-123' });
-      expect(result).toHaveLength(1);
-      expect(result[0].companyId).toBe('company-123');
-    });
-
-    it('should filter contacts by deal', async () => {
-      const mockRows = [
-        {
-          id: 'contact-1',
-          company_id: null,
-          deal_id: 'deal-123',
-          full_name: 'John Doe',
-          role: null,
-          email: 'john@example.com',
-          phone: null,
-          linkedin_url: null,
-          notes: null,
-          created_at: 1234567890,
-          updated_at: 1234567890,
-        },
-      ];
-
-      mockDb.select.mockResolvedValue(mockRows);
-
-      const result = await service.list({ dealId: 'deal-123' });
-
-      expect(mockDb.select).toHaveBeenCalledWith('ma_contacts', { deal_id: 'deal-123' });
-      expect(result).toHaveLength(1);
-      expect(result[0].dealId).toBe('deal-123');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(expectedContacts);
+      expect(mockRepository.listByDeal).toHaveBeenCalledWith(dealId, 0, 50);
     });
   });
 
-  describe('update', () => {
-    it('should update contact with valid input', async () => {
-      const input: UpdateContactInput = {
-        fullName: 'John Updated',
-        email: 'john.updated@example.com',
-      };
+  describe('deleteContactsByCompany', () => {
+    it('should delete all contacts for a company', async () => {
+      const companyId = 'company_123';
+      mockRepository.deleteByCompany.mockResolvedValue({ success: true, data: 5 });
 
-      const mockRow = {
-        id: 'contact-123',
-        company_id: 'company-123',
-        deal_id: null,
-        full_name: 'John Updated',
-        role: null,
-        email: 'john.updated@example.com',
-        phone: null,
-        linkedin_url: null,
-        notes: null,
-        created_at: 1234567890,
-        updated_at: 1234567890,
-      };
+      const result = await service.deleteContactsByCompany(companyId);
 
-      mockDb.select.mockResolvedValue(mockRow);
-      mockDb.update.mockResolvedValue(1);
-
-      const result = await service.update('contact-123', input);
-
-      expect(mockDb.update).toHaveBeenCalledWith(
-        'ma_contacts',
-        { id: 'contact-123' },
-        expect.objectContaining({
-          full_name: 'John Updated',
-          email: 'john.updated@example.com',
-          updated_at: expect.any(Number),
-        })
-      );
-      expect(result.fullName).toBe('John Updated');
-      expect(result.email).toBe('john.updated@example.com');
-    });
-
-    it('should throw error if contact not found during update', async () => {
-      const input: UpdateContactInput = { fullName: 'Updated' };
-
-      mockDb.select.mockResolvedValue(null);
-
-      await expect(service.update('nonexistent', input)).rejects.toThrow('Contact not found: nonexistent');
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(5);
+      expect(mockRepository.deleteByCompany).toHaveBeenCalledWith(companyId);
     });
   });
 
-  describe('delete', () => {
-    it('should delete contact by id', async () => {
-      mockDb.delete.mockResolvedValue(1);
+  describe('deleteContactsByDeal', () => {
+    it('should delete all contacts for a deal', async () => {
+      const dealId = 'deal_123';
+      mockRepository.deleteByDeal.mockResolvedValue({ success: true, data: 3 });
 
-      await service.delete('contact-123');
+      const result = await service.deleteContactsByDeal(dealId);
 
-      expect(mockDb.delete).toHaveBeenCalledWith('ma_contacts', { id: 'contact-123' });
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(3);
+      expect(mockRepository.deleteByDeal).toHaveBeenCalledWith(dealId);
     });
   });
 });

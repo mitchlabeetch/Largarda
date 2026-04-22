@@ -22,6 +22,7 @@ import type {
 } from '../update/updateTypes';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import type { SpeechToTextRequest, SpeechToTextResult } from '../types/speech';
+import type { Company } from '../ma/company/schema';
 
 export const shell = {
   openFile: bridge.buildProvider<void, string>('open-file'), // 使用系统默认程序打开文件
@@ -1334,12 +1335,26 @@ import type {
   IntegrationSessionResult,
   IntegrationProxyRequest,
   IntegrationProxyResponse,
+  SyncJob,
+  CreateSyncJobInput,
+  SyncJobProgress,
+  SyncReadiness,
 } from '@/common/ma/types';
 import type {
   DueDiligenceRequest,
   DueDiligenceResult,
   ComparisonResult,
 } from '@process/services/ma/DueDiligenceService';
+import type { Contact, CreateContactInput, UpdateContactInput } from '@/common/ma/contact/schema';
+import type {
+  Watchlist,
+  CreateWatchlistInput,
+  UpdateWatchlistInput,
+  WatchlistHit,
+  CreateWatchlistHitInput,
+  UpdateWatchlistHitInput,
+} from '@/common/ma/watchlist/schema';
+// import type { Company } from '@/common/ma/types'; // For deferred companyEnrichment
 
 export const ma = {
   deal: {
@@ -1435,5 +1450,207 @@ export const ma = {
     getAnalysis: bridge.buildProvider<DueDiligenceResult | null, { id: string }>('ma.due-diligence.get'),
     listAnalyses: bridge.buildProvider<DueDiligenceResult[], { dealId: string }>('ma.due-diligence.list'),
     compareDeals: bridge.buildProvider<ComparisonResult, { dealIds: string[] }>('ma.due-diligence.compare'),
+  },
+  // NOTE: Contact and Watchlist operations were removed in Wave 4 / Batch 4A
+  // See docs/audit/2026-04-22-wave-4-batch-4a-pass.md for disposition rationale
+  // Email Sync (Wave 8 / Batch 8B)
+  emailSync: {
+    getReadiness: bridge.buildProvider<SyncReadiness, void>('ma.email-sync.get-readiness'),
+    start: bridge.buildProvider<SyncJob, CreateSyncJobInput>('ma.email-sync.start'),
+    getJob: bridge.buildProvider<SyncJob | null, { id: string }>('ma.email-sync.get-job'),
+    listJobs: bridge.buildProvider<SyncJob[], { status?: string }>('ma.email-sync.list-jobs'),
+    cancel: bridge.buildProvider<boolean, { id: string }>('ma.email-sync.cancel'),
+    progress: bridge.buildEmitter<SyncJobProgress>('ma.email-sync.progress'),
+  },
+  // CRM Sync (Wave 8 / Batch 8B)
+  crmSync: {
+    getReadiness: bridge.buildProvider<SyncReadiness, void>('ma.crm-sync.get-readiness'),
+    start: bridge.buildProvider<SyncJob, CreateSyncJobInput>('ma.crm-sync.start'),
+    getJob: bridge.buildProvider<SyncJob | null, { id: string }>('ma.crm-sync.get-job'),
+    listJobs: bridge.buildProvider<SyncJob[], { status?: string }>('ma.crm-sync.list-jobs'),
+    cancel: bridge.buildProvider<boolean, { id: string }>('ma.crm-sync.cancel'),
+    progress: bridge.buildEmitter<SyncJobProgress>('ma.crm-sync.progress'),
+  },
+  // Company Enrichment (ENABLED in 4B)
+  // Uses FREE NO-AUTH API: https://recherche-entreprises.api.gouv.fr
+  // @see src/renderer/pages/login/openapi(1).json for API spec
+  companyEnrichment: {
+    enrichBySiren: bridge.buildProvider<Company, { siren: string }>('ma.company-enrichment.enrich-by-siren'),
+    enrichCompany: bridge.buildProvider<Company, { companyId: string }>('ma.company-enrichment.enrich-company'),
+    searchByName: bridge.buildProvider<Array<Partial<Company>>, { query: string; limit?: number }>(
+      'ma.company-enrichment.search-by-name'
+    ),
+    batchEnrich: bridge.buildProvider<Map<string, Company>, { companyIds: string[] }>(
+      'ma.company-enrichment.batch-enrich'
+    ),
+  },
+  // Comparables (Wave 10 / Batch 10B)
+  comparables: {
+    createCompany: bridge.buildProvider<
+      import('@/common/ma/comparable/schema').ComparableCompany,
+      import('@/common/ma/comparable/schema').CreateComparableInput
+    >('ma.comparables.create-company'),
+    getCompany: bridge.buildProvider<import('@/common/ma/comparable/schema').ComparableCompany | null, { id: string }>(
+      'ma.comparables.get-company'
+    ),
+    updateCompany: bridge.buildProvider<
+      import('@/common/ma/comparable/schema').ComparableCompany | null,
+      { id: string; input: import('@/common/ma/comparable/schema').UpdateComparableInput }
+    >('ma.comparables.update-company'),
+    deleteCompany: bridge.buildProvider<boolean, { id: string }>('ma.comparables.delete-company'),
+    listBySector: bridge.buildProvider<
+      {
+        data: import('@/common/ma/comparable/schema').ComparableCompany[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { sector: string; page?: number; pageSize?: number }
+    >('ma.comparables.list-by-sector'),
+    listByFreshness: bridge.buildProvider<
+      {
+        data: import('@/common/ma/comparable/schema').ComparableCompany[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { freshness: import('@/common/ma/sourceCache/schema').FreshnessStatus; page?: number; pageSize?: number }
+    >('ma.comparables.list-by-freshness'),
+    searchByName: bridge.buildProvider<
+      {
+        data: import('@/common/ma/comparable/schema').ComparableCompany[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { query: string; page?: number; pageSize?: number }
+    >('ma.comparables.search-by-name'),
+    createSet: bridge.buildProvider<
+      import('@/common/ma/comparable/schema').ComparableSet,
+      import('@/common/ma/comparable/schema').CreateComparableSetInput
+    >('ma.comparables.create-set'),
+    getSet: bridge.buildProvider<import('@/common/ma/comparable/schema').ComparableSet | null, { id: string }>(
+      'ma.comparables.get-set'
+    ),
+    updateSet: bridge.buildProvider<
+      import('@/common/ma/comparable/schema').ComparableSet | null,
+      { id: string; input: import('@/common/ma/comparable/schema').UpdateComparableSetInput }
+    >('ma.comparables.update-set'),
+    deleteSet: bridge.buildProvider<boolean, { id: string }>('ma.comparables.delete-set'),
+    listSetsBySector: bridge.buildProvider<
+      {
+        data: import('@/common/ma/comparable/schema').ComparableSet[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { sector: string; page?: number; pageSize?: number }
+    >('ma.comparables.list-sets-by-sector'),
+    listSetsByDeal: bridge.buildProvider<
+      {
+        data: import('@/common/ma/comparable/schema').ComparableSet[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { dealId: string; page?: number; pageSize?: number }
+    >('ma.comparables.list-sets-by-deal'),
+  },
+  // Market Feeds (Wave 10 / Batch 10B)
+  marketFeeds: {
+    createItem: bridge.buildProvider<
+      import('@/common/ma/marketFeed/schema').FeedItem,
+      import('@/common/ma/marketFeed/schema').CreateFeedItemInput
+    >('ma.market-feeds.create-item'),
+    getItem: bridge.buildProvider<import('@/common/ma/marketFeed/schema').FeedItem | null, { id: string }>(
+      'ma.market-feeds.get-item'
+    ),
+    getItemBySymbol: bridge.buildProvider<import('@/common/ma/marketFeed/schema').FeedItem | null, { symbol: string }>(
+      'ma.market-feeds.get-item-by-symbol'
+    ),
+    updateItem: bridge.buildProvider<
+      import('@/common/ma/marketFeed/schema').FeedItem | null,
+      { id: string; input: import('@/common/ma/marketFeed/schema').UpdateFeedItemInput }
+    >('ma.market-feeds.update-item'),
+    deleteItem: bridge.buildProvider<boolean, { id: string }>('ma.market-feeds.delete-item'),
+    listByType: bridge.buildProvider<
+      {
+        data: import('@/common/ma/marketFeed/schema').FeedItem[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { type: import('@/common/ma/marketFeed/schema').FeedItemType; page?: number; pageSize?: number }
+    >('ma.market-feeds.list-by-type'),
+    listByFreshness: bridge.buildProvider<
+      {
+        data: import('@/common/ma/marketFeed/schema').FeedItem[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { freshness: import('@/common/ma/sourceCache/schema').FreshnessStatus; page?: number; pageSize?: number }
+    >('ma.market-feeds.list-by-freshness'),
+    search: bridge.buildProvider<
+      {
+        data: import('@/common/ma/marketFeed/schema').FeedItem[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { query: string; page?: number; pageSize?: number }
+    >('ma.market-feeds.search'),
+    createSource: bridge.buildProvider<
+      import('@/common/ma/marketFeed/schema').FeedSource,
+      import('@/common/ma/marketFeed/schema').CreateFeedSourceInput
+    >('ma.market-feeds.create-source'),
+    getSource: bridge.buildProvider<import('@/common/ma/marketFeed/schema').FeedSource | null, { id: string }>(
+      'ma.market-feeds.get-source'
+    ),
+    updateSource: bridge.buildProvider<
+      import('@/common/ma/marketFeed/schema').FeedSource | null,
+      { id: string; input: import('@/common/ma/marketFeed/schema').UpdateFeedSourceInput }
+    >('ma.market-feeds.update-source'),
+    deleteSource: bridge.buildProvider<boolean, { id: string }>('ma.market-feeds.delete-source'),
+    listSources: bridge.buildProvider<
+      {
+        data: import('@/common/ma/marketFeed/schema').FeedSource[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { page?: number; pageSize?: number }
+    >('ma.market-feeds.list-sources'),
+    listSourcesByStatus: bridge.buildProvider<
+      {
+        data: import('@/common/ma/marketFeed/schema').FeedSource[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+      },
+      { status: string; page?: number; pageSize?: number }
+    >('ma.market-feeds.list-sources-by-status'),
+  },
+  // Daily Brief and Reporting (Wave 10 / Batch 10C)
+  brief: {
+    generateDaily: bridge.buildProvider<
+      import('@/common/ma/types').DailyBrief,
+      import('@/common/ma/types').GenerateBriefInput
+    >('ma.brief.generate-daily'),
+  },
+  report: {
+    generate: bridge.buildProvider<import('@/common/ma/types').Report, import('@/common/ma/types').GenerateReportInput>(
+      'ma.report.generate'
+    ),
   },
 };

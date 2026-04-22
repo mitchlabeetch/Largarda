@@ -9,7 +9,15 @@
 /**
  * Built-in platform types for channel plugins.
  */
-export type BuiltinPluginType = 'telegram' | 'slack' | 'discord' | 'lark' | 'dingtalk' | 'weixin' | 'wecom';
+export type BuiltinPluginType =
+  | 'telegram'
+  | 'slack'
+  | 'discord'
+  | 'lark'
+  | 'dingtalk'
+  | 'weixin'
+  | 'wecom'
+  | 'whatsapp';
 
 /**
  * Supported platform types for plugins.
@@ -51,6 +59,13 @@ export interface IPluginCredentials {
   // WeCom (Enterprise WeChat AI Bot websocket)
   botId?: string;
   secret?: string;
+  // WhatsApp Business API
+  whatsappPhoneNumberId?: string;
+  whatsappBusinessAccountId?: string;
+  whatsappWebhookVerifyToken?: string;
+  whatsappBaseUrl?: string;
+  whatsappApiVersion?: string;
+  whatsappAppSecret?: string;
   // Extension plugins: arbitrary credential fields
   [key: string]: string | number | boolean | undefined;
 }
@@ -72,6 +87,7 @@ export function hasPluginCredentials(type: PluginType, credentials?: IPluginCred
     const hasWebsocket = !!(credentials.botId && credentials.secret);
     return hasWebhook || hasWebsocket;
   }
+  if (type === 'whatsapp') return !!(credentials.token && credentials.whatsappPhoneNumberId);
   // Extension or unknown plugins: check if any credential value is non-empty
   return Object.values(credentials).some((v) => v !== undefined && v !== null && v !== '');
 }

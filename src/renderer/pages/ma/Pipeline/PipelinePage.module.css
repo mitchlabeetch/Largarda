@@ -1,0 +1,219 @@
+/**
+ * PipelinePage Styles
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px;
+  gap: 16px;
+  outline: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-1);
+}
+
+.count {
+  font-size: 14px;
+  color: var(--color-text-3);
+}
+
+.board {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+.stage {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-fill-2);
+  border-radius: 8px;
+  max-height: 100%;
+}
+
+.stageHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-2);
+  flex-shrink: 0;
+}
+
+.stageTag {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.dealCount {
+  font-size: 14px;
+  color: var(--color-text-3);
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.stageContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyStage {
+  opacity: 0.5;
+}
+
+.dealCard {
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 6px;
+  padding: 12px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.dealCard:hover {
+  border-color: rgb(var(--primary-6));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.dealCard:focus {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
+}
+
+.dealCardFocused {
+  border-color: rgb(var(--primary-6));
+  box-shadow: 0 0 0 3px rgba(var(--primary-6), 0.2);
+}
+
+.dealCard:active {
+  cursor: grabbing;
+}
+
+.dealHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.dealName {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-text-1);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dealMenuTrigger {
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.dealCard:hover .dealMenuTrigger,
+.dealCard:focus .dealMenuTrigger {
+  opacity: 1;
+}
+
+.dealMenuTrigger:hover {
+  background: var(--color-fill-3);
+}
+
+.dealMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.targetCompany {
+  font-size: 12px;
+  color: var(--color-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dealParties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.partyTag {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--color-fill-3);
+  border-radius: 4px;
+  color: var(--color-text-2);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.partyMore {
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+
+.stageMenu,
+.dealMenu {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--color-bg-2);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.keyboardHints {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-3);
+}

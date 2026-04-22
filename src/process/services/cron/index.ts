@@ -9,5 +9,5 @@
  */
 
 export { MaEnrichmentJob, createMaEnrichmentJob } from './maEnrichmentJob';
-export { MaWatchlistJob, createMaWatchlistJob } from './maWatchlistJob';
+// export { MaWatchlistJob, createMaWatchlistJob } from './maWatchlistJob'; // REMOVED - WatchlistService removed
 export { MaDatagouvHousekeepingJob, createMaDatagouvHousekeepingJob } from './maDatagouvHousekeepingJob';

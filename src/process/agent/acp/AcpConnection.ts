@@ -32,6 +32,10 @@ import { getWindowsShellExecutionOptions } from '@process/utils/shellEnv';
 import { connectClaude, connectCodebuddy, connectCodex, prepareCleanEnv, spawnGenericBackend } from './acpConnectors';
 import type { SpawnResult } from './acpConnectors';
 import { killChild, readTextFile, writeJsonRpcMessage, writeTextFile } from './utils';
+import { createLogger, generateCorrelationId } from '@/common/utils/structuredLogger';
+import { recordAiFailure, AiFailureType } from '@/common/utils/aiObservability';
+
+const logger = createLogger('AcpConnection');
 
 const execFile = promisify(execFileCb);
 
@@ -328,7 +332,9 @@ export class AcpConnection {
 
     // Exit handler for both startup and runtime phases
     child.on('exit', (code, signal) => {
+      const correlationId = generateCorrelationId();
       console.error(`[ACP ${backend}] Process exited with code: ${code}, signal: ${signal}`);
+      logger.error(`Process exited`, { code, signal, backend, correlationId, isSetupComplete: this.isSetupComplete });
 
       if (!this.isSetupComplete) {
         // Startup phase - set error for initial check.
@@ -348,11 +354,29 @@ export class AcpConnection {
         if (code !== 0 && !spawnError) {
           spawnError = new Error(errMsg);
         }
+        recordAiFailure({
+          failureType: AiFailureType.AGENT_CRASH,
+          component: 'AcpConnection',
+          message: 'ACP process exited during startup',
+          error: spawnError || new Error(errMsg),
+          context: { backend, code, signal, stderr: stderrCombined.slice(0, 500) },
+          agentType: backend,
+          correlationId,
+        });
         // Reject processExitPromise so Promise.race returns immediately
         processExitReject?.(new Error(errMsg));
       } else {
         // Runtime phase - handle unexpected exit
         this.handleProcessExit(code, signal);
+        recordAiFailure({
+          failureType: AiFailureType.AGENT_CRASH,
+          component: 'AcpConnection',
+          message: 'ACP process exited unexpectedly during runtime',
+          error: new Error(`Process exited (code: ${code}, signal: ${signal})`),
+          context: { backend, code, signal },
+          agentType: backend,
+          correlationId,
+        });
       }
     });
 
@@ -425,6 +449,9 @@ export class AcpConnection {
    * Similar to Codex's handleProcessExit implementation
    */
   private handleProcessExit(code: number | null, signal: NodeJS.Signals | null): void {
+    const correlationId = generateCorrelationId();
+    logger.error('Handling unexpected process exit', { code, signal, backend: this.backend, correlationId });
+
     // 1. Reject all pending requests with clear error message
     for (const [_id, request] of this.pendingRequests) {
       if (request.timeoutId) {
@@ -503,6 +530,23 @@ export class AcpConnection {
    * LLM generation without killing the process; for other methods, just reject.
    */
   private handlePromptTimeout(requestId: number, request: PendingRequest<unknown>): void {
+    const correlationId = generateCorrelationId();
+    logger.warn('Request timed out', {
+      requestId,
+      method: request.method,
+      timeoutDuration: request.timeoutDuration,
+      correlationId,
+    });
+    recordAiFailure({
+      failureType: AiFailureType.TIMEOUT,
+      component: 'AcpConnection',
+      message: `Request ${request.method} timed out after ${request.timeoutDuration / 1000} seconds`,
+      error: new Error(`Request timeout`),
+      context: { requestId, method: request.method, timeoutDuration: request.timeoutDuration },
+      agentType: this.backend || 'unknown',
+      correlationId,
+    });
+
     this.pendingRequests.delete(requestId);
     if (request.method === 'session/prompt') {
       this.cancelPrompt();

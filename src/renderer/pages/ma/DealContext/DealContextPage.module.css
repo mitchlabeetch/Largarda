@@ -65,7 +65,9 @@
   border-radius: var(--radius-md);
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   border: none;
   background: transparent;
   color: var(--bg-6);
@@ -87,8 +89,9 @@
   padding: 12px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--bg-4);
-  cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .dealCard:hover {
@@ -103,8 +106,31 @@
 
 .dealCardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.dealCardHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dealCardButton {
+  width: 100%;
+  height: auto;
+  padding: 0;
+  justify-content: flex-start;
+}
+
+.dealCardText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
 }
 
 .dealCardName {

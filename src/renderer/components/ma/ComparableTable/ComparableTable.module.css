@@ -1,0 +1,56 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.comparable-table {
+  width: 100%;
+}
+
+.table-toolbar {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--color-fill-2);
+  border-radius: 4px;
+}
+
+.comparable-table-error {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-2);
+}
+
+.comparable-table-error p {
+  margin-bottom: 16px;
+}
+
+.provenance-info {
+  padding: 8px 0;
+}
+
+.provenance-info p {
+  margin: 8px 0;
+  color: var(--color-text-2);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Freshness status colors */
+.freshness-fresh {
+  color: var(--color-success);
+}
+
+.freshness-stale {
+  color: var(--color-warning);
+}
+
+.freshness-expired {
+  color: var(--color-danger);
+}
+
+.freshness-unknown {
+  color: var(--color-text-3);
+}

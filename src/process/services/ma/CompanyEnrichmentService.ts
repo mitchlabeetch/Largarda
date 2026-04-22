@@ -6,8 +6,10 @@
 
 /**
  * Company Enrichment Service
- * Manages company enrichment from external sources (SIRENE, etc.)
+ * Manages company enrichment from external sources (API Recherche d'entreprises)
+ * Uses free no-auth API: https://recherche-entreprises.api.gouv.fr
  * Handles sources_json attribution for data provenance
+ * Rate limit: 7 requests/second per user
  */
 
 import type { Company, UpdateCompanyInput } from '../../../common/ma/company/schema';
@@ -26,7 +28,7 @@ export interface EnrichmentSource {
  * Sources JSON structure for tracking data provenance
  */
 export interface SourcesJson {
-  sirene?: EnrichmentSource;
+  rechercheEntreprises?: EnrichmentSource;
   [key: string]: EnrichmentSource | undefined;
 }
 
@@ -34,59 +36,170 @@ export interface SourcesJson {
  * Company Enrichment Service Interface
  */
 export interface ICompanyEnrichmentService {
+  /** Enrich/create company by SIREN using API Recherche d'entreprises */
   enrichBySiren(siren: string): Promise<Company | null>;
+  /** Enrich existing company by ID */
   enrichCompany(companyId: string): Promise<Company | null>;
+  /** Search for companies by name */
+  searchByName(query: string, limit?: number): Promise<Array<Partial<Company>>>;
+  /** Batch enrich multiple companies */
   batchEnrich(companyIds: string[]): Promise<Map<string, Company>>;
+  /** Update sources_json for a company */
   updateSources(companyId: string, sources: SourcesJson): Promise<void>;
 }
 
 /**
- * SIRENE Enricher
- * Fetches company data from French SIRENE API
+ * API Recherche d'entreprises Response
+ * @see https://recherche-entreprises.api.gouv.fr
  */
-class SireneEnricher {
-  private readonly baseUrl = 'https://entreprise.data.gouv.fr/api/sirene/v3';
+interface RechercheEntreprisesResponse {
+  results: Array<{
+    siren: string;
+    nom_complet?: string;
+    nom_raison_sociale?: string;
+    sigle?: string;
+    siret_siege?: string;
+    numero_voie?: string;
+    type_voie?: string;
+    libelle_voie?: string;
+    code_postal?: string;
+    libelle_commune?: string;
+    etat_administratif?: string;
+    categorie_entreprise?: string;
+    activite_principale?: string;
+    date_creation?: string;
+    tranche_effectif_salarie?: string;
+    complements?: {
+      est_entrepreneur_individuel?: boolean;
+      est_entrepreneur_spectacle?: boolean;
+    };
+    matching_etablissements?: Array<{
+      siret: string;
+      adresse: string;
+    }>;
+  }>;
+  total_results: number;
+  page: number;
+  per_page: number;
+}
 
-  async fetchBySiren(siren: string): Promise<Record<string, unknown> | null> {
+/**
+ * API Recherche d'entreprises Enricher
+ * Free no-auth API for French company data
+ * @see openapi(1).json for full API spec
+ */
+class RechercheEntreprisesEnricher {
+  private readonly baseUrl = 'https://recherche-entreprises.api.gouv.fr';
+  private lastRequestTime = 0;
+  private readonly minRequestInterval = 150; // ~7 req/sec = 143ms + buffer
+
+  private async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const elapsed = now - this.lastRequestTime;
+    if (elapsed < this.minRequestInterval) {
+      await new Promise((resolve) => setTimeout(resolve, this.minRequestInterval - elapsed));
+    }
+    this.lastRequestTime = Date.now();
+  }
+
+  /** Search by SIREN - returns first matching result */
+  async fetchBySiren(siren: string): Promise<RechercheEntreprisesResponse['results'][0] | null> {
+    await this.rateLimit();
     try {
-      const response = await fetch(`${this.baseUrl}/unites_legales/${siren}`);
+      const response = await fetch(`${this.baseUrl}/search?q=${siren}`);
       if (!response.ok) {
+        if (response.status === 429) {
+          console.warn("API Recherche d'entreprises rate limit exceeded");
+        }
         return null;
       }
-      const data = await response.json();
-      return data.unite_legale ?? null;
+      const data: RechercheEntreprisesResponse = await response.json();
+      return data.results.find((r) => r.siren === siren) ?? null;
     } catch {
       return null;
     }
   }
 
-  async fetchBySiret(siret: string): Promise<Record<string, unknown> | null> {
+  /** Search by name - returns multiple results */
+  async searchByName(query: string, limit = 10): Promise<RechercheEntreprisesResponse['results']> {
+    await this.rateLimit();
     try {
-      const response = await fetch(`${this.baseUrl}/etablissements/${siret}`);
+      const response = await fetch(`${this.baseUrl}/search?q=${encodeURIComponent(query)}&per_page=${limit}`);
       if (!response.ok) {
-        return null;
+        return [];
       }
-      const data = await response.json();
-      return data.etablissement ?? null;
+      const data: RechercheEntreprisesResponse = await response.json();
+      return data.results;
     } catch {
-      return null;
+      return [];
     }
   }
 
-  mapToCompanyUpdate(sireneData: Record<string, unknown>): Partial<UpdateCompanyInput> {
+  mapToCompanyUpdate(apiData: RechercheEntreprisesResponse['results'][0]): Partial<UpdateCompanyInput> {
     const update: Partial<UpdateCompanyInput> = {};
 
-    if (sireneData.denomination) {
-      update.name = String(sireneData.denomination);
+    // Use nom_complet (preferred) or nom_raison_sociale
+    const name = apiData.nom_complet ?? apiData.nom_raison_sociale;
+    if (name) {
+      update.name = name;
     }
-    if (sireneData.categorie_juridique) {
-      update.legalForm = String(sireneData.categorie_juridique);
+
+    // Build address from components
+    const addressParts: string[] = [];
+    if (apiData.numero_voie) addressParts.push(apiData.numero_voie);
+    if (apiData.type_voie) addressParts.push(apiData.type_voie);
+    if (apiData.libelle_voie) addressParts.push(apiData.libelle_voie);
+    if (apiData.code_postal) addressParts.push(apiData.code_postal);
+    if (apiData.libelle_commune) addressParts.push(apiData.libelle_commune);
+
+    if (addressParts.length > 0) {
+      update.headquartersAddress = addressParts.join(' ');
     }
-    if (sireneData.activite_principale) {
-      update.nafCode = String(sireneData.activite_principale);
+
+    // NAF/NAF code (activite_principale)
+    if (apiData.activite_principale) {
+      update.nafCode = apiData.activite_principale;
     }
-    if (sireneData.date_creation) {
-      update.registeredAt = new Date(String(sireneData.date_creation)).getTime();
+
+    // Legal form from categorie_entreprise
+    if (apiData.categorie_entreprise) {
+      update.legalForm = apiData.categorie_entreprise;
+    }
+
+    // Creation date
+    if (apiData.date_creation) {
+      update.registeredAt = new Date(apiData.date_creation).getTime();
+    }
+
+    // Employee count from tranche_effectif_salarie
+    if (apiData.tranche_effectif_salarie) {
+      // Map tranche codes to approximate numbers
+      const employeeMap: Record<string, number> = {
+        '00': 0,
+        '01': 1,
+        '02': 3,
+        '03': 6,
+        '11': 10,
+        '12': 20,
+        '21': 50,
+        '22': 100,
+        '31': 200,
+        '32': 250,
+        '41': 500,
+        '42': 750,
+        '51': 1000,
+        '52': 1500,
+        '53': 2000,
+      };
+      const tranche = apiData.tranche_effectif_salarie;
+      if (tranche in employeeMap) {
+        update.employeeCount = employeeMap[tranche];
+      }
+    }
+
+    // SIRET (siege)
+    if (apiData.siret_siege) {
+      update.siret = apiData.siret_siege;
     }
 
     return update;
@@ -97,26 +210,26 @@ class SireneEnricher {
  * Company Enrichment Service Implementation
  */
 export class CompanyEnrichmentService implements ICompanyEnrichmentService {
-  private sireneEnricher = new SireneEnricher();
+  private enricher = new RechercheEntreprisesEnricher();
 
   constructor(private db: any) {}
 
   /**
-   * Enrich a company by SIREN number
+   * Enrich a company by SIREN number using API Recherche d'entreprises
    */
   async enrichBySiren(siren: string): Promise<Company | null> {
-    const sireneData = await this.sireneEnricher.fetchBySiren(siren);
-    if (!sireneData) {
+    const apiData = await this.enricher.fetchBySiren(siren);
+    if (!apiData) {
       return null;
     }
 
-    const update = this.sireneEnricher.mapToCompanyUpdate(sireneData);
+    const update = this.enricher.mapToCompanyUpdate(apiData);
     const sources: SourcesJson = {
-      sirene: {
-        name: 'SIRENE',
-        url: `https://entreprise.data.gouv.fr/api/sirene/v3/unites_legales/${siren}`,
+      rechercheEntreprises: {
+        name: "API Recherche d'entreprises",
+        url: `https://recherche-entreprises.api.gouv.fr/search?q=${siren}`,
         lastFetchedAt: Date.now(),
-        data: sireneData,
+        data: apiData,
       },
     };
 
@@ -134,8 +247,8 @@ export class CompanyEnrichmentService implements ICompanyEnrichmentService {
       const row = {
         id: companyId,
         siren,
-        siret: null as string | null,
-        name: update.name ?? sireneData.denomination ?? 'Unknown',
+        siret: update.siret ?? null,
+        name: update.name ?? apiData.nom_complet ?? apiData.nom_raison_sociale ?? 'Unknown',
         legal_form: update.legalForm ?? null,
         naf_code: update.nafCode ?? null,
         sector_id: null as string | null,
@@ -164,23 +277,41 @@ export class CompanyEnrichmentService implements ICompanyEnrichmentService {
       return null;
     }
 
-    const sireneData = await this.sireneEnricher.fetchBySiren(company.siren);
-    if (!sireneData) {
+    const apiData = await this.enricher.fetchBySiren(company.siren);
+    if (!apiData) {
       return null;
     }
 
-    const update = this.sireneEnricher.mapToCompanyUpdate(sireneData);
+    const update = this.enricher.mapToCompanyUpdate(apiData);
     const sources: SourcesJson = {
-      sirene: {
-        name: 'SIRENE',
-        url: `https://entreprise.data.gouv.fr/api/sirene/v3/unites_legales/${company.siren}`,
+      rechercheEntreprises: {
+        name: "API Recherche d'entreprises",
+        url: `https://recherche-entreprises.api.gouv.fr/search?q=${company.siren}`,
         lastFetchedAt: Date.now(),
-        data: sireneData,
+        data: apiData,
       },
     };
 
     await this.updateCompany(companyId, update, sources);
     return this.getById(companyId);
+  }
+
+  /**
+   * Search for companies by name
+   * Returns lightweight company objects for selection
+   */
+  async searchByName(query: string, limit = 10): Promise<Array<Partial<Company>>> {
+    const results = await this.enricher.searchByName(query, limit);
+    return results.map((r) => ({
+      siren: r.siren,
+      siret: r.siret_siege,
+      name: r.nom_complet ?? r.nom_raison_sociale ?? 'Unknown',
+      legalForm: r.categorie_entreprise,
+      nafCode: r.activite_principale,
+      headquartersAddress: [r.numero_voie, r.type_voie, r.libelle_voie, r.code_postal, r.libelle_commune]
+        .filter(Boolean)
+        .join(' '),
+    }));
   }
 
   /**

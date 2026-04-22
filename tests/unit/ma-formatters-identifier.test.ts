@@ -9,7 +9,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatSiren, formatSiret, formatCompanyIdentifiers, formatUuid } from '@/renderer/utils/ma/formatters/identifier';
+import {
+  formatSiren,
+  formatSiret,
+  formatCompanyIdentifiers,
+  formatUuid,
+} from '@/renderer/utils/ma/formatters/identifier';
 import type { CompanyInfo } from '@/common/ma/types';
 
 describe('M&A Identifier Formatters', () => {
